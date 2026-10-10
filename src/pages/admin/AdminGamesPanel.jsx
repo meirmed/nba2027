@@ -3,6 +3,7 @@ import { Timestamp, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/fi
 import { db } from '../../firebase.js';
 import PageShell from '../../components/PageShell.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
+import Score from '../../components/Score.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSettings } from '../../contexts/SettingsContext.jsx';
@@ -20,7 +21,7 @@ const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v)
 
 // The ONLY editor of games (create / edit / score-status-OT override / cancel / delete) and the teams seeder.
 export default function AdminGamesPanel() {
-  const { t, lang } = useLang();
+  const { t, lang, dir } = useLang();
   const { user } = useAuth();
   const { timezone } = useSettings();
   const { teams, seeded } = useTeams();
@@ -129,10 +130,10 @@ export default function AdminGamesPanel() {
                 {GAME_STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
               </select></label>
             <label className="field">{t('ag.score')}
-              <span className="inline" dir="ltr">
-                <input className="input num" type="number" min="0" value={form.s1} onChange={(e) => set('s1', e.target.value)} />
+              <span className="inline" dir={dir}>
+                <input className="input num" dir="ltr" type="number" min="0" value={form.s1} onChange={(e) => set('s1', e.target.value)} />
                 <span>–</span>
-                <input className="input num" type="number" min="0" value={form.s2} onChange={(e) => set('s2', e.target.value)} />
+                <input className="input num" dir="ltr" type="number" min="0" value={form.s2} onChange={(e) => set('s2', e.target.value)} />
               </span></label>
             <label className="field">{t('ag.ot')}
               <input className="input num" dir="ltr" type="number" min="0" max="6" value={form.ot} onChange={(e) => set('ot', e.target.value)} /></label>
@@ -162,7 +163,7 @@ export default function AdminGamesPanel() {
         <div key={g.id} className="row">
           <div className="grow">
             <div><TeamBadge abbr={g.t1} /> <span className="muted">–</span> <TeamBadge abbr={g.t2} />
-              {(g.status === 'finished' || g.status === 'live') && <span dir="ltr"> · {g.s1}–{g.s2}{g.ot > 0 ? ` (${t('results.ot')})` : ''}</span>}
+              {(g.status === 'finished' || g.status === 'live') && <> · <Score a={g.s1} b={g.s2} />{g.ot > 0 ? ` (${t('results.ot')})` : ''}</>}
               {g.overridden && <span title={t('ag.lockApi')}> 🔒</span>}</div>
             {g.round !== 'RS' && <div className="muted small">{t(`round.${g.round}`)} · {g.seriesKey} · {t('ag.gameNum')} {g.gameNum}</div>}
             <div className="muted small">{formatDateTime(g.tipoff, lang, timezone)} · <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span></div>

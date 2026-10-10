@@ -6,16 +6,13 @@ import { usePoints } from '../contexts/PointsContext.jsx';
 import { rankRows } from '@shared/standings.js';
 import PageShell from '../components/PageShell.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
+import Score from '../components/Score.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { useMyPredictions } from '../contexts/MyPredictionsContext.jsx';
 import { useGames } from '../hooks/useGames.js';
 import { dayKey, formatDateTime, formatDay } from '../utils/dates.js';
 import { addDaysToKey } from '@shared/daykeys.js';
-
-// Each number is its own flex item, so the row follows the page direction deterministically:
-// Hebrew (RTL): home team + home score on the RIGHT, away on the LEFT. English (LTR): home on the left.
-const Score = ({ a, b }) => <span className="score"><span>{a}</span><span className="muted">–</span><span>{b}</span></span>;
 
 const PRESETS = ['7', '30', 'all', 'upcoming', 'custom'];
 const PRESET_LABEL = { 7: 'mp.range7', 30: 'mp.range30', all: 'mp.rangeAll', upcoming: 'mp.rangeUpcoming', custom: 'mp.rangeCustom' };

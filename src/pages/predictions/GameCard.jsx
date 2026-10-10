@@ -1,5 +1,6 @@
 import TeamBadge from '../../components/TeamBadge.jsx';
 import EveryonesPicks from '../../components/EveryonesPicks.jsx';
+import Score from '../../components/Score.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useSettings, useScoring } from '../../contexts/SettingsContext.jsx';
 import { formatCountdown, formatTime } from '../../utils/dates.js';
@@ -27,18 +28,18 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
         {game.status === 'live' && <span className="badge live">{t('status.live')}</span>}
       </div>
 
-      <div className="pred-body" dir="ltr">
+      <div className="pred-body">
         <div className="pred-team"><TeamBadge abbr={game.t1} /><small className="muted">{t('pred.home')}</small></div>
         {locked || !ready ? (
-          <div className="pred-score" dir="ltr">
-            <strong>{saved ? `${saved.s1} – ${saved.s2}` : '– – –'}</strong>
+          <div className="pred-score">
+            <strong>{saved ? <Score a={saved.s1} b={saved.s2} /> : '– –'}</strong>
             {jokerOn && <span title={t('pred.joker', { n: jokerMultiplier })}> ⭐</span>}
           </div>
         ) : (
-          <div className="pred-inputs" dir="ltr">
-            <input className="input num" type="number" inputMode="numeric" min="0" max="200" value={v1} aria-label={t('pred.home')} onChange={(e) => onEdit('s1', e.target.value)} />
+          <div className="pred-inputs">
+            <input className="input num" dir="ltr" type="number" inputMode="numeric" min="0" max="200" value={v1} aria-label={t('pred.home')} onChange={(e) => onEdit('s1', e.target.value)} />
             <span>–</span>
-            <input className="input num" type="number" inputMode="numeric" min="0" max="200" value={v2} aria-label={t('pred.away')} onChange={(e) => onEdit('s2', e.target.value)} />
+            <input className="input num" dir="ltr" type="number" inputMode="numeric" min="0" max="200" value={v2} aria-label={t('pred.away')} onChange={(e) => onEdit('s2', e.target.value)} />
           </div>
         )}
         <div className="pred-team"><TeamBadge abbr={game.t2} /><small className="muted">{t('pred.away')}</small></div>
@@ -47,8 +48,8 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
       {!ready && <p className="muted small">{t('pred.teamsTbd')}</p>}
       {locked && !saved && game.status !== 'cancelled' && <p className="muted small">{t('pred.noPick')}</p>}
       {showResult && (
-        <p className="small" dir="ltr">
-          {game.status === 'finished' ? t('pred.final') : t('status.live')}: <strong>{game.s1 ?? 0} – {game.s2 ?? 0}</strong>{game.ot > 0 ? ` (${t('results.ot')})` : ''}
+        <p className="small">
+          {game.status === 'finished' ? t('pred.final') : t('status.live')}: <strong><Score a={game.s1 ?? 0} b={game.s2 ?? 0} /></strong>{game.ot > 0 ? ` (${t('results.ot')})` : ''}
         </p>
       )}
       {reason && <p className="error small" role="alert">{t(`pred.err.${reason}`)}</p>}

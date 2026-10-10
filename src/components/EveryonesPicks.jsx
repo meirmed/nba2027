@@ -3,6 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import Score from './Score.jsx';
 
 /** Reads picks/{gameId} (written by lockGamePicks at tip-off). Doesn't exist before lock, so nothing leaks early. */
 export default function EveryonesPicks({ gameId, result }) {
@@ -34,7 +35,7 @@ export default function EveryonesPicks({ gameId, result }) {
             {rows.map((r) => (
               <tr key={r.uid} className={r.uid === user?.uid ? 'me' : ''}>
                 <td dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</td>
-                <td>{r.s1} – {r.s2}{r.joker ? ' ⭐' : ''}{finished && r.s1 === result.s1 && r.s2 === result.s2 ? ' ✅' : ''}</td>
+                <td><Score a={r.s1} b={r.s2} />{r.joker ? ' ⭐' : ''}{finished && r.s1 === result.s1 && r.s2 === result.s2 ? ' ✅' : ''}</td>
               </tr>
             ))}
           </tbody>

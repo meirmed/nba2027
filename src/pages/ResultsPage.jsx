@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import PageShell from '../components/PageShell.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
+import Score from '../components/Score.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings } from '../contexts/SettingsContext.jsx';
 import { useGames } from '../hooks/useGames.js';
@@ -33,8 +34,8 @@ export default function ResultsPage() {
             <div key={g.id} className={`game-row status-${g.status}`}>
               <span className="muted time" dir="ltr">{formatTime(g.tipoff, lang, timezone)}</span>
               <span className="teams"><TeamBadge abbr={g.t1} /> <span className="muted">–</span> <TeamBadge abbr={g.t2} /></span>
-              <span className="score" dir="ltr">
-                {g.status === 'finished' || g.status === 'live' ? `${g.s1 ?? 0} – ${g.s2 ?? 0}` : ''}
+              <span className="res-score">
+                {g.status === 'finished' || g.status === 'live' ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : ''}
                 {g.ot > 0 && <small> {t('results.ot')}{g.ot > 1 ? g.ot : ''}</small>}
               </span>
               <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span>
