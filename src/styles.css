@@ -73,3 +73,11 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .save-bar { position: sticky; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + .5rem); display: flex; align-items: center; gap: .6rem; background: var(--surface); border-radius: var(--radius); padding: .6rem; margin-top: 1rem; box-shadow: 0 4px 16px #0006; }
 .everyone .table td { padding: .35rem .5rem; } .everyone tr.me td { color: var(--accent); font-weight: 700; }
 @media (min-width: 900px) { .save-bar { bottom: .5rem; } }
+
+/* ---- compact team names + My Points rows ---- */
+.name-short { display: none; }
+@media (max-width: 600px) { .name-full { display: none; } .name-short { display: inline; } }
+.mp-row { background: var(--surface); border-radius: var(--radius); padding: .6rem .8rem; margin-block: .4rem; display: flex; flex-direction: column; gap: .2rem; }
+.mp-main { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.mp-teams { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-pick { white-space: nowrap; font-variant-numeric: tabular-nums; }

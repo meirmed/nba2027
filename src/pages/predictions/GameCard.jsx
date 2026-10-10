@@ -1,13 +1,14 @@
 import TeamBadge from '../../components/TeamBadge.jsx';
 import EveryonesPicks from '../../components/EveryonesPicks.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
-import { useSettings } from '../../contexts/SettingsContext.jsx';
+import { useSettings, useScoring } from '../../contexts/SettingsContext.jsx';
 import { formatCountdown, formatTime } from '../../utils/dates.js';
 
 /** One game. Display only: all state lives in GamesTab (draft values, joker draft, rejection reasons). */
 export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, jokerDisabled, onJoker, reason }) {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
+  const { jokerMultiplier } = useScoring();
   const tipMs = game.tipoff?.toMillis?.() ?? 0;
   const locked = game.status !== 'scheduled' || nowMs >= tipMs;
   const ready = !!(game.t1 && game.t2);
@@ -31,7 +32,7 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
         {locked || !ready ? (
           <div className="pred-score" dir="ltr">
             <strong>{saved ? `${saved.s1} – ${saved.s2}` : '– – –'}</strong>
-            {jokerOn && <span title={t('pred.joker')}> ⭐</span>}
+            {jokerOn && <span title={t('pred.joker', { n: jokerMultiplier })}> ⭐</span>}
           </div>
         ) : (
           <div className="pred-inputs" dir="ltr">
@@ -55,7 +56,7 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
       {!locked && ready && (
         <div className="actions">
           <button className={`btn ${jokerOn ? '' : 'ghost'}`} disabled={jokerDisabled} onClick={onJoker} aria-pressed={jokerOn}>
-            ⭐ {t('pred.joker')}
+            ⭐ {t('pred.joker', { n: jokerMultiplier })}
           </button>
         </div>
       )}

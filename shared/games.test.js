@@ -48,4 +48,9 @@ describe('teams', () => {
     expect(new Set(TEAMS.map((t) => t.abbr)).size).toBe(30);
     expect(TEAMS.filter((t) => t.conf === 'E')).toHaveLength(15);
   });
+  it('every team has distinct short names in both languages', () => {
+    expect(new Set(TEAMS.map((t) => t.shortEn)).size).toBe(30);
+    expect(new Set(TEAMS.map((t) => t.shortHe)).size).toBe(30);
+    expect(TEAMS.every((t) => t.shortEn && t.shortHe)).toBe(true);
+  });
 });

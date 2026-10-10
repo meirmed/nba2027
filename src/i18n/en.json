@@ -136,7 +136,7 @@
   "pred.saveFailed": "Saving failed. Try again.",
   "pred.partial": "{ok} saved, {bad} not saved",
   "pred.jokersLeft": "Jokers left: {n} of {max}",
-  "pred.joker": "Joker ×2",
+  "pred.joker": "Joker ×{n}",
   "pred.locksIn": "Locks in {time}",
   "pred.locked": "Locked",
   "pred.home": "Home",
@@ -165,5 +165,6 @@
   "auth.enterName": "Your full name",
   "auth.nameHint": "Type it exactly as the admin entered it.",
   "auth.errNotListed": "This name isn't on the approved list. Type it exactly as the admin entered it, or ask the admin.",
-  "auth.errBusy": "Registration for this name is in progress. Try again in 2 minutes."
+  "auth.errBusy": "Registration for this name is in progress. Try again in 2 minutes.",
+  "mp.jokerLegend": "⭐ = joker used (×{n} points)"
 }
