@@ -10,7 +10,6 @@ export default function TeamBadge({ abbr, short = false, compact = false }) {
   const shortName = tm ? (lang === 'he' ? tm.shortHe : tm.shortEn) || name : abbr;
   return (
     <span className="team">
-      <span className="dot" style={{ background: tm?.color || '#888' }} aria-hidden />
       {compact
         ? <strong><span className="name-full">{name}</span><span className="name-short">{shortName}</span></strong>
         : <strong>{short ? abbr : name}</strong>}

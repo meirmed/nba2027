@@ -46,7 +46,7 @@ textarea.input { font: inherit; resize: vertical; }
 .small { font-size: .8rem; }
 .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; }
 .inline { display: flex; align-items: center; gap: .4rem; } .num { width: 4.5rem; }
-.team { display: inline-flex; align-items: center; gap: .35rem; } .dot { width: .8rem; height: .8rem; border-radius: 50%; display: inline-block; }
+.team { display: inline-flex; align-items: center; gap: .35rem; }
 .day h3 { margin-top: 1.2rem; color: var(--muted); font-size: .95rem; }
 .game-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; background: var(--surface); border-radius: var(--radius); padding: .6rem .8rem; margin-block: .4rem; }
 .game-row .teams { flex: 1; min-width: 12rem; } .game-row .res-score { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 4.5rem; text-align: center; }
@@ -87,7 +87,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .mp-col { width: 4.4rem; flex: none; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mp-head { padding-inline: .8rem; margin-top: .4rem; }
 .score { display: inline-flex; gap: .25em; justify-content: center; }
-@media (max-width: 600px) { .mp-teams .dot { display: none; } .mp-line { font-size: .88rem; gap: .3rem; } .mp-col { width: 3.9rem; } }
+@media (max-width: 600px) { .mp-line { font-size: .88rem; gap: .3rem; } .mp-col { width: 3.9rem; } }
 
 /* ---- leaderboard / points ---- */
 .table-wrap { overflow-x: auto; }
