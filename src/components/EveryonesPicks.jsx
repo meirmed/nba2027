@@ -37,16 +37,16 @@ export default function EveryonesPicks({ gameId, result }) {
     return scoreGamePicks({ game: result, picks: rows.map((r) => ({ uid: r.uid, p: r, joker: r.joker })), scoring });
   }, [rows, result, settings.countedRounds, scoring]);
 
-  const chips = (r) => {
-    const s = scored[r.uid];
-    const list = [];
-    if (s?.uniquePts > 0) list.push(['unique', t('bd.unique'), true]);
-    if (s?.exact) list.push(['exact', t('bd.exact'), true]);
-    if (s?.winnerCorrect) list.push(['winner', t('bd.winner'), false]);
-    if (s?.diffPts > 0) list.push(['diff', t('bd.diff', { n: s.diffPts }), false]);
-    if (s?.riskPts > 0) list.push(['risk', t('bd.risk'), false]);
-    if (r.autoFilled) list.push(['auto', t('bd.auto'), false]);
-    return list;
+  // ONE reason per player, most significant first: unique > exact > risk > diff > winner. (auto-filled is a marker, not a reason)
+  const reason = (r) => {
+    const sc = scored[r.uid];
+    if (!sc) return null;
+    if (sc.uniquePts > 0) return ['unique', t('bd.unique')];
+    if (sc.exact) return ['exact', t('bd.exact')];
+    if (sc.riskPts > 0) return ['risk', t('bd.risk')];
+    if (sc.diffPts > 0) return ['diff', t('bd.diff', { n: sc.diffPts })];
+    if (sc.winnerCorrect) return ['winner', t('bd.winner')];
+    return null;
   };
 
   return (
@@ -62,8 +62,8 @@ export default function EveryonesPicks({ gameId, result }) {
               {rows.map((r) => (
                 <tr key={r.uid} className={r.uid === user?.uid ? 'me' : ''}>
                   <td dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</td>
-                  <td><Score a={r.s1} b={r.s2} />{r.joker ? ' ⭐' : ''}</td>
-                  <td dir={dir}><span className="chips">{chips(r).map(([k, label, hl]) => <span key={k} className={`chip ${hl ? 'hl' : ''}`}>{label}</span>)}</span></td>
+                  <td><Score a={r.s1} b={r.s2} />{r.joker ? ' ⭐' : ''}{r.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</td>
+                  <td dir={dir}>{(() => { const x = reason(r); return x ? <span className={`chip chip-${x[0]}`}>{x[1]}</span> : null; })()}</td>
                   <td>{scored[r.uid] ? <strong>{scored[r.uid].pts}</strong> : ''}</td>
                 </tr>
               ))}

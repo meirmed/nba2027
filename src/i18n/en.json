@@ -227,5 +227,5 @@
   "bd.winner": "winner",
   "bd.diff": "diff +{n}",
   "bd.risk": "risk",
-  "bd.auto": "auto"
+  "bd.auto": "auto-filled pick"
 }
