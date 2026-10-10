@@ -12,6 +12,13 @@ export function gameOpenReason(game, nowMs, countedRounds = ['RS']) {
   return null;
 }
 
+/** null = valid pick; otherwise the reason key. Same rule for the UI (before autosave) and the server. */
+export function pickIssue(p) {
+  if (!isScore(p?.s1) || !isScore(p?.s2)) return 'invalid-score';
+  if (p.s1 === p.s2) return 'tie';
+  return null;
+}
+
 export const countJokers = (jokers) => Object.values(jokers || {}).filter(Boolean).length;
 
 /**
@@ -30,8 +37,7 @@ export function planSave({ existing, games, picks, jokers, nowMs, maxJokers, cou
   Object.entries(picks || {}).forEach(([id, p]) => {
     const why = gameOpenReason(games[id], nowMs, countedRounds);
     if (why) rejected.push({ id, reason: why });
-    else if (!isScore(p?.s1) || !isScore(p?.s2)) rejected.push({ id, reason: 'invalid-score' });
-    else if (p.s1 === p.s2) rejected.push({ id, reason: 'tie' });
+    else if (pickIssue(p)) rejected.push({ id, reason: pickIssue(p) });
     else accepted[id] = { s1: p.s1, s2: p.s2 };
   });
 

@@ -104,3 +104,19 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .chip-risk { background: #8b5cf6; color: #fff; }
 .chip-diff { background: #f59e0b; color: #1a1300; font-weight: 600; }
 .chip-winner { background: #64748b; color: #fff; }
+
+/* ---- one-line rows on phones, save indicators ---- */
+.team { min-width: 0; }
+.team strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pred-team { min-width: 0; }
+.save-ok { color: #22c55e; font-weight: 700; font-size: .85rem; margin-inline-start: auto; }
+.save-bar .save-ok { margin-inline-start: 0; }
+.save-wait { margin-inline-start: auto; }
+@media (max-width: 600px) {
+  .game-row { flex-wrap: nowrap; gap: .4rem; font-size: .9rem; padding-inline: .6rem; }
+  .game-row .teams { min-width: 0; display: flex; align-items: center; gap: .3rem; }
+  .game-row .time { flex: none; }
+  .game-row .res-score { min-width: 3.6rem; }
+  .pred-inputs .num { width: 3.4rem; padding-inline: .2rem; }
+  .pred-card { padding: .6rem; }
+}

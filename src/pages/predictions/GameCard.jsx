@@ -6,7 +6,7 @@ import { useSettings, useScoring } from '../../contexts/SettingsContext.jsx';
 import { formatCountdown, formatTime } from '../../utils/dates.js';
 
 /** One game. Display only: all state lives in GamesTab (draft values, joker draft, rejection reasons). */
-export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, jokerDisabled, onJoker, reason }) {
+export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, jokerDisabled, onJoker, reason, status }) {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const { jokerMultiplier } = useScoring();
@@ -26,6 +26,8 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
           ? <span className="badge">🔒 {t('pred.locked')}</span>
           : <span className="muted small">{t('pred.locksIn', { time: formatCountdown(tipMs - nowMs) })}</span>)}
         {game.status === 'live' && <span className="badge live">{t('status.live')}</span>}
+        {!locked && ready && status === 'saved' && <span className="save-ok">✓ {t('pred.savedShort')}</span>}
+        {!locked && ready && status === 'saving' && <span className="save-wait muted small">{t('pred.saving')}</span>}
       </div>
 
       <div className="pred-body">

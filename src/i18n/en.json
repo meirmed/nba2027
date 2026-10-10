@@ -131,7 +131,7 @@
   "pred.prev": "Previous day",
   "pred.next": "Next day",
   "pred.noGames": "No games to predict yet.",
-  "pred.saveAll": "Save predictions ({n})",
+  "pred.saveAll": "Save predictions ({n} saved)",
   "pred.saved": "Saved ✓",
   "pred.saveFailed": "Saving failed. Try again.",
   "pred.partial": "{ok} saved, {bad} not saved",
@@ -227,5 +227,9 @@
   "bd.winner": "winner",
   "bd.diff": "diff +{n}",
   "bd.risk": "risk",
-  "bd.auto": "auto-filled pick"
+  "bd.auto": "auto-filled pick",
+  "pred.allSaved": "✓ Everything is saved",
+  "pred.savedShort": "Saved",
+  "pred.saving": "Saving…",
+  "pred.fixIssues": "Some picks are incomplete or invalid. Check the highlighted games."
 }

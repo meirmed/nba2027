@@ -131,7 +131,7 @@
   "pred.prev": "היום הקודם",
   "pred.next": "היום הבא",
   "pred.noGames": "אין עדיין משחקים לניחוש.",
-  "pred.saveAll": "שמור ניחושים ({n})",
+  "pred.saveAll": "שמור ניחושים ({n} נשמרו)",
   "pred.saved": "נשמר ✓",
   "pred.saveFailed": "השמירה נכשלה. נסה שוב.",
   "pred.partial": "{ok} נשמרו, {bad} לא נשמרו",
@@ -227,5 +227,9 @@
   "bd.winner": "מנצח",
   "bd.diff": "הפרש +{n}",
   "bd.risk": "סיכון",
-  "bd.auto": "ניחוש אוטומטי"
+  "bd.auto": "ניחוש אוטומטי",
+  "pred.allSaved": "✓ הכל נשמר",
+  "pred.savedShort": "נשמר",
+  "pred.saving": "שומר…",
+  "pred.fixIssues": "חלק מהניחושים חסרים או לא תקינים. בדוק את המשחקים המסומנים."
 }

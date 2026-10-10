@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planSave, gameOpenReason, countJokers } from './predictions.js';
+import { planSave, gameOpenReason, countJokers, pickIssue } from './predictions.js';
 
 const NOW = 1_000_000;
 const open = { round: 'RS', status: 'scheduled', t1: 'BOS', t2: 'NYK', tipoffMs: NOW + 60_000 };
@@ -17,6 +17,17 @@ describe('gameOpenReason', () => {
     expect(gameOpenReason({ ...open, round: 'R1' }, NOW)).toBe('not-counted');
     expect(gameOpenReason({ ...open, t2: null }, NOW)).toBe('teams-tbd');
     expect(gameOpenReason(undefined, NOW)).toBe('not-found');
+  });
+});
+
+describe('pickIssue', () => {
+  it('valid, tie, and out-of-range / non-integer', () => {
+    expect(pickIssue({ s1: 100, s2: 90 })).toBeNull();
+    expect(pickIssue({ s1: 90, s2: 90 })).toBe('tie');
+    expect(pickIssue({ s1: -1, s2: 90 })).toBe('invalid-score');
+    expect(pickIssue({ s1: 201, s2: 90 })).toBe('invalid-score');
+    expect(pickIssue({ s1: 1.5, s2: 90 })).toBe('invalid-score');
+    expect(pickIssue(null)).toBe('invalid-score');
   });
 });
 

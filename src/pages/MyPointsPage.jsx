@@ -108,7 +108,7 @@ export default function MyPointsPage() {
               <div key={g.id} className="mp-row">
                 <div className="mp-line">
                   <span className="mp-star" title={mine.jokers[g.id] ? t('pred.joker', { n: jokerMultiplier }) : ''}>{mine.jokers[g.id] ? '⭐' : ''}</span>
-                  <span className="mp-teams"><TeamBadge abbr={g.t1} compact /><span className="muted">–</span><TeamBadge abbr={g.t2} compact /></span>
+                  <span className="mp-teams"><TeamBadge abbr={g.t1} /><span className="muted">–</span><TeamBadge abbr={g.t2} /></span>
                   <strong className="mp-col"><Score a={p.s1} b={p.s2} /></strong>
                   <span className="mp-col">{hasResult ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : <span className="muted">–</span>}</span>
                   <strong className="mp-pts">{g.status === 'finished' ? (detail[g.id]?.pts ?? 0) : '–'}</strong>
