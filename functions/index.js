@@ -10,6 +10,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { addProfileDocs, adminEmails, normEmail } from './lib/profile.js';
 import { mapScheduleGame, validateImportItem } from './shared/schedule.js';
 import { planSave } from './shared/predictions.js';
+import { normalizeName } from './shared/names.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -36,32 +37,33 @@ export const beforeUserCreatedGate = beforeUserCreated(async (event) => {
   throw new IdentityHttpsError('permission-denied', 'Not an approved participant. Ask the admin to add your name.');
 });
 
-/** Public (unauthenticated): names the admin approved that nobody has claimed yet. */
-export const listOpenParticipants = onCall(async () => {
+/** Public (unauthenticated): is registration open? (No names are ever sent to the browser.) */
+export const registrationStatus = onCall(async () => {
   const settings = (await db.doc('appSettings/main').get()).data() || {};
-  if (!settings.registrationOpen) return { open: false, participants: [] };
-  const snap = await db.collection('participants').where('claimedBy', '==', null).get();
-  const participants = snap.docs
-    .map((d) => ({ id: d.id, displayName: d.data().displayName }))
-    .sort((a, b) => a.displayName.localeCompare(b.displayName, 'he'));
-  return { open: true, participants };
+  return { open: !!settings.registrationOpen };
 });
 
-/** Public: claim an approved name. Creates the Auth user (Admin SDK) + users/points/predictions docs. */
+/** Public: claim an approved name by TYPING it (must match the admin's list). Creates the Auth user (Admin SDK) + users/points/predictions docs. */
 export const registerParticipant = onCall(async (request) => {
-  const { participantId, password } = request.data || {};
+  const { password } = request.data || {};
+  const rawName = typeof request.data?.name === 'string' ? request.data.name : '';
+  const normName = normalizeName(rawName);
   const email = normEmail(request.data?.email);
-  if (typeof participantId !== 'string' || !participantId || participantId.includes('/')) throw new HttpsError('invalid-argument', 'participant');
+  if (!normName || rawName.length > 80) throw new HttpsError('invalid-argument', 'name');
   if (!EMAIL_RE.test(email)) throw new HttpsError('invalid-argument', 'email');
   if (password != null && (typeof password !== 'string' || password.length < 6)) throw new HttpsError('invalid-argument', 'password');
 
   const settings = (await db.doc('appSettings/main').get()).data() || {};
   if (!settings.registrationOpen) throw new HttpsError('failed-precondition', 'registration-closed');
 
-  const ref = db.doc(`participants/${participantId}`);
+  let found = await db.collection('participants').where('normalizedName', '==', normName).limit(1).get();
+  if (found.empty) found = await db.collection('participants').where('displayName', '==', rawName.trim()).limit(1).get();
+  if (found.empty) throw new HttpsError('not-found', 'name-not-found');
+  const ref = found.docs[0].ref;
+  const participantId = ref.id;
   const participant = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists) throw new HttpsError('not-found', 'participant');
+    if (!snap.exists) throw new HttpsError('not-found', 'name-not-found');
     const d = snap.data();
     if (d.claimedBy) throw new HttpsError('permission-denied', 'already-claimed');
     const busy = d.registeringAt && Date.now() - d.registeringAt.toMillis() < 120000 && d.registeringEmail !== email;

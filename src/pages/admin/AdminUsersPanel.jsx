@@ -6,8 +6,8 @@ import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useParticipants } from '../../hooks/useParticipants.js';
 import { addAudit } from '../../utils/audit.js';
+import { normalizeName as normName } from '@shared/names.js';
 
-const normName = (s) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 // Approved-participants whitelist (people can register only after being added here) + paid tracking.
 export default function AdminUsersPanel() {

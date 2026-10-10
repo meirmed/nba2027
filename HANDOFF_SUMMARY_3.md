@@ -20,3 +20,8 @@
 
 ## Reconciliation
 No points persisted yet.
+
+## Update: registration by typed name (owner decision)
+- No name dropdown. The user TYPES their name; `registerParticipant({name,email,password?})` matches it server-side against `participants.normalizedName` (shared `normalizeName`: NFC, strips invisible direction marks, collapses spaces, ignores Latin case), with a fallback on exact `displayName`. Names are never sent to the browser.
+- `listOpenParticipants` REMOVED; replaced by `registrationStatus` ({open}). On deploy the CLI will ask to delete `listOpenParticipants` -> answer **y** (intentional).
+- Errors: not-found -> "not on the list"; permission-denied -> already registered; aborted -> in progress; failed-precondition -> closed.
