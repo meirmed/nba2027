@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    // Admin = custom claim only. users.isAdmin is display-only and never trusted.
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // Profile: owner may edit ONLY these fields. paid / blocked / isAdmin / email are admin-or-function only.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if false;                       // created by function (Phase 1)
+      allow update: if isAdmin() || (isOwner(uid) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name','username','phone','team','photoURL','lang','updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    // Participant whitelist (admin adds names BEFORE people can register). Claimed via callable only.
+    match /participants/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Reference / config data: signed-in read, admin write.
+    match /teams/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /games/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /bonus/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /appSettings/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /h2hTournament/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /h2h/{id}     { allow read: if signedIn(); allow write: if isAdmin(); }
+
+    // Public snapshot of picks, written by function at tip-off.
+    match /picks/{gameId} { allow read: if signedIn(); allow write: if false; }
+
+    // Points are written by Cloud Functions only (admin overrides go through a callable -> auditLog).
+    match /points/{uid} { allow read: if signedIn(); allow write: if false; }
+
+    // PREDICTIONS: private until lock. Client writes go through callable `savePredictions`
+    // (validates tip-off server-side, scores 0-200 ints, writes dotted paths + serverTimestamp).
+    // Rules cannot loop over map keys to check each game's tip-off, so direct client writes are denied.
+    match /predictions/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    match /auditLog/{id} { allow read: if isAdmin(); allow create: if isAdmin(); allow update, delete: if false; }
+    match /backups/{id}  { allow read, write: if isAdmin(); }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
