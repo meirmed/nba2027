@@ -40,14 +40,16 @@ export function scoreGame(pred, result, ctx = {}) {
 
   if (winnerCorrect) {
     base += sc.winner;
-    const err = Math.abs(predMargin - realMargin);
-    const tier = [...sc.diffBonus].sort((a, b) => a.maxErr - b.maxErr).find((t) => err <= t.maxErr);
-    if (tier) { diffPts = tier.pts; base += diffPts; }
+    if (!exact) { // an exact score earns the exact bonus INSTEAD of the margin bonus
+      const err = Math.abs(predMargin - realMargin);
+      const tier = [...sc.diffBonus].sort((a, b) => a.maxErr - b.maxErr).find((t) => err <= t.maxErr);
+      if (tier) { diffPts = tier.pts; base += diffPts; }
+    }
     if (isNum(ctx.pickPct) && ctx.pickPct <= sc.risk.maxPickPct) { riskPts = sc.risk.pts; base += riskPts; }
   }
   if (exact) {
     base += sc.exact;
-    if (ctx.isUniqueExact) { uniquePts = sc.unique; base += uniquePts; }
+    if (ctx.isUniqueExact && !pred.autoFilled) { uniquePts = sc.unique; base += uniquePts; } // auto-filled never gets unique
   }
 
   let pts = base * (sc.roundMultipliers[ctx.round] ?? 1);

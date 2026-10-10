@@ -9,6 +9,7 @@ import { SettingsProvider } from './contexts/SettingsContext.jsx';
 import { TeamsProvider } from './contexts/TeamsContext.jsx';
 import { GamesProvider } from './contexts/GamesContext.jsx';
 import { MyPredictionsProvider } from './contexts/MyPredictionsContext.jsx';
+import { PointsProvider } from './contexts/PointsContext.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')).render(
             <TeamsProvider>
               <GamesProvider>
                 <MyPredictionsProvider>
-                  <App />
+                  <PointsProvider>
+                    <App />
+                  </PointsProvider>
                 </MyPredictionsProvider>
               </GamesProvider>
             </TeamsProvider>

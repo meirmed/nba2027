@@ -2,6 +2,7 @@
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { beforeUserCreated, HttpsError as IdentityHttpsError } from 'firebase-functions/v2/identity';
 import { defineString, defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
@@ -11,6 +12,7 @@ import { addProfileDocs, adminEmails, normEmail } from './lib/profile.js';
 import { mapScheduleGame, validateImportItem } from './shared/schedule.js';
 import { planSave } from './shared/predictions.js';
 import { normalizeName } from './shared/names.js';
+import { recalcAllPoints, reconcileAll } from './lib/recalc.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -280,4 +282,32 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
     batch.update(g.ref, { picksLockedAt: FieldValue.serverTimestamp() });
     await batch.commit();
   }
+});
+
+// ---------------------------------------------------------------- scoring (Phase 3)
+/**
+ * When a game's result-relevant fields change (and it is/was finished), recompute everyone's points from raw data.
+ * Ignores writes that only touch picksLockedAt / updatedAt etc. Recompute is idempotent, so retries are safe.
+ */
+export const onGameUpdated = onDocumentWritten({ document: 'games/{gameId}', timeoutSeconds: 120 }, async (event) => {
+  const b = event.data?.before?.data();
+  const a = event.data?.after?.data();
+  const key = (g) => (g ? [g.status, g.s1, g.s2, g.round, g.t1, g.t2].join('|') : 'none');
+  if (key(b) === key(a)) return;
+  if (b?.status !== 'finished' && a?.status !== 'finished') return;
+  await recalcAllPoints(db);
+});
+
+/** Admin: full recompute (after changing scoring values, or after any incident). Audited. */
+export const recalcAll = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  const r = await recalcAllPoints(db);
+  await db.collection('auditLog').add({ action: 'points.recalcAll', by: request.auth.uid, ts: FieldValue.serverTimestamp(), target: 'points', before: null, after: r });
+  return r;
+});
+
+/** Admin: stored points vs recomputed from raw games + predictions. Expected: ok = true (0 mismatches). */
+export const reconcilePoints = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  return reconcileAll(db);
 });

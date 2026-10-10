@@ -1,4 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import { usePoints } from '../contexts/PointsContext.jsx';
+import { rankRows } from '@shared/standings.js';
 import PageShell from '../components/PageShell.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
@@ -20,7 +25,10 @@ const PRESET_LABEL = { 7: 'mp.range7', 30: 'mp.range30', all: 'mp.rangeAll', upc
 export default function MyPointsPage() {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
-  const { jokerMultiplier } = useScoring();
+  const { jokerMultiplier, tiebreakers } = useScoring();
+  const { user } = useAuth();
+  const pointsAll = usePoints();
+  const [detail, setDetail] = useState({}); // pointsDetail/{uid}.byGame: {gameId:{pts,...}}
   const { games } = useGames();
   const mine = useMyPredictions();
 
@@ -28,6 +36,12 @@ export default function MyPointsPage() {
   const [preset, setPreset] = useState('7');
   const [from, setFrom] = useState(() => addDaysToKey(dayKey(new Date(), timezone), -6));
   const [to, setTo] = useState(() => dayKey(new Date(), timezone));
+
+  useEffect(() => {
+    if (!user) return undefined;
+    return onSnapshot(doc(db, 'pointsDetail', user.uid), (snap) => setDetail(snap.data()?.byGame || {}), () => setDetail({}));
+  }, [user]);
+  const myRank = useMemo(() => rankRows(pointsAll.rows, tiebreakers).find((r) => r.uid === user?.uid), [pointsAll.rows, tiebreakers, user]);
 
   const mineAll = useMemo(() => games.filter((g) => mine.games[g.id]), [games, mine.games]);
 
@@ -67,6 +81,12 @@ export default function MyPointsPage() {
               <label className="field">{t('mp.to')}<input className="input" dir="ltr" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
             </div>
           )}
+          {myRank && (
+            <div className="card mp-summary">
+              <strong>{t('mp.total')}: {myRank.total ?? 0}</strong>
+              <span className="muted">{t('mp.rank', { r: myRank.rank, n: pointsAll.rows.length })}</span>
+            </div>
+          )}
           <p className="muted small">{t('mp.jokerLegend', { n: jokerMultiplier })}</p>
           {groups.length === 0 && <p className="muted">{t('mp.noneInRange')}</p>}
           {groups.length > 0 && (
@@ -75,6 +95,7 @@ export default function MyPointsPage() {
               <span className="mp-teams" />
               <span className="mp-col">{t('mp.myPick')}</span>
               <span className="mp-col">{t('mp.result')}</span>
+              <span className="mp-pts">{t('mp.points')}</span>
             </div>
           )}
         </>
@@ -93,6 +114,7 @@ export default function MyPointsPage() {
                   <span className="mp-teams"><TeamBadge abbr={g.t1} compact /><span className="muted">–</span><TeamBadge abbr={g.t2} compact /></span>
                   <strong className="mp-col"><Score a={p.s1} b={p.s2} /></strong>
                   <span className="mp-col">{hasResult ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : <span className="muted">–</span>}</span>
+                  <strong className="mp-pts">{g.status === 'finished' ? (detail[g.id]?.pts ?? 0) : '–'}</strong>
                 </div>
                 <div className="muted small">
                   {formatDateTime(g.tipoff, lang, timezone)}
@@ -105,7 +127,6 @@ export default function MyPointsPage() {
           })}
         </div>
       ))}
-      {mineAll.length > 0 && <p className="muted small">{t('mp.pointsSoon')}</p>}
     </PageShell>
   );
 }

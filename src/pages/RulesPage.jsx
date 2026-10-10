@@ -21,7 +21,11 @@ export default function RulesPage() {
       <table className="table" dir="ltr">
         <tbody>{rows.map(([label, v], i) => <tr key={i}><td>{label}</td><td>{v}</td></tr>)}</tbody>
       </table>
-      <p className="muted">{t('rules.placeholderNote')}</p>
+      <ul className="muted small">
+        <li>{t('rules.exactNoDiff')}</li>
+        <li>{t('rules.autofillNoUnique')}</li>
+        <li>{t('rules.ot')}</li>
+      </ul>
     </PageShell>
   );
 }

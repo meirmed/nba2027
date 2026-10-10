@@ -35,12 +35,23 @@ describe('scoreGame', () => {
     const r = scoreGame({ s1: 105, s2: 100 }, fin(110, 103), { scoring: sc }); // margin err 2 -> tier 2
     expect(r).toMatchObject({ pts: 4, winnerCorrect: true, exact: false, diffPts: 2 });
   });
-  it('exact score includes winner + diff + exact', () => {
-    expect(scoreGame({ s1: 110, s2: 100 }, fin(110, 100), { scoring: sc }).pts).toBe(2 + 3 + 5);
+  it('exact score = winner + exact, and NO margin bonus', () => {
+    const r = scoreGame({ s1: 110, s2: 100 }, fin(110, 100), { scoring: sc });
+    expect(r).toMatchObject({ pts: 2 + 5, diffPts: 0, exact: true });
   });
-  it('unique + risk bonuses', () => {
+  it('unique + risk bonuses on an exact pick', () => {
     const r = scoreGame({ s1: 110, s2: 100 }, fin(110, 100), { scoring: sc, isUniqueExact: true, pickPct: 5 });
-    expect(r.pts).toBe(2 + 3 + 4 + 5 + 3);
+    expect(r.pts).toBe(2 + 5 + 4 + 3);
+  });
+  it('risk bonus is inclusive at the threshold and needs a correct winner', () => {
+    expect(scoreGame({ s1: 105, s2: 100 }, fin(120, 100), { scoring: sc, pickPct: 10 }).riskPts).toBe(4);
+    expect(scoreGame({ s1: 105, s2: 100 }, fin(120, 100), { scoring: sc, pickPct: 10.1 }).riskPts).toBe(0);
+    expect(scoreGame({ s1: 90, s2: 100 }, fin(120, 100), { scoring: sc, pickPct: 1 }).pts).toBe(0);
+  });
+  it('auto-filled pick never earns the unique bonus (even if exact)', () => {
+    const r = scoreGame({ s1: 110, s2: 100, autoFilled: true }, fin(110, 100), { scoring: sc, isUniqueExact: true });
+    expect(r.uniquePts).toBe(0);
+    expect(r.pts).toBe(Math.floor((2 + 5) * 0.5));
   });
   it('round multiplier, joker, auto-fill floor', () => {
     const cfg = { ...sc, roundMultipliers: { F: 2 }, jokerMultiplier: 2, autoFillFactor: 0.5 };

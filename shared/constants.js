@@ -9,24 +9,25 @@ export const PREV_ROUND = { R1: null, R2: 'R1', CF: 'R2', F: 'CF' };
 export const BONUS_CATEGORIES = ['general', 'round1', 'round2', 'cf', 'finals'];
 export const BONUS_TYPES = ['numeric', 'choice', 'team', 'player', 'dynamic_score', 'text'];
 
-// !!! PLACEHOLDER VALUES - owner must confirm (Blueprint §12 Q2). Real values live in appSettings/main.scoring.
+// Owner-approved values (risk.pts is still a PLACEHOLDER - owner has not given it yet). Live values: appSettings/main.scoring.
 export const DEFAULT_SCORING = {
-  winner: 2,
-  exact: 5,
-  // margin-error tiers (|predicted margin - actual margin|), applied when winner is correct. CONFIRM tiers.
+  winner: 5, // correct winner
+  exact: 7, // exact score: ADDED to winner points; an exact score does NOT also get the margin bonus
+  // margin closeness: only when the winner is right and the score is not exact. error = |predicted margin - actual margin|
   diffBonus: [
-    { maxErr: 0, pts: 3 },
+    { maxErr: 1, pts: 4 },
+    { maxErr: 2, pts: 3 },
     { maxErr: 3, pts: 2 },
-    { maxErr: 6, pts: 1 },
+    { maxErr: 4, pts: 1 },
   ],
-  // risk bonus: winner correct and pick shared by <= maxPickPct % of users. CONFIRM definition.
-  risk: { maxPickPct: 15, pts: 2 },
-  unique: 3, // only user with the exact score
+  // risk bonus: winner correct AND <= maxPickPct % of the picks on that game chose that winner. pts = PLACEHOLDER
+  risk: { maxPickPct: 10, pts: 2 },
+  unique: 5, // only (non-auto-filled) user with the exact score. Auto-filled picks never earn it.
   roundMultipliers: { RS: 1, R1: 1, R2: 1, CF: 1, F: 1 },
   jokersPerSeason: 3,
   jokerMultiplier: 2,
   autoFillFactor: 0.5, // floor-reduced
-  tiebreakers: ['total', 'exactHits', 'uniqueHits', 'bonus'], // CONFIRM order (Blueprint §12 Q9)
+  tiebreakers: ['total', 'exactHits', 'uniqueHits', 'bonus'],
 };
 
 export const DEFAULT_SETTINGS = {
