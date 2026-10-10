@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Timestamp, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { db } from '../../firebase.js';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../firebase.js';
 import PageShell from '../../components/PageShell.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
 import Score from '../../components/Score.jsx';
@@ -11,6 +12,7 @@ import { useTeams } from '../../contexts/TeamsContext.jsx';
 import { useGames } from '../../hooks/useGames.js';
 import { addAudit } from '../../utils/audit.js';
 import AdminScheduleImport from './AdminScheduleImport.jsx';
+import PollerHealth from './PollerHealth.jsx';
 import { formatDateTime, toLocalInput } from '../../utils/dates.js';
 import { GAME_ROUNDS } from '@shared/constants.js';
 import { TEAMS } from '@shared/teams.js';
@@ -85,6 +87,15 @@ export default function AdminGamesPanel() {
     } catch (e) { console.error(e); setMsg(t('common.error')); }
   };
 
+  const resync = async () => {
+    setMsg('');
+    try {
+      const r = (await httpsCallable(functions, 'resyncGame')({ gameId: editing.id })).data;
+      setMsg(r.applied ? t('ag.resyncDone') : t('ag.resyncNone'));
+      setForm(null); setEditing(null); setErrs([]);
+    } catch (e) { console.error(e); setErrs(['common.error']); }
+  };
+
   const remove = async (g) => {
     if (!window.confirm(t('common.confirmDelete'))) return;
     try {
@@ -144,6 +155,7 @@ export default function AdminGamesPanel() {
           <div className="actions">
             <button className="btn" onClick={save}>{t('common.save')}</button>
             <button className="btn ghost" onClick={() => { setForm(null); setEditing(null); setErrs([]); }}>{t('common.cancel')}</button>
+            {editing?.apiGameId != null && <button className="btn ghost" onClick={resync}>{t('ag.resync')}</button>}
           </div>
         </div>
       </PageShell>
@@ -152,6 +164,7 @@ export default function AdminGamesPanel() {
 
   return (
     <PageShell titleKey="admin.games">
+      <PollerHealth />
       <div className="actions">
         <button className="btn" onClick={() => setView('import')}>{t('ai.title')}</button>
         <button className="btn ghost" onClick={openNew}>{t('ag.new')}</button>

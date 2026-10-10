@@ -13,6 +13,9 @@ import { mapScheduleGame, validateImportItem } from './shared/schedule.js';
 import { planSave } from './shared/predictions.js';
 import { normalizeName } from './shared/names.js';
 import { recalcAllPoints, reconcileAll } from './lib/recalc.js';
+import { fetchGamesRange, fetchGamesByDates, apiDatesFor } from './lib/balldontlie.js';
+import { runPoll, currentOf, toWrite } from './lib/poll.js';
+import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -132,27 +135,6 @@ const requireAdmin = (request) => {
   if (request.auth?.token?.admin !== true) throw new HttpsError('permission-denied', 'admin-only');
 };
 
-async function fetchApiGames(startDate, endDate, key) {
-  const out = [];
-  let cursor = null;
-  for (let page = 0; page < 4; page += 1) { // free tier = 5 req/min: never more than 4 pages per click
-    const url = new URL('https://api.balldontlie.io/v1/games');
-    url.searchParams.set('start_date', startDate);
-    url.searchParams.set('end_date', endDate);
-    url.searchParams.set('per_page', '100');
-    if (cursor) url.searchParams.set('cursor', String(cursor));
-    const res = await fetch(url, { headers: { Authorization: key } });
-    if (res.status === 401) throw new HttpsError('failed-precondition', 'api-unauthorized');
-    if (res.status === 429) throw new HttpsError('resource-exhausted', 'api-rate-limited');
-    if (!res.ok) throw new HttpsError('unavailable', `api-${res.status}`);
-    const body = await res.json();
-    out.push(...(body.data || []));
-    cursor = body.meta?.next_cursor;
-    if (!cursor) break;
-  }
-  return out;
-}
-
 /** Admin: games from balldontlie for a date range (<=14 days), flagged if already in our DB. Key never leaves the server. */
 export const listScheduleGames = onCall({ secrets: [NBA_API_KEY] }, async (request) => {
   requireAdmin(request);
@@ -161,7 +143,7 @@ export const listScheduleGames = onCall({ secrets: [NBA_API_KEY] }, async (reque
   const days = (Date.parse(endDate) - Date.parse(startDate)) / 86400000;
   if (!(days >= 0 && days <= 14)) throw new HttpsError('invalid-argument', 'range');
 
-  const rows = (await fetchApiGames(startDate, endDate, NBA_API_KEY.value())).map(mapScheduleGame);
+  const rows = (await fetchGamesRange(startDate, endDate, NBA_API_KEY.value())).map(mapScheduleGame);
   const withId = rows.filter((r) => r.id);
   const snaps = withId.length ? await db.getAll(...withId.map((r) => db.doc(`games/${r.id}`))) : [];
   const existing = new Set(snaps.filter((s) => s.exists).map((s) => s.id));
@@ -310,4 +292,30 @@ export const recalcAll = onCall({ timeoutSeconds: 120 }, async (request) => {
 export const reconcilePoints = onCall({ timeoutSeconds: 120 }, async (request) => {
   requireAdmin(request);
   return reconcileAll(db);
+});
+
+// ---------------------------------------------------------------- live scores (Phase 4)
+/** Every minute: update scheduled/live games from balldontlie (see lib/poll.js). Writes a heartbeat to system/poller. */
+export const pollLiveScores = onSchedule({ schedule: 'every 1 minutes', timeZone: 'UTC', secrets: [NBA_API_KEY], timeoutSeconds: 55 }, async () => {
+  await runPoll(db, NBA_API_KEY.value());
+});
+
+/** Admin: drop the manual lock on ONE game and pull its current state from the API now. Audited. */
+export const resyncGame = onCall({ secrets: [NBA_API_KEY] }, async (request) => {
+  requireAdmin(request);
+  const gameId = request.data?.gameId;
+  if (typeof gameId !== 'string' || !gameId || gameId.includes('/')) throw new HttpsError('invalid-argument', 'gameId');
+  const ref = db.doc(`games/${gameId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'game');
+  const g = snap.data();
+  if (g.apiGameId == null) throw new HttpsError('failed-precondition', 'no-api-id');
+
+  const apiGames = await fetchGamesByDates(apiDatesFor([g.tipoff.toMillis()]), NBA_API_KEY.value());
+  const api = apiGames.find((x) => x.id === g.apiGameId);
+  if (!api) throw new HttpsError('not-found', 'not-in-api');
+  const patch = planGameUpdate(currentOf(g), parseApiGame(api), { force: true });
+  await ref.update({ ...(patch ? toWrite(patch) : { updatedAt: FieldValue.serverTimestamp() }), overridden: false });
+  await db.collection('auditLog').add({ action: 'game.resync', by: request.auth.uid, ts: FieldValue.serverTimestamp(), target: `games/${gameId}`, before: { overridden: !!g.overridden, status: g.status, s1: g.s1 ?? null, s2: g.s2 ?? null }, after: patch || {} });
+  return { applied: !!patch, patch: patch || {} };
 });

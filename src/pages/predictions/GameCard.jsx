@@ -51,7 +51,7 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
       {locked && !saved && game.status !== 'cancelled' && <p className="muted small">{t('pred.noPick')}</p>}
       {showResult && (
         <p className="small">
-          {game.status === 'finished' ? t('pred.final') : t('status.live')}: <strong><Score a={game.s1 ?? 0} b={game.s2 ?? 0} /></strong>{game.ot > 0 ? ` (${t('results.ot')})` : ''}
+          {game.status === 'finished' ? t('pred.final') : t('status.live')}: <strong><Score a={game.s1 ?? 0} b={game.s2 ?? 0} /></strong>{game.ot > 0 ? ` (${t('results.ot')})` : ''}{game.status === 'live' && game.liveText ? ` · ${game.liveText}` : ''}
         </p>
       )}
       {reason && <p className="error small" role="alert">{t(`pred.err.${reason}`)}</p>}

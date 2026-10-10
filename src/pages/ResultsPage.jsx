@@ -36,6 +36,7 @@ export default function ResultsPage() {
               <span className="teams"><TeamBadge abbr={g.t1} /> <span className="muted">–</span> <TeamBadge abbr={g.t2} /></span>
               <span className="res-score">
                 {g.status === 'finished' || g.status === 'live' ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : ''}
+                {g.status === 'live' && g.liveText && <small className="muted" dir="ltr"> {g.liveText}</small>}
                 {g.ot > 0 && <small> {t('results.ot')}{g.ot > 1 ? g.ot : ''}</small>}
               </span>
               <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span>

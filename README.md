@@ -41,3 +41,11 @@ firebase functions:secrets:set NBA_API_KEY     # paste the balldontlie key when 
 firebase deploy --only functions
 ```
 Admin -> Games -> "Import from schedule": pick dates, tick games, add. Free tier = 5 requests/min.
+
+## Live scores (Phase 4)
+`pollLiveScores` runs every minute. It reads only games that are scheduled/live, tipped off in the last 48 h (or within 15 min) and have an `apiGameId`
+(games created via "Import from schedule"), calls balldontlie ONCE for their dates, and updates status / score (final incl. OT) / OT / live text.
+Games with the manual lock (`overridden`) are never touched. Admin -> Games shows the heartbeat; "Re-sync from API" unlocks a single game.
+```bash
+firebase deploy --only firestore:indexes,firestore:rules,functions   # first deploy needs the new games index (status + tipoff)
+```

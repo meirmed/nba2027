@@ -231,5 +231,15 @@
   "pred.allSaved": "✓ Everything is saved",
   "pred.savedShort": "Saved",
   "pred.saving": "Saving…",
-  "pred.fixIssues": "Some picks are incomplete or invalid. Check the highlighted games."
+  "pred.fixIssues": "Some picks are incomplete or invalid. Check the highlighted games.",
+  "hl.ok": "Live scores running",
+  "hl.stale": "Live-score updater is not running",
+  "hl.lastRun": "last run {t} ago",
+  "hl.noGames": "no games in play",
+  "hl.lastFetch": "last update from the API {t} ago",
+  "hl.error": "Last error",
+  "hl.none": "No live-score heartbeat yet. Deploy the functions.",
+  "ag.resync": "Re-sync from API",
+  "ag.resyncDone": "Synced from the API ✓",
+  "ag.resyncNone": "Already matches the API. Manual lock removed."
 }
