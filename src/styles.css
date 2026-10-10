@@ -78,6 +78,13 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .name-short { display: none; }
 @media (max-width: 600px) { .name-full { display: none; } .name-short { display: inline; } }
 .mp-row { background: var(--surface); border-radius: var(--radius); padding: .6rem .8rem; margin-block: .4rem; display: flex; flex-direction: column; gap: .2rem; }
-.mp-main { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
-.mp-teams { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mp-pick { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* My Points: one line = star | teams | my pick | result. No forced dir: follows the page (RTL puts home on the right). */
+.mp-line { display: flex; align-items: center; gap: .4rem; font-size: .95rem; }
+.mp-star { width: 1.2rem; text-align: center; flex: none; }
+.mp-teams { flex: 1; min-width: 0; display: flex; align-items: center; gap: .3rem; white-space: nowrap; }
+.mp-teams .team { min-width: 0; } .mp-teams strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-col { width: 4.4rem; flex: none; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mp-head { padding-inline: .8rem; margin-top: .4rem; }
+.score { display: inline-flex; gap: .25em; justify-content: center; }
+@media (max-width: 600px) { .mp-teams .dot { display: none; } .mp-line { font-size: .88rem; gap: .3rem; } .mp-col { width: 3.9rem; } }
