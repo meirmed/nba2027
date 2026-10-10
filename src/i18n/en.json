@@ -167,5 +167,13 @@
   "auth.errNotListed": "This name isn't on the approved list. Type it exactly as the admin entered it, or ask the admin.",
   "auth.errBusy": "Registration for this name is in progress. Try again in 2 minutes.",
   "mp.jokerLegend": "⭐ = joker used (×{n} points)",
-  "mp.result": "Result"
+  "mp.result": "Result",
+  "mp.range7": "Last 7 days",
+  "mp.range30": "Last 30 days",
+  "mp.rangeAll": "Whole season",
+  "mp.rangeUpcoming": "Upcoming",
+  "mp.rangeCustom": "Custom",
+  "mp.from": "From",
+  "mp.to": "To",
+  "mp.noneInRange": "No predictions in this period."
 }

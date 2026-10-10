@@ -1,60 +1,111 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import PageShell from '../components/PageShell.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { useMyPredictions } from '../contexts/MyPredictionsContext.jsx';
 import { useGames } from '../hooks/useGames.js';
-import { formatDateTime } from '../utils/dates.js';
+import { dayKey, formatDateTime, formatDay } from '../utils/dates.js';
+import { addDaysToKey } from '@shared/daykeys.js';
 
 // Each number is its own flex item, so the row follows the page direction deterministically:
 // Hebrew (RTL): home team + home score on the RIGHT, away on the LEFT. English (LTR): home on the left.
 const Score = ({ a, b }) => <span className="score"><span>{a}</span><span className="muted">–</span><span>{b}</span></span>;
 
-// Skeleton (Phase 2): one line per game = teams | my pick | actual result. Points columns arrive with scoring (Phase 3).
+const PRESETS = ['7', '30', 'all', 'upcoming', 'custom'];
+const PRESET_LABEL = { 7: 'mp.range7', 30: 'mp.range30', all: 'mp.rangeAll', upcoming: 'mp.rangeUpcoming', custom: 'mp.rangeCustom' };
+
+// Skeleton (Phase 2): grouped by day (newest first). Default = last 7 days; other periods on demand.
+// One line per game = teams | my pick | actual result. Points columns arrive with scoring (Phase 3).
 export default function MyPointsPage() {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const { jokerMultiplier } = useScoring();
   const { games } = useGames();
   const mine = useMyPredictions();
-  const rows = useMemo(() => games.filter((g) => mine.games[g.id]).reverse(), [games, mine.games]);
+
+  const today = dayKey(new Date(), timezone);
+  const [preset, setPreset] = useState('7');
+  const [from, setFrom] = useState(() => addDaysToKey(dayKey(new Date(), timezone), -6));
+  const [to, setTo] = useState(() => dayKey(new Date(), timezone));
+
+  const mineAll = useMemo(() => games.filter((g) => mine.games[g.id]), [games, mine.games]);
+
+  const groups = useMemo(() => {
+    const t0 = dayKey(new Date(), timezone);
+    let lo = null;
+    let hi = null;
+    if (preset === '7') { lo = addDaysToKey(t0, -6); hi = t0; }
+    else if (preset === '30') { lo = addDaysToKey(t0, -29); hi = t0; }
+    else if (preset === 'upcoming') { lo = addDaysToKey(t0, 1); }
+    else if (preset === 'custom') { lo = from || null; hi = to || null; }
+    const m = new Map();
+    mineAll.forEach((g) => {
+      const k = dayKey(g.tipoff, timezone);
+      if ((lo && k < lo) || (hi && k > hi)) return;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(g); // games arrive sorted by tip-off, so each day is in time order
+    });
+    return [...m.entries()].sort((a, b) => b[0].localeCompare(a[0])); // newest day first
+  }, [mineAll, preset, from, to, timezone]);
 
   return (
     <PageShell titleKey="nav.myPoints">
-      {rows.length === 0 && <p className="muted">{t('mp.empty')}</p>}
-      {rows.length > 0 && (
+      {mineAll.length === 0 && <p className="muted">{t('mp.empty')}</p>}
+      {mineAll.length > 0 && (
         <>
-          <p className="muted small">{t('mp.jokerLegend', { n: jokerMultiplier })}</p>
-          <div className="mp-line mp-head muted small">
-            <span className="mp-star" />
-            <span className="mp-teams" />
-            <span className="mp-col">{t('mp.myPick')}</span>
-            <span className="mp-col">{t('mp.result')}</span>
+          <div className="tabs scroll" role="tablist">
+            {PRESETS.map((p) => (
+              <button key={p} role="tab" aria-selected={preset === p} className={`tab ${preset === p ? 'active' : ''}`} onClick={() => setPreset(p)}>
+                {t(PRESET_LABEL[p])}
+              </button>
+            ))}
           </div>
+          {preset === 'custom' && (
+            <div className="grid-form">
+              <label className="field">{t('mp.from')}<input className="input" dir="ltr" type="date" max={today} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+              <label className="field">{t('mp.to')}<input className="input" dir="ltr" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+            </div>
+          )}
+          <p className="muted small">{t('mp.jokerLegend', { n: jokerMultiplier })}</p>
+          {groups.length === 0 && <p className="muted">{t('mp.noneInRange')}</p>}
+          {groups.length > 0 && (
+            <div className="mp-line mp-head muted small">
+              <span className="mp-star" />
+              <span className="mp-teams" />
+              <span className="mp-col">{t('mp.myPick')}</span>
+              <span className="mp-col">{t('mp.result')}</span>
+            </div>
+          )}
         </>
       )}
-      {rows.map((g) => {
-        const p = mine.games[g.id];
-        const hasResult = g.status === 'finished' || g.status === 'live';
-        return (
-          <div key={g.id} className="mp-row">
-            <div className="mp-line">
-              <span className="mp-star" title={mine.jokers[g.id] ? t('pred.joker', { n: jokerMultiplier }) : ''}>{mine.jokers[g.id] ? '⭐' : ''}</span>
-              <span className="mp-teams"><TeamBadge abbr={g.t1} compact /><span className="muted">–</span><TeamBadge abbr={g.t2} compact /></span>
-              <strong className="mp-col"><Score a={p.s1} b={p.s2} /></strong>
-              <span className="mp-col">{hasResult ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : <span className="muted">–</span>}</span>
-            </div>
-            <div className="muted small">
-              {formatDateTime(g.tipoff, lang, timezone)}
-              {g.status === 'live' && ` · ${t('status.live')}`}
-              {g.status === 'scheduled' && ` · ${t('mp.pending')}`}
-              {g.ot > 0 && ` · ${t('results.ot')}`}
-            </div>
-          </div>
-        );
-      })}
-      <p className="muted small">{t('mp.pointsSoon')}</p>
+
+      {groups.map(([k, list]) => (
+        <div key={k} className="day">
+          <h3>{formatDay(list[0].tipoff, lang, timezone)}</h3>
+          {list.map((g) => {
+            const p = mine.games[g.id];
+            const hasResult = g.status === 'finished' || g.status === 'live';
+            return (
+              <div key={g.id} className="mp-row">
+                <div className="mp-line">
+                  <span className="mp-star" title={mine.jokers[g.id] ? t('pred.joker', { n: jokerMultiplier }) : ''}>{mine.jokers[g.id] ? '⭐' : ''}</span>
+                  <span className="mp-teams"><TeamBadge abbr={g.t1} compact /><span className="muted">–</span><TeamBadge abbr={g.t2} compact /></span>
+                  <strong className="mp-col"><Score a={p.s1} b={p.s2} /></strong>
+                  <span className="mp-col">{hasResult ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : <span className="muted">–</span>}</span>
+                </div>
+                <div className="muted small">
+                  {formatDateTime(g.tipoff, lang, timezone)}
+                  {g.status === 'live' && ` · ${t('status.live')}`}
+                  {g.status === 'scheduled' && ` · ${t('mp.pending')}`}
+                  {g.ot > 0 && ` · ${t('results.ot')}`}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      {mineAll.length > 0 && <p className="muted small">{t('mp.pointsSoon')}</p>}
     </PageShell>
   );
 }
