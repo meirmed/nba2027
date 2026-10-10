@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeAllPoints, rankRows } from './standings.js';
+import { computeAllPoints, rankRows, scoreGamePicks } from './standings.js';
 
 const sc = { winner: 5, exact: 7, diffBonus: [{ maxErr: 1, pts: 4 }, { maxErr: 2, pts: 3 }, { maxErr: 3, pts: 2 }, { maxErr: 4, pts: 1 }],
   risk: { maxPickPct: 10, pts: 2 }, unique: 5, roundMultipliers: { RS: 1 }, jokerMultiplier: 2, autoFillFactor: 0.5 };
@@ -55,6 +55,22 @@ describe('computeAllPoints', () => {
     const r = computeAllPoints({ games: [g1], predictions: {}, uids: ['Z'], scoring: sc, countedRounds: ['RS'] });
     expect(r.Z.gamePts).toBe(0);
     expect(r.Z.byGame).toEqual({});
+  });
+});
+
+describe('scoreGamePicks (drives the "Everyone\'s picks" badges)', () => {
+  it('flags exact/unique/diff/auto per user', () => {
+    const picks = [
+      { uid: 'A', p: P(110, 100) }, { uid: 'B', p: P(108, 100) }, { uid: 'C', p: P(90, 100) }, { uid: 'D', p: P(110, 100, { autoFilled: true }) },
+    ];
+    const r = scoreGamePicks({ game: { round: 'RS', s1: 110, s2: 100 }, picks, scoring: sc });
+    expect(r.A).toMatchObject({ pts: 17, exact: true, uniquePts: 5, diffPts: 0, winnerCorrect: true });
+    expect(r.B).toMatchObject({ pts: 8, exact: false, diffPts: 3 });
+    expect(r.C).toMatchObject({ pts: 0, winnerCorrect: false });
+    expect(r.D).toMatchObject({ pts: 6, exact: true, uniquePts: 0 });
+  });
+  it('returns nothing when there are no valid picks', () => {
+    expect(scoreGamePicks({ game: { round: 'RS', s1: 1, s2: 0 }, picks: [], scoring: sc })).toEqual({});
   });
 });
 

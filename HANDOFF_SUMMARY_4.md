@@ -23,3 +23,7 @@
 - No provisional (live) points yet. No per-period (weekly/monthly) leaderboard tab yet — needs the period design with H2H (Phase 6).
 - After changing scoring values in Admin: press "Recalculate all points".
 - Deploy needs functions + firestore rules.
+
+## Update: "Everyone's picks" shows why each user got points
+- `shared/standings.js` now exports `scoreGamePicks` (the per-game rule application); `computeAllPoints` uses it too. The Everyone's-picks table runs the SAME function on `picks/{gameId}` to show chips (unique, exact, winner, diff +N, risk, auto) and the game total per user, only for finished, counted games. No extra reads and no new fields.
+- Behaviour of the saved totals is unchanged (52 -> 54 tests); redeploying functions is optional but keeps `functions/shared` byte-identical with the client.

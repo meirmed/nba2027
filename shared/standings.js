@@ -12,6 +12,28 @@ export const emptyStats = () => ({
 });
 
 /**
+ * Score every pick on ONE finished game (the only place the per-game rules are applied across players).
+ * game: {round, s1, s2}   picks: [{uid, p:{s1,s2,autoFilled?}, joker}]   -> {uid: scoreGame result}
+ * "unique" = exactly ONE non-auto-filled exact pick.  Risk % = share of ALL valid picks on the game with the same winner.
+ */
+export function scoreGamePicks({ game, picks, scoring }) {
+  const sc = mergeScoring(scoring);
+  const valid = picks.filter(({ p }) => validPick(p));
+  const out = {};
+  if (valid.length === 0) return out;
+  const counts = { 1: 0, 2: 0 };
+  valid.forEach(({ p }) => { counts[sideOf(p.s1, p.s2)] += 1; });
+  const exactManual = valid.filter(({ p }) => !p.autoFilled && p.s1 === game.s1 && p.s2 === game.s2);
+  const uniqueUid = exactManual.length === 1 ? exactManual[0].uid : null;
+  valid.forEach(({ uid, p, joker }) => {
+    out[uid] = scoreGame(p, { s1: game.s1, s2: game.s2, status: 'finished' }, {
+      round: game.round, joker: !!joker, pickPct: (100 * counts[sideOf(p.s1, p.s2)]) / valid.length, isUniqueExact: uid === uniqueUid, scoring: sc,
+    });
+  });
+  return out;
+}
+
+/**
  * games: [{id, round, status, t1, t2, s1, s2, tipoffMs}]   predictions: {uid: {games:{id:{s1,s2,autoFilled?}}, jokers:{id:true}}}
  * Returns {uid: {...stats, byGame:{gameId:{pts,w,x,u,r,d}}}}.  gameHits === winnerCorrect (a hit needs the right winner).
  * "unique" = exactly ONE non-auto-filled exact pick on that game.  Risk % = share of ALL picks on the game with the same winner.
@@ -28,18 +50,11 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
 
   finished.forEach((g) => {
     const picks = [];
-    uids.forEach((uid) => { const p = predictions[uid]?.games?.[g.id]; if (validPick(p)) picks.push({ uid, p }); });
-    if (picks.length === 0) return;
-    const counts = { 1: 0, 2: 0 };
-    picks.forEach(({ p }) => { counts[sideOf(p.s1, p.s2)] += 1; });
-    const exactManual = picks.filter(({ p }) => !p.autoFilled && p.s1 === g.s1 && p.s2 === g.s2);
-    const uniqueUid = exactManual.length === 1 ? exactManual[0].uid : null;
-
-    picks.forEach(({ uid, p }) => {
-      const r = scoreGame(p, { s1: g.s1, s2: g.s2, status: 'finished' }, {
-        round: g.round, joker: !!predictions[uid]?.jokers?.[g.id],
-        pickPct: (100 * counts[sideOf(p.s1, p.s2)]) / picks.length, isUniqueExact: uid === uniqueUid, scoring: sc,
-      });
+    uids.forEach((uid) => {
+      const p = predictions[uid]?.games?.[g.id];
+      if (validPick(p)) picks.push({ uid, p, joker: !!predictions[uid]?.jokers?.[g.id] });
+    });
+    Object.entries(scoreGamePicks({ game: g, picks, scoring: sc })).forEach(([uid, r]) => {
       const u = out[uid];
       u.gamePts += r.pts;
       u.gamePtsByRound[g.round] = (u.gamePtsByRound[g.round] || 0) + r.pts;

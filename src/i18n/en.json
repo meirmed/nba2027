@@ -221,5 +221,11 @@
   "sc.recalcDone": "Recalculated {n} users ✓",
   "sc.reconOk": "✅ 0 mismatches ({n} users checked)",
   "sc.reconBad": "⚠️ {n} mismatches",
-  "sc.invalid": "Check the values: numbers only, no negatives."
+  "sc.invalid": "Check the values: numbers only, no negatives.",
+  "bd.unique": "unique",
+  "bd.exact": "exact",
+  "bd.winner": "winner",
+  "bd.diff": "diff +{n}",
+  "bd.risk": "risk",
+  "bd.auto": "auto"
 }
