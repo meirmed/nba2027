@@ -18,7 +18,7 @@ import { GAME_ROUNDS } from '@shared/constants.js';
 import { TEAMS } from '@shared/teams.js';
 import { GAME_STATUSES, buildGameId, buildRegularSeasonId, seriesIdOf, validateGame } from '@shared/games.js';
 
-const EMPTY = { round: 'RS', seriesKey: 'E-1', gameNum: 1, t1: '', t2: '', tipoffLocal: '', venue: '', status: 'scheduled', s1: '', s2: '', ot: 0, lockApi: false };
+const EMPTY = { round: 'RS', seriesKey: 'E-1', gameNum: 1, t1: '', t2: '', tipoffLocal: '', status: 'scheduled', s1: '', s2: '', ot: 0, lockApi: false };
 const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
 
 // The ONLY editor of games (create / edit / score-status-OT override / cancel / delete) and the teams seeder.
@@ -53,7 +53,7 @@ export default function AdminGamesPanel() {
     setEditing(g); setErrs([]);
     setForm({
       round: g.round, seriesKey: g.seriesKey, gameNum: g.gameNum, t1: g.t1 || '', t2: g.t2 || '',
-      tipoffLocal: toLocalInput(g.tipoff), venue: g.venue || '', status: g.status, s1: g.s1 ?? '', s2: g.s2 ?? '', ot: g.ot || 0, lockApi: !!g.overridden,
+      tipoffLocal: toLocalInput(g.tipoff), status: g.status, s1: g.s1 ?? '', s2: g.s2 ?? '', ot: g.ot || 0, lockApi: !!g.overridden,
     });
   };
 
@@ -63,7 +63,7 @@ export default function AdminGamesPanel() {
     const isRS = form.round === 'RS';
     const data = {
       round: form.round, seriesKey: isRS ? 'RS' : form.seriesKey.trim(), gameNum: isRS ? null : Number(form.gameNum),
-      t1: form.t1 || null, t2: form.t2 || null, tipoff, venue: form.venue.trim(), status: form.status,
+      t1: form.t1 || null, t2: form.t2 || null, tipoff, status: form.status,
       s1: num(form.s1), s2: num(form.s2), ot: Number(form.ot) || 0,
     };
     const problems = validateGame(data);
@@ -134,8 +134,6 @@ export default function AdminGamesPanel() {
               </select></label>
             <label className="field">{t('ag.tipoff')}
               <input className="input" dir="ltr" type="datetime-local" value={form.tipoffLocal} onChange={(e) => set('tipoffLocal', e.target.value)} /></label>
-            <label className="field">{t('ag.venue')}
-              <input className="input" value={form.venue} onChange={(e) => set('venue', e.target.value)} /></label>
             <label className="field">{t('ag.status')}
               <select className="input" value={form.status} onChange={(e) => set('status', e.target.value)}>
                 {GAME_STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}

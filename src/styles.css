@@ -44,7 +44,7 @@ textarea.input { font: inherit; resize: vertical; }
 .row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; background: var(--surface); border-radius: var(--radius); padding: .6rem .8rem; margin-block: .4rem; }
 .grow { flex: 1; min-width: 12rem; }
 .small { font-size: .8rem; }
-.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; }
+.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; align-items: end; } /* inputs share one baseline even when a label wraps */
 .inline { display: flex; align-items: center; gap: .4rem; } .num { width: 4.5rem; }
 .team { display: inline-flex; align-items: center; gap: .35rem; }
 .day h3 { margin-top: 1.2rem; color: var(--muted); font-size: .95rem; }
