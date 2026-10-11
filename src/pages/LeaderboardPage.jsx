@@ -17,7 +17,7 @@ const COLS = {
 const pct = (a, b) => (b > 0 ? `${Math.round((100 * a) / b)}%` : '–');
 
 function Board({ tab }) {
-  const { t } = useLang();
+  const { t, dir } = useLang();
   const { user } = useAuth();
   const scoring = useScoring();
   const { rows, loading } = usePoints();
@@ -34,10 +34,10 @@ function Board({ tab }) {
 
   return (
     <div className="table-wrap">
-      <table className="table lb" dir="ltr">
+      <table className="table lb" dir={dir}>
         <thead>
           <tr className="muted small">
-            <th>#</th><th>{t('lb.name')}</th>
+            <th>#</th><th className="lb-name">{t('lb.name')}</th>
             {stats ? (
               <>
                 <th>{t('lb.exact')}</th><th>{t('lb.winners')}</th><th>{t('lb.unique')}</th><th>{t('lb.risk')}</th>

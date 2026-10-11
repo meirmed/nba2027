@@ -20,5 +20,5 @@ export const BOTTOM = [
   { key: 'leaderboard', to: '/leaderboard', label: 'nav.leaderboard', icon: '🏆' },
   { key: 'h2h', to: '/h2h', label: 'nav.h2h', icon: '⚔️' },
 ];
-// "More" drawer on mobile: Bonus, My Points, Rules, Profile (+ Admin)
-export const MORE_KEYS = ['bonus', 'mypoints', 'rules', 'profile', 'admin'];
+// "More" drawer on mobile: My Points, Rules, Profile (+ Admin). Bonus questions are a tab inside Predictions, so no separate entry on phones.
+export const MORE_KEYS = ['mypoints', 'rules', 'profile', 'admin'];

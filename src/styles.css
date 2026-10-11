@@ -92,7 +92,8 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 /* ---- leaderboard / points ---- */
 .table-wrap { overflow-x: auto; }
 .lb th, .lb td { padding: .45rem .5rem; white-space: nowrap; text-align: center; }
-.lb th:nth-child(2), .lb td.lb-name { text-align: start; }
+.lb th.lb-name, .lb td.lb-name { text-align: start; width: 100%; } /* name column takes the free space, numbers stay narrow */
+.lb td:last-child { text-align: center; }
 .lb tr.me td { color: var(--accent); font-weight: 700; }
 .mp-pts { width: 2.6rem; flex: none; text-align: center; font-variant-numeric: tabular-nums; }
 .mp-summary { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
