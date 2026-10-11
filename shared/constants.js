@@ -6,8 +6,9 @@ export const GAME_ROUNDS = ['RS', ...ROUNDS];
 // Explicit previous-round map. NEVER use ROUNDS[i-1] (WC lesson #3).
 export const PREV_ROUND = { R1: null, R2: 'R1', CF: 'R2', F: 'CF' };
 
-export const BONUS_CATEGORIES = ['general', 'round1', 'round2', 'cf', 'finals'];
-export const BONUS_TYPES = ['numeric', 'choice', 'team', 'player', 'dynamic_score', 'text'];
+// Bonus questions: category = general | season | month (+ month 'YYYY-MM'). 'ranking' is RESERVED (owner will specify it later).
+export const BONUS_CATEGORIES = ['general', 'season', 'month'];
+export const BONUS_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text', 'ranking'];
 
 // Owner-approved values (risk.pts is still a PLACEHOLDER - owner has not given it yet). Live values: appSettings/main.scoring.
 export const DEFAULT_SCORING = {

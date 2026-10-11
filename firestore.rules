@@ -22,6 +22,9 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Player list for bonus questions (admin-maintained).
+    match /players/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+
     // Reference / config data: signed-in read, admin write.
     match /teams/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
     match /games/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }

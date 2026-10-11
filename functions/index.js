@@ -16,6 +16,7 @@ import { recalcAllPoints, reconcileAll } from './lib/recalc.js';
 import { fetchGamesRange, fetchGamesByDates, apiDatesFor } from './lib/balldontlie.js';
 import { runPoll, currentOf, toWrite } from './lib/poll.js';
 import { parseApiGame, planGameUpdate } from './shared/live.js';
+import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -318,4 +319,49 @@ export const resyncGame = onCall({ secrets: [NBA_API_KEY] }, async (request) => 
   await ref.update({ ...(patch ? toWrite(patch) : { updatedAt: FieldValue.serverTimestamp() }), overridden: false });
   await db.collection('auditLog').add({ action: 'game.resync', by: request.auth.uid, ts: FieldValue.serverTimestamp(), target: `games/${gameId}`, before: { overridden: !!g.overridden, status: g.status, s1: g.s1 ?? null, s2: g.s2 ?? null }, after: patch || {} });
   return { applied: !!patch, patch: patch || {} };
+});
+
+// ---------------------------------------------------------------- bonus questions (Phase 5)
+/**
+ * The ONLY way bonus answers are written (rules deny direct client writes). Deadline checked against SERVER time;
+ * a question whose correct answer is already set is closed. Writes are merge-sets on bonus.{id} (never a whole-map rewrite).
+ */
+export const saveBonusAnswers = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'login');
+  const uid = request.auth.uid;
+  const answers = request.data?.answers;
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) throw new HttpsError('invalid-argument', 'shape');
+  const ids = Object.keys(answers);
+  if (ids.length === 0 || ids.length > 50 || ids.some((id) => id.length > 80 || id.includes('/'))) throw new HttpsError('invalid-argument', 'ids');
+  if (!(await db.doc(`users/${uid}`).get()).exists) throw new HttpsError('permission-denied', 'no-profile');
+
+  const snaps = await db.getAll(...ids.map((id) => db.doc(`bonus/${id}`)));
+  const nowMs = Date.now();
+  const saved = {};
+  const rejected = [];
+  for (let i = 0; i < ids.length; i += 1) {
+    const id = ids[i];
+    const q = snaps[i].exists ? { id, ...snaps[i].data(), deadlineMs: snaps[i].data().deadline?.toMillis?.() ?? 0 } : undefined;
+    const closed = bonusClosedReason(q, nowMs);
+    if (closed) { rejected.push({ id, reason: closed }); continue; }
+    const c = cleanAnswer(q, answers[id]);
+    if (c.error) { rejected.push({ id, reason: c.error }); continue; }
+    if (q.type === 'player') {
+      const ps = await db.getAll(...c.value.map((pid) => db.doc(`players/${pid}`)));
+      if (ps.some((p) => !p.exists)) { rejected.push({ id, reason: 'invalid-answer' }); continue; }
+    }
+    saved[id] = c.value;
+  }
+  if (Object.keys(saved).length) {
+    const bonus = Object.fromEntries(Object.entries(saved).map(([id, answer]) => [id, { answer, updatedAt: FieldValue.serverTimestamp() }]));
+    await db.doc(`predictions/${uid}`).set({ bonus, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  }
+  return { saved: Object.keys(saved), rejected };
+});
+
+/** When a question's scoring-relevant fields change (correct answer, points, options, penalty...), rescore everyone. */
+export const onBonusUpdated = onDocumentWritten({ document: 'bonus/{id}', timeoutSeconds: 120 }, async (event) => {
+  const key = (q) => (q ? JSON.stringify([q.type, q.pts, q.penalty ?? null, !!q.multi, q.category, q.month ?? null, q.answer ?? [], (q.options || []).map((o) => [o.id, o.pts ?? null])]) : 'none');
+  if (key(event.data?.before?.data()) === key(event.data?.after?.data())) return;
+  await recalcAllPoints(db);
 });

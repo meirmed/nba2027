@@ -49,3 +49,8 @@ Games with the manual lock (`overridden`) are never touched. Admin -> Games show
 ```bash
 firebase deploy --only firestore:indexes,firestore:rules,functions   # first deploy needs the new games index (status + tipoff)
 ```
+
+## Bonus questions (Phase 5)
+Admin -> Bonus: questions (numeric / as-close-as-possible / choice / team / player / odds-based / free text; "ranking" is reserved) and the players list.
+Users answer under Predictions -> Bonus (autosave; the server checks the deadline). Setting a correct answer in Admin closes the question and rescores
+everyone (`onBonusUpdated`). Bonus points have their own leaderboard column and tab.

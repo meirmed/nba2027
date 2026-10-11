@@ -13,6 +13,11 @@ import { useMyPredictions } from '../contexts/MyPredictionsContext.jsx';
 import { useGames } from '../hooks/useGames.js';
 import { dayKey, formatDateTime, formatDay } from '../utils/dates.js';
 import { addDaysToKey } from '@shared/daykeys.js';
+import { scoreBonus } from '@shared/bonus.js';
+import { useBonus } from '../contexts/BonusContext.jsx';
+import { useTeams } from '../contexts/TeamsContext.jsx';
+import { usePlayers } from '../hooks/usePlayers.js';
+import { answerLabel } from './predictions/BonusCard.jsx';
 
 const PRESETS = ['7', '30', 'all', 'upcoming', 'custom'];
 const PRESET_LABEL = { 7: 'mp.range7', 30: 'mp.range30', all: 'mp.rangeAll', upcoming: 'mp.rangeUpcoming', custom: 'mp.rangeCustom' };
@@ -40,6 +45,11 @@ export default function MyPointsPage() {
   }, [user]);
   const myRank = useMemo(() => rankRows(pointsAll.rows, tiebreakers).find((r) => r.uid === user?.uid), [pointsAll.rows, tiebreakers, user]);
 
+  const { questions } = useBonus();
+  const { teams } = useTeams();
+  const myBonus = useMemo(() => questions.filter((q) => mine.bonus[q.id]?.answer?.length), [questions, mine.bonus]);
+  const { byId: playersById } = usePlayers(myBonus.some((q) => q.type === 'player'));
+
   const mineAll = useMemo(() => games.filter((g) => mine.games[g.id]), [games, mine.games]);
 
   const groups = useMemo(() => {
@@ -62,7 +72,7 @@ export default function MyPointsPage() {
 
   return (
     <PageShell titleKey="nav.myPoints">
-      {mineAll.length === 0 && <p className="muted">{t('mp.empty')}</p>}
+      {mineAll.length === 0 && myBonus.length === 0 && <p className="muted">{t('mp.empty')}</p>}
       {mineAll.length > 0 && (
         <>
           <div className="tabs scroll" role="tablist">
@@ -96,6 +106,25 @@ export default function MyPointsPage() {
             </div>
           )}
         </>
+      )}
+
+      {myBonus.length > 0 && (
+        <div className="day">
+          <h3>{t('mp.bonusTitle')}</h3>
+          {myBonus.map((q) => {
+            const answered = (q.answer || []).length > 0;
+            const my = mine.bonus[q.id].answer;
+            return (
+              <div key={q.id} className="mp-row">
+                <div className="mp-line">
+                  <span className="grow" dir="auto">{q.question?.[lang] || q.question?.en}</span>
+                  <strong className="mp-pts">{answered ? scoreBonus(q, my).pts : '–'}</strong>
+                </div>
+                <div className="muted small" dir="auto">{t('bq.yourAnswer')}: {answerLabel(q, my, { lang, teams, playersById })}{answered ? ` · ${t('bq.correctAnswer')}: ${answerLabel(q, q.answer, { lang, teams, playersById })}` : ''}</div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {groups.map(([k, list]) => (

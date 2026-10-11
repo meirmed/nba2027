@@ -7,7 +7,13 @@ import { useScoring } from '../contexts/SettingsContext.jsx';
 import { usePoints } from '../contexts/PointsContext.jsx';
 import { rankRows } from '@shared/standings.js';
 
-const TABS = ['total', 'games', 'stats'];
+const TABS = ['total', 'games', 'bonus', 'stats'];
+// [header key, field, css class] per tab. Total tab = Total (green) / Games (blue) / Bonus (orange), like the World Cup app.
+const COLS = {
+  total: [['lb.totalCol', 'total', 'pts-total'], ['lb.games', 'gamePts', 'pts-games'], ['lb.bonus', 'bonus', 'pts-bonus']],
+  games: [['lb.games', 'gamePts', 'pts-games']],
+  bonus: [['lb.bonus', 'bonus', 'pts-bonus']],
+};
 const pct = (a, b) => (b > 0 ? `${Math.round((100 * a) / b)}%` : '–');
 
 function Board({ tab }) {
@@ -18,7 +24,7 @@ function Board({ tab }) {
 
   // 'games' tab ranks by game points only; the others use the configured tiebreakers (total first).
   const ranked = useMemo(
-    () => rankRows(rows, tab === 'games' ? ['gamePts', 'exactHits', 'uniqueHits'] : scoring.tiebreakers),
+    () => rankRows(rows, tab === 'games' ? ['gamePts', 'exactHits', 'uniqueHits'] : tab === 'bonus' ? ['bonus', 'total'] : scoring.tiebreakers),
     [rows, tab, scoring.tiebreakers],
   );
 
@@ -37,7 +43,7 @@ function Board({ tab }) {
                 <th>{t('lb.exact')}</th><th>{t('lb.winners')}</th><th>{t('lb.unique')}</th><th>{t('lb.risk')}</th>
                 <th>{t('lb.played')}</th><th>{t('lb.accuracy')}</th><th>{t('lb.bestStreak')}</th><th>{t('lb.points')}</th>
               </>
-            ) : <th>{t('lb.points')}</th>}
+            ) : COLS[tab].map(([h]) => <th key={h}>{t(h)}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -51,7 +57,7 @@ function Board({ tab }) {
                   <td>{r.gamesPlayed ?? 0}</td><td>{pct(r.winnerCorrect ?? 0, r.gamesPlayed ?? 0)}</td><td>{r.bestStreak ?? 0}</td>
                   <td><strong>{r.total ?? 0}</strong></td>
                 </>
-              ) : <td><strong>{tab === 'games' ? r.gamePts ?? 0 : r.total ?? 0}</strong></td>}
+              ) : COLS[tab].map(([h, f, cls]) => <td key={h}><strong className={cls}>{r[f] ?? 0}</strong></td>)}
             </tr>
           ))}
         </tbody>
