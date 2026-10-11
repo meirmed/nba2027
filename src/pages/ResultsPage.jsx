@@ -3,10 +3,12 @@ import PageShell from '../components/PageShell.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import Score from '../components/Score.jsx';
 import PeriodFilter from '../components/PeriodFilter.jsx';
+import EveryonesPicks from '../components/EveryonesPicks.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings } from '../contexts/SettingsContext.jsx';
 import { useGames } from '../hooks/useGames.js';
 import { usePeriod } from '../hooks/usePeriod.js';
+import { useNow } from '../hooks/useNow.js';
 import { dayKey, formatDay, formatTime } from '../utils/dates.js';
 import { inRange } from '@shared/period.js';
 
@@ -15,6 +17,7 @@ export default function ResultsPage() {
   const { timezone } = useSettings();
   const { games, loading, error } = useGames();
   const period = usePeriod(timezone);
+  const nowMs = useNow(5000);
 
   const groups = useMemo(() => {
     const m = new Map();
@@ -38,18 +41,24 @@ export default function ResultsPage() {
       {groups.map(([k, list]) => (
         <div key={k} className="day">
           <h3>{formatDay(list[0].tipoff, lang, timezone)}</h3>
-          {list.map((g) => (
-            <div key={g.id} className={`game-row status-${g.status}`}>
-              <span className="muted time" dir="ltr">{formatTime(g.tipoff, lang, timezone)}</span>
-              <span className="teams"><TeamBadge abbr={g.t1} /> <span className="muted">–</span> <TeamBadge abbr={g.t2} /></span>
-              <span className="res-score">
-                {g.status === 'finished' || g.status === 'live' ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : ''}
-                {g.status === 'live' && g.liveText && <small className="muted" dir="ltr"> {g.liveText}</small>}
-                {g.ot > 0 && <small> {t('results.ot')}{g.ot > 1 ? g.ot : ''}</small>}
-              </span>
-              <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span>
-            </div>
-          ))}
+          {list.map((g) => {
+            const started = g.status !== 'scheduled' || nowMs >= (g.tipoff?.toMillis?.() ?? 0);
+            return (
+              <div key={g.id} className="game-block">
+                <div className={`game-row status-${g.status}`}>
+                  <span className="muted time" dir="ltr">{formatTime(g.tipoff, lang, timezone)}</span>
+                  <span className="teams"><TeamBadge abbr={g.t1} /> <span className="muted">–</span> <TeamBadge abbr={g.t2} /></span>
+                  <span className="res-score">
+                    {g.status === 'finished' || g.status === 'live' ? <Score a={g.s1 ?? 0} b={g.s2 ?? 0} /> : ''}
+                    {g.status === 'live' && g.liveText && <small className="muted" dir="ltr"> {g.liveText}</small>}
+                    {g.ot > 0 && <small> {t('results.ot')}{g.ot > 1 ? g.ot : ''}</small>}
+                  </span>
+                  <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span>
+                </div>
+                {started && g.status !== 'cancelled' && <EveryonesPicks gameId={g.id} result={g} />}
+              </div>
+            );
+          })}
         </div>
       ))}
     </PageShell>

@@ -157,3 +157,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .pred-score { flex-direction: column; gap: .1rem; }
 .pred-pick { display: inline-flex; align-items: center; gap: .25rem; }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .6rem; margin-block: .4rem; }
+
+/* Results: a game row + its "Everyone's picks" in one card */
+.game-block { background: var(--surface); border-radius: var(--radius); padding: .6rem .8rem; margin-block: .4rem; display: flex; flex-direction: column; gap: .4rem; }
+.game-block > .game-row { background: none; padding: 0; margin: 0; }

@@ -25,7 +25,6 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
         {game.status !== 'cancelled' && (locked
           ? <span className="badge">🔒 {t('pred.locked')}</span>
           : <span className="muted small">{t('pred.locksIn', { time: formatCountdown(tipMs - nowMs) })}</span>)}
-        {game.status === 'live' && <span className="badge live">{t('status.live')}</span>}
         {!locked && ready && status === 'saved' && <span className="save-ok">✓ {t('pred.savedShort')}</span>}
         {!locked && ready && status === 'saving' && <span className="save-wait muted small">{t('pred.saving')}</span>}
       </div>
@@ -35,11 +34,12 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
         {locked || !ready ? (
           <div className="pred-score">
             <span className="pred-pick">
-              <strong>{saved ? <Score a={saved.s1} b={saved.s2} /> : '– –'}</strong>
-              {jokerOn && <span title={t('pred.joker', { n: jokerMultiplier })}> ⭐</span>}
-              {saved?.autoFilled && <span title={t('bd.auto')}> 🎲</span>}
+              <strong>{showResult ? <Score a={game.s1 ?? 0} b={game.s2 ?? 0} /> : '– –'}</strong>
+              {game.status === 'live' && <span className="badge live">{t('status.live')}</span>}
+              {game.status === 'finished' && <span className="badge finished">{t('status.finished')}</span>}
             </span>
-            <small className="muted">{t('mp.myPick')}</small>
+            {game.status === 'live' && game.liveText && <small className="muted" dir="ltr">{game.liveText}</small>}
+            {game.status === 'finished' && game.ot > 0 && <small className="muted">{t('results.ot')}{game.ot > 1 ? game.ot : ''}</small>}
           </div>
         ) : (
           <div className="pred-inputs">
@@ -53,11 +53,6 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
 
       {!ready && <p className="muted small">{t('pred.teamsTbd')}</p>}
       {locked && !saved && game.status !== 'cancelled' && <p className="muted small">{t('pred.noPick')}</p>}
-      {showResult && (
-        <p className="small">
-          {game.status === 'finished' ? t('pred.final') : t('status.live')}: <strong><Score a={game.s1 ?? 0} b={game.s2 ?? 0} /></strong>{game.ot > 0 ? ` (${t('results.ot')})` : ''}{game.status === 'live' && game.liveText ? ` · ${game.liveText}` : ''}
-        </p>
-      )}
       {reason && <p className="error small" role="alert">{t(`pred.err.${reason}`)}</p>}
 
       {!locked && ready && (
