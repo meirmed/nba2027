@@ -18,6 +18,7 @@ import { fetchGamesRange, fetchGamesByDates, apiDatesFor } from './lib/balldontl
 import { runPoll, currentOf, toWrite } from './lib/poll.js';
 import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
+import { makeAutoPick } from './shared/autofill.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -239,8 +240,11 @@ export const savePredictions = onCall(async (request) => {
 });
 
 /**
- * Every minute: for games that tipped off in the last 30 min and aren't published yet, copy everyone's picks into
- * picks/{gameId} (readable by all signed-in users). Before tip-off nobody can see other people's picks.
+ * Every minute, for games that tipped off in the last 30 min and aren't published yet:
+ *  1) AUTO-FILL: every player without a pick gets a random pick (20-99, margin 1-30, flagged autoFilled -> 50% points, never unique)
+ *     if features.autoFill is on, the round counts and both teams are set;
+ *  2) publish everyone's picks to picks/{gameId} (readable by all signed-in users). Before tip-off nobody can see other people's picks.
+ * Idempotent: a retry sees the already auto-filled picks as picks.
  */
 export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone: 'UTC' }, async () => {
   const now = Date.now();
@@ -251,19 +255,36 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
   const todo = snap.docs.filter((d) => !d.data().picksLockedAt && d.data().status !== 'cancelled');
   if (todo.length === 0) return;
 
-  const [preds, points] = await Promise.all([db.collection('predictions').get(), db.collection('points').get()]);
+  const [preds, points, settingsSnap] = await Promise.all([db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get()]);
+  const settings = settingsSnap.data() || {};
+  const autoFillOn = (settings.features?.autoFill ?? DEFAULT_SETTINGS.features.autoFill) !== false;
+  const counted = settings.countedRounds || DEFAULT_SETTINGS.countedRounds;
   const names = new Map(points.docs.map((d) => [d.id, d.data().name || '']));
+
   for (const g of todo) {
+    const gd = g.data();
+    const canFill = autoFillOn && counted.includes(gd.round) && !!gd.t1 && !!gd.t2;
     const picks = {};
+    const fills = [];
     preds.forEach((p) => {
       const d = p.data();
       const pick = d.games?.[g.id];
-      if (!pick) return;
-      picks[p.id] = { name: names.get(p.id) || '', s1: pick.s1, s2: pick.s2, joker: !!d.jokers?.[g.id], autoFilled: !!pick.autoFilled };
+      if (pick) {
+        picks[p.id] = { name: names.get(p.id) || '', s1: pick.s1, s2: pick.s2, joker: !!d.jokers?.[g.id], autoFilled: !!pick.autoFilled };
+      } else if (canFill) {
+        const f = makeAutoPick();
+        fills.push({ ref: p.ref, f });
+        picks[p.id] = { name: names.get(p.id) || '', s1: f.s1, s2: f.s2, joker: false, autoFilled: true };
+      }
     });
+    for (let i = 0; i < fills.length; i += 400) {
+      const fb = db.batch();
+      fills.slice(i, i + 400).forEach(({ ref, f }) => fb.set(ref, { games: { [g.id]: { s1: f.s1, s2: f.s2, autoFilled: true, updatedAt: FieldValue.serverTimestamp() } }, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+      await fb.commit();
+    }
     const batch = db.batch();
     batch.set(db.doc(`picks/${g.id}`), { gameId: g.id, lockedAt: FieldValue.serverTimestamp(), count: Object.keys(picks).length, picks });
-    batch.update(g.ref, { picksLockedAt: FieldValue.serverTimestamp() });
+    batch.update(g.ref, { picksLockedAt: FieldValue.serverTimestamp(), autoFilledCount: fills.length });
     await batch.commit();
   }
 });
@@ -390,4 +411,37 @@ export const translateTexts = onCall(async (request) => {
     console.error('translate failed', e);
     throw new HttpsError('unavailable', 'translate-failed');
   }
+});
+
+// ---------------------------------------------------------------- profile / names (Phase 7)
+/** Keep the PUBLIC copy of name / avatar / favorite team (points/{uid}) in sync with the private users/{uid}. */
+export const onUserUpdated = onDocumentWritten('users/{uid}', async (event) => {
+  const a = event.data?.after?.data();
+  if (!a) return;
+  const b = event.data?.before?.data();
+  if (b && b.name === a.name && (b.photoURL ?? null) === (a.photoURL ?? null) && (b.team ?? null) === (a.team ?? null)) return;
+  await db.doc(`points/${event.params.uid}`).set({ name: a.name, photoURL: a.photoURL ?? null, team: a.team ?? null }, { merge: true });
+});
+
+/** Admin: rename an approved participant. If already registered, also renames the account everywhere (users, leaderboard, login profile). Audited. */
+export const renameParticipant = onCall(async (request) => {
+  requireAdmin(request);
+  const { participantId } = request.data || {};
+  const name = typeof request.data?.name === 'string' ? request.data.name.trim().replace(/\s+/g, ' ') : '';
+  const norm = normalizeName(name);
+  if (typeof participantId !== 'string' || !participantId || participantId.includes('/') || !norm || name.length > 80) throw new HttpsError('invalid-argument', 'input');
+  const ref = db.doc(`participants/${participantId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'participant');
+  const clash = await db.collection('participants').where('normalizedName', '==', norm).limit(2).get();
+  if (clash.docs.some((d) => d.id !== participantId)) throw new HttpsError('already-exists', 'name-exists');
+
+  const p = snap.data();
+  const batch = db.batch();
+  batch.update(ref, { displayName: name, normalizedName: norm });
+  if (p.claimedBy) batch.set(db.doc(`users/${p.claimedBy}`), { name, updatedAt: FieldValue.serverTimestamp() }, { merge: true }); // onUserUpdated copies it to points
+  batch.set(db.collection('auditLog').doc(), { action: 'participant.rename', by: request.auth.uid, ts: FieldValue.serverTimestamp(), target: ref.path, before: { displayName: p.displayName }, after: { displayName: name } });
+  await batch.commit();
+  if (p.claimedBy) await getAuth().updateUser(p.claimedBy, { displayName: name }).catch((e) => console.error('auth rename failed', e));
+  return { ok: true };
 });

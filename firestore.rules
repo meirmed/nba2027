@@ -13,7 +13,7 @@ service cloud.firestore {
       allow create: if false;                       // created by function (Phase 1)
       allow update: if isAdmin() || (isOwner(uid) &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['name','username','phone','team','photoURL','lang','updatedAt']));
+          .hasOnly(['username','phone','team','photoURL','lang','updatedAt'])); // NOT name: only the admin renames a player
       allow delete: if isAdmin();
     }
 

@@ -2,31 +2,39 @@ import { useMemo } from 'react';
 import PageShell from '../components/PageShell.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import Score from '../components/Score.jsx';
+import PeriodFilter from '../components/PeriodFilter.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings } from '../contexts/SettingsContext.jsx';
 import { useGames } from '../hooks/useGames.js';
+import { usePeriod } from '../hooks/usePeriod.js';
 import { dayKey, formatDay, formatTime } from '../utils/dates.js';
+import { inRange } from '@shared/period.js';
 
 export default function ResultsPage() {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const { games, loading, error } = useGames();
+  const period = usePeriod(timezone);
 
   const groups = useMemo(() => {
     const m = new Map();
     games.forEach((g) => {
       const k = dayKey(g.tipoff, timezone);
+      if (!inRange(k, period.range)) return;
       if (!m.has(k)) m.set(k, []);
-      m.get(k).push(g);
+      m.get(k).push(g); // games arrive sorted by tip-off: each day stays in time order
     });
-    return [...m.entries()];
-  }, [games, timezone]);
+    const asc = period.preset === 'upcoming'; // upcoming: soonest first; otherwise newest day first
+    return [...m.entries()].sort((a, b) => (asc ? a[0].localeCompare(b[0]) : b[0].localeCompare(a[0])));
+  }, [games, timezone, period.range, period.preset]);
 
   return (
     <PageShell titleKey="nav.results">
+      <PeriodFilter period={period} />
       {loading && <p className="muted">{t('common.loading')}</p>}
       {error && <p className="error">{t('common.error')}</p>}
-      {!loading && !error && groups.length === 0 && <p className="muted">{t('results.empty')}</p>}
+      {!loading && !error && games.length === 0 && <p className="muted">{t('results.empty')}</p>}
+      {!loading && !error && games.length > 0 && groups.length === 0 && <p className="muted">{t('results.noneInRange')}</p>}
       {groups.map(([k, list]) => (
         <div key={k} className="day">
           <h3>{formatDay(list[0].tipoff, lang, timezone)}</h3>

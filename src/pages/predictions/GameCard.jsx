@@ -36,6 +36,7 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
           <div className="pred-score">
             <strong>{saved ? <Score a={saved.s1} b={saved.s2} /> : '– –'}</strong>
             {jokerOn && <span title={t('pred.joker', { n: jokerMultiplier })}> ⭐</span>}
+            {saved?.autoFilled && <span title={t('bd.auto')}> 🎲</span>}
           </div>
         ) : (
           <div className="pred-inputs">

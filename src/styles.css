@@ -146,3 +146,9 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .lb tr.adv td:first-child { box-shadow: inset 3px 0 0 #22c55e; }
 .champion { text-align: center; font-size: 1.1rem; margin-bottom: .6rem; }
 .pair-edit { border-top: 1px solid #0003; padding-block: .6rem; }
+
+/* ---- avatar, home ---- */
+.avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; object-fit: cover; color: #fff; font-weight: 700; font-size: .8rem; vertical-align: middle; margin-inline-end: .5rem; flex: none; }
+.announce { border-inline-start: 4px solid var(--accent); }
+.vs-names { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; font-size: 1.05rem; }
+.row.me { border: 1px solid var(--accent); }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { db } from '../../firebase.js';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../firebase.js';
 import PageShell from '../../components/PageShell.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
@@ -45,10 +46,9 @@ export default function AdminUsersPanel() {
   const rename = (p) => run(async () => {
     const name = window.prompt(t('ap.promptName'), p.displayName);
     if (!name || !name.trim()) return;
-    const batch = writeBatch(db);
-    batch.update(doc(db, 'participants', p.id), { displayName: name.trim(), normalizedName: normName(name) });
-    addAudit(batch, user.uid, { action: 'participant.rename', target: `participants/${p.id}`, before: { displayName: p.displayName }, after: { displayName: name.trim() } });
-    await batch.commit();
+    try { await httpsCallable(functions, 'renameParticipant')({ participantId: p.id, name }); } catch (e) {
+      if (String(e.code).includes('already-exists')) setMsg(t('ap.errExists')); else throw e;
+    }
   });
 
   const remove = (p) => run(async () => {

@@ -18,7 +18,7 @@ export default function AdminSettingsPanel() {
 
   useEffect(() => {
     if (s.ready && form === null) {
-      setForm({ registrationOpen: !!s.registrationOpen, seasonStarted: !!s.seasonStarted, annHe: s.announcement?.he ?? '', annEn: s.announcement?.en ?? '', countedRounds: [...(s.countedRounds || [])] });
+      setForm({ registrationOpen: !!s.registrationOpen, seasonStarted: !!s.seasonStarted, annHe: s.announcement?.he ?? '', annEn: s.announcement?.en ?? '', countedRounds: [...(s.countedRounds || [])], autoFill: s.features?.autoFill !== false });
     }
   }, [s, form]);
 
@@ -28,10 +28,10 @@ export default function AdminSettingsPanel() {
   const save = async () => {
     setMsg('');
     try {
-      const after = { registrationOpen: form.registrationOpen, seasonStarted: form.seasonStarted, announcement: { he: form.annHe, en: form.annEn }, countedRounds: form.countedRounds };
+      const after = { registrationOpen: form.registrationOpen, seasonStarted: form.seasonStarted, announcement: { he: form.annHe, en: form.annEn }, countedRounds: form.countedRounds, features: { autoFill: form.autoFill } };
       const batch = writeBatch(db);
       batch.set(doc(db, 'appSettings', 'main'), { ...after, updatedAt: serverTimestamp() }, { merge: true });
-      addAudit(batch, user.uid, { action: 'settings.update', target: 'appSettings/main', before: { registrationOpen: s.registrationOpen, seasonStarted: s.seasonStarted, announcement: s.announcement, countedRounds: s.countedRounds }, after });
+      addAudit(batch, user.uid, { action: 'settings.update', target: 'appSettings/main', before: { registrationOpen: s.registrationOpen, seasonStarted: s.seasonStarted, announcement: s.announcement, countedRounds: s.countedRounds, features: s.features }, after });
       await batch.commit();
       setMsg(t('common.saved'));
     } catch { setMsg(t('common.error')); }
@@ -41,6 +41,7 @@ export default function AdminSettingsPanel() {
     <PageShell titleKey="admin.settings">
       <div className="card">
         <label className="check"><input type="checkbox" checked={form.registrationOpen} onChange={(e) => set('registrationOpen', e.target.checked)} /> {t('as.registrationOpen')}</label>
+        <label className="check"><input type="checkbox" checked={form.autoFill} onChange={(e) => set('autoFill', e.target.checked)} /> {t('as.autoFill')}</label>
         <label className="check"><input type="checkbox" checked={form.seasonStarted} onChange={(e) => set('seasonStarted', e.target.checked)} /> {t('as.seasonStarted')}</label>
         <div className="field">{t('as.countedRounds')}
           <div className="actions">

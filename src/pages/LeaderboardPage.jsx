@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useScoring } from '../contexts/SettingsContext.jsx';
 import { usePoints } from '../contexts/PointsContext.jsx';
 import { rankRows } from '@shared/standings.js';
+import Avatar from '../components/Avatar.jsx';
 
 const TABS = ['total', 'games', 'bonus', 'stats'];
 // [header key, field, css class] per tab. Total tab = Total (green) / Games (blue) / Bonus (orange), like the World Cup app.
@@ -50,7 +51,7 @@ function Board({ tab }) {
           {ranked.map((r) => (
             <tr key={r.id} className={r.uid === user?.uid ? 'me' : ''}>
               <td>{r.rank}</td>
-              <td dir="auto" className="lb-name">{r.name}{r.uid === user?.uid ? ` ${t('lb.you')}` : ''}</td>
+              <td className="lb-name"><Avatar name={r.name} url={r.photoURL} size={24} /><span dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('lb.you')}` : ''}</span></td>
               {stats ? (
                 <>
                   <td>{r.exactHits ?? 0}</td><td>{r.winnerCorrect ?? 0}</td><td>{r.uniqueHits ?? 0}</td><td>{r.riskHits ?? 0}</td>
