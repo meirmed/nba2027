@@ -316,5 +316,6 @@
   "err.bqOptions": "Add at least 2 options with text in both languages.",
   "err.bqPenalty": "Points lost per unit must be a number, 0 or more.",
   "err.bqMax": "Max answers must be a whole number, 1 or more.",
-  "err.bqAnswer": "The correct answer isn't valid for this question."
+  "err.bqAnswer": "The correct answer isn't valid for this question.",
+  "bq.choosePlayer": "Choose a player…"
 }
