@@ -398,9 +398,7 @@
   "home.myRank": "המקום שלי",
   "home.rankOf": "{r} מתוך {n}",
   "home.points": "{n} נק׳",
-  "home.top3": "שלושת הראשונים",
   "home.noPick": "לא ניחשת",
-  "pf.nameNote": "את השם אפשר לשנות רק דרך המנהל.",
   "pf.upload": "העלאת תמונה",
   "pf.uploading": "מעלה…",
   "pf.avatarFailed": "לא הצלחנו להעלות את התמונה. נסה תמונה אחרת.",
@@ -416,5 +414,10 @@
   "au.back": "חזרה לרשימה",
   "au.registered": "נרשם",
   "au.noPicks": "לשחקן הזה אין עדיין ניחושים.",
-  "au.curStreak": "רצף נוכחי"
+  "au.curStreak": "רצף נוכחי",
+  "auth.phone": "מספר טלפון",
+  "auth.errPhone": "הזן מספר טלפון תקין (ספרות, אפשר להתחיל ב-+).",
+  "home.top": "חמשת הראשונים",
+  "home.needPhone": "נא להוסיף את מספר הטלפון שלך בפרופיל.",
+  "home.goProfile": "לפרופיל"
 }

@@ -12,6 +12,7 @@ import { usePoints } from '../contexts/PointsContext.jsx';
 import { useBonus } from '../contexts/BonusContext.jsx';
 import { useGames } from '../hooks/useGames.js';
 import { useNow } from '../hooks/useNow.js';
+import { useProfile } from '../hooks/useProfile.js';
 import { dayKey, formatCountdown, formatDay, formatTime } from '../utils/dates.js';
 import { countsForStandings } from '@shared/games.js';
 import { rankRows } from '@shared/standings.js';
@@ -29,6 +30,7 @@ export default function HomePage() {
   const { rows } = usePoints();
   const { questions } = useBonus();
   const nowMs = useNow(1000);
+  const profile = useProfile();
   const tz = settings.timezone;
 
   const counted = useMemo(() => games.filter((g) => countsForStandings(g, settings.countedRounds)), [games, settings.countedRounds]);
@@ -50,6 +52,12 @@ export default function HomePage() {
   return (
     <PageShell titleKey="nav.home">
       {announcement && <div className="card announce" dir="auto">📣 {announcement}</div>}
+      {profile && !profile.phone && (
+        <div className="card announce">
+          <span>📞 {t('home.needPhone')}</span>
+          <div className="actions"><Link className="btn" to="/profile">{t('home.goProfile')}</Link></div>
+        </div>
+      )}
 
       <div className="card">
         {next ? (
@@ -88,8 +96,8 @@ export default function HomePage() {
 
       {ranked.length > 0 && (
         <>
-          <h3 className="bq-title">{t('home.top3')}</h3>
-          {ranked.slice(0, 3).map((r) => (
+          <h3 className="bq-title">{t('home.top')}</h3>
+          {ranked.slice(0, 5).map((r) => (
             <div key={r.uid} className={`row ${r.uid === user?.uid ? 'me' : ''}`}>
               <strong>{r.rank}</strong>
               <Avatar name={r.name} url={r.photoURL} />

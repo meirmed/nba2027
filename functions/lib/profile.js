@@ -4,10 +4,10 @@ export const normEmail = (e) => String(e || '').trim().toLowerCase();
 export const adminEmails = (raw) => String(raw || '').split(',').map(normEmail).filter(Boolean);
 
 /** users + points + predictions docs for a new participant. points.name is public (leaderboard needs names; users docs are private). */
-export function addProfileDocs({ db, batch, uid, name, email, participantId = null, isAdmin = false }) {
+export function addProfileDocs({ db, batch, uid, name, email, phone = '', participantId = null, isAdmin = false }) {
   const now = FieldValue.serverTimestamp();
   batch.set(db.doc(`users/${uid}`), {
-    name, username: '', email: normEmail(email), phone: '', team: null, photoURL: null, lang: 'he',
+    name, username: '', email: normEmail(email), phone, team: null, photoURL: null, lang: 'he',
     isAdmin, participantId, createdAt: now, updatedAt: now,
   });
   batch.set(db.doc(`points/${uid}`), {

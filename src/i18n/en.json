@@ -398,9 +398,7 @@
   "home.myRank": "My rank",
   "home.rankOf": "{r} of {n}",
   "home.points": "{n} pts",
-  "home.top3": "Top 3",
   "home.noPick": "No pick",
-  "pf.nameNote": "Your name can only be changed by the admin.",
   "pf.upload": "Upload a picture",
   "pf.uploading": "Uploading…",
   "pf.avatarFailed": "Couldn't upload the picture. Try a different image.",
@@ -416,5 +414,10 @@
   "au.back": "Back to the list",
   "au.registered": "Registered",
   "au.noPicks": "This player has no predictions yet.",
-  "au.curStreak": "Current streak"
+  "au.curStreak": "Current streak",
+  "auth.phone": "Phone number",
+  "auth.errPhone": "Enter a valid phone number (digits, optionally starting with +).",
+  "home.top": "Top 5",
+  "home.needPhone": "Please add your phone number in your profile.",
+  "home.goProfile": "Open profile"
 }

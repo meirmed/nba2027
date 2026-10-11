@@ -19,6 +19,7 @@ import { runPoll, currentOf, toWrite } from './lib/poll.js';
 import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { makeAutoPick } from './shared/autofill.js';
+import { normalizePhone } from './shared/phone.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -59,6 +60,8 @@ export const registerParticipant = onCall(async (request) => {
   const email = normEmail(request.data?.email);
   if (!normName || rawName.length > 80) throw new HttpsError('invalid-argument', 'name');
   if (!EMAIL_RE.test(email)) throw new HttpsError('invalid-argument', 'email');
+  const phone = normalizePhone(request.data?.phone); // mandatory
+  if (!phone) throw new HttpsError('invalid-argument', 'phone');
   if (password != null && (typeof password !== 'string' || password.length < 6)) throw new HttpsError('invalid-argument', 'password');
 
   const settings = (await db.doc('appSettings/main').get()).data() || {};
@@ -98,7 +101,7 @@ export const registerParticipant = onCall(async (request) => {
       claimedBy: record.uid, claimedAt: FieldValue.serverTimestamp(), email,
       registeringEmail: FieldValue.delete(), registeringAt: FieldValue.delete(),
     });
-    addProfileDocs({ db, batch, uid: record.uid, name: participant.displayName, email, participantId });
+    addProfileDocs({ db, batch, uid: record.uid, name: participant.displayName, email, phone, participantId });
     await batch.commit();
   } catch (e) {
     console.error('profile write failed, rolling back user', e);

@@ -7,6 +7,7 @@ import Avatar from '../components/Avatar.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTeams } from '../contexts/TeamsContext.jsx';
+import { normalizePhone } from '@shared/phone.js';
 
 /** Centre-crop to a square and shrink to 256x256 JPEG (a few tens of KB; Storage rules allow < 300 KB). */
 async function toAvatarBlob(file, size = 256) {
@@ -18,7 +19,7 @@ async function toAvatarBlob(file, size = 256) {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
 }
 
-// The name is read-only: only the admin renames a player (it must stay equal to the approved participant name).
+// The name is shown read-only (only the admin renames a player; the rules enforce it). The phone number is mandatory.
 export default function ProfilePage() {
   const { t, lang, setLang } = useLang();
   const { user } = useAuth();
@@ -39,9 +40,11 @@ export default function ProfilePage() {
   const userRef = doc(db, 'users', user.uid);
 
   const save = async () => {
+    const phone = normalizePhone(form.phone);
+    if (!phone) { setMsg(t('auth.errPhone')); return; }
     setBusy(true); setMsg('');
     try {
-      await updateDoc(userRef, { team: form.team || null, phone: form.phone.trim(), lang: form.lang, updatedAt: serverTimestamp() });
+      await updateDoc(userRef, { team: form.team || null, phone, lang: form.lang, updatedAt: serverTimestamp() });
       setLang(form.lang);
       setMsg(`✓ ${t('pf.saved')}`);
     } catch (e) { console.error(e); setMsg(t('common.error')); }
@@ -72,7 +75,6 @@ export default function ProfilePage() {
             <div className="muted small" dir="ltr">{u.email}</div>
           </div>
         </div>
-        <p className="muted small">{t('pf.nameNote')}</p>
         <div className="actions">
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ''; }} />
           <button className="btn ghost" disabled={busy} onClick={() => fileRef.current?.click()}>{t('pf.upload')}</button>
