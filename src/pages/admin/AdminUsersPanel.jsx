@@ -7,6 +7,7 @@ import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useParticipants } from '../../hooks/useParticipants.js';
 import { addAudit } from '../../utils/audit.js';
+import AdminUserDetail from './AdminUserDetail.jsx';
 import { normalizeName as normName } from '@shared/names.js';
 
 
@@ -17,6 +18,7 @@ export default function AdminUsersPanel() {
   const { participants, loading, error } = useParticipants();
   const [text, setText] = useState('');
   const [msg, setMsg] = useState('');
+  const [detail, setDetail] = useState(null); // participant whose details are open
 
   const run = async (fn) => { setMsg(''); try { await fn(); } catch (e) { console.error(e); setMsg(t('common.error')); } };
 
@@ -62,6 +64,8 @@ export default function AdminUsersPanel() {
 
   const paidCount = participants.filter((p) => p.paid).length;
 
+  if (detail) return <PageShell titleKey="admin.users"><AdminUserDetail participant={participants.find((x) => x.id === detail.id) || detail} onBack={() => setDetail(null)} /></PageShell>;
+
   return (
     <PageShell titleKey="admin.users">
       <div className="card">
@@ -80,6 +84,7 @@ export default function AdminUsersPanel() {
             <div className="muted small" dir="ltr">{p.claimedBy ? p.email : t('ap.unclaimed')}</div>
           </div>
           <label className="check"><input type="checkbox" checked={!!p.paid} onChange={() => togglePaid(p)} /> {t('ap.paid')}</label>
+          {p.claimedBy && <button className="btn ghost" onClick={() => setDetail(p)}>{t('au.details')}</button>}
           <button className="btn ghost" onClick={() => rename(p)}>{t('ap.rename')}</button>
           <button className="btn ghost" onClick={() => remove(p)}>{t('common.delete')}</button>
         </div>

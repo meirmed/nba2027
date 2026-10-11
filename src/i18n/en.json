@@ -411,5 +411,10 @@
   "pf.saved": "Saved",
   "results.noneInRange": "No games in this period.",
   "as.autoFill": "Auto-fill missing picks at tip-off (50% points, never the unique bonus)",
-  "ap.errExists": "Another participant already has this name."
+  "ap.errExists": "Another participant already has this name.",
+  "au.details": "Details",
+  "au.back": "Back to the list",
+  "au.registered": "Registered",
+  "au.noPicks": "This player has no predictions yet.",
+  "au.curStreak": "Current streak"
 }

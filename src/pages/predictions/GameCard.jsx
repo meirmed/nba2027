@@ -34,9 +34,12 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
         <div className="pred-team"><TeamBadge abbr={game.t1} /><small className="muted">{t('pred.home')}</small></div>
         {locked || !ready ? (
           <div className="pred-score">
-            <strong>{saved ? <Score a={saved.s1} b={saved.s2} /> : '– –'}</strong>
-            {jokerOn && <span title={t('pred.joker', { n: jokerMultiplier })}> ⭐</span>}
-            {saved?.autoFilled && <span title={t('bd.auto')}> 🎲</span>}
+            <span className="pred-pick">
+              <strong>{saved ? <Score a={saved.s1} b={saved.s2} /> : '– –'}</strong>
+              {jokerOn && <span title={t('pred.joker', { n: jokerMultiplier })}> ⭐</span>}
+              {saved?.autoFilled && <span title={t('bd.auto')}> 🎲</span>}
+            </span>
+            <small className="muted">{t('mp.myPick')}</small>
           </div>
         ) : (
           <div className="pred-inputs">
