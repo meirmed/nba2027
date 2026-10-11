@@ -1,10 +1,9 @@
-// Single menu definition. Bonus lives as a tab inside /predictions but has its own menu entry (deep link).
+// Single menu definition. Bonus questions are a tab inside /predictions (no separate menu entry).
 export const MENU = [
   { key: 'home', to: '/', label: 'nav.home', icon: '🏠' },
   { key: 'leaderboard', to: '/leaderboard', label: 'nav.leaderboard', icon: '🏆' },
   { key: 'results', to: '/results', label: 'nav.results', icon: '📊' },
   { key: 'games', to: '/predictions?tab=games', label: 'nav.gamePredictions', icon: '🏀' },
-  { key: 'bonus', to: '/predictions?tab=bonus', label: 'nav.bonus', icon: '⭐' },
   { key: 'mypoints', to: '/my-points', label: 'nav.myPoints', icon: '🧾' },
   { key: 'h2h', to: '/h2h', label: 'nav.h2h', icon: '⚔️' },
   { key: 'rules', to: '/rules', label: 'nav.rules', icon: '📖' },
