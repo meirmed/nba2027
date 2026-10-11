@@ -8,6 +8,7 @@ import { defineString, defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { v2 as translateV2 } from '@google-cloud/translate';
 import { addProfileDocs, adminEmails, normEmail } from './lib/profile.js';
 import { mapScheduleGame, validateImportItem } from './shared/schedule.js';
 import { planSave } from './shared/predictions.js';
@@ -364,4 +365,29 @@ export const onBonusUpdated = onDocumentWritten({ document: 'bonus/{id}', timeou
   const key = (q) => (q ? JSON.stringify([q.type, q.pts, q.penalty ?? null, !!q.multi, q.category, q.month ?? null, q.answer ?? [], (q.options || []).map((o) => [o.id, o.pts ?? null])]) : 'none');
   if (key(event.data?.before?.data()) === key(event.data?.after?.data())) return;
   await recalcAllPoints(db);
+});
+
+// ---------------------------------------------------------------- translation (admin tool for bonus questions)
+/**
+ * Admin: translate short texts between Hebrew and English with Google Cloud Translation (uses the project's own credentials,
+ * no API key to manage; the "Cloud Translation API" must be enabled in the Google Cloud project).
+ * items: [{text, to: 'he'|'en'}]  ->  {translations: [string]}
+ */
+export const translateTexts = onCall(async (request) => {
+  requireAdmin(request);
+  const items = request.data?.items;
+  if (!Array.isArray(items) || items.length === 0 || items.length > 30) throw new HttpsError('invalid-argument', 'items');
+  if (items.some((i) => typeof i?.text !== 'string' || !i.text.trim() || i.text.length > 400 || !['he', 'en'].includes(i.to))) throw new HttpsError('invalid-argument', 'item');
+  const translator = new translateV2.Translate();
+  try {
+    const translations = [];
+    for (const i of items) {
+      const [out] = await translator.translate(i.text, { from: i.to === 'he' ? 'en' : 'he', to: i.to, format: 'text' });
+      translations.push(String(out));
+    }
+    return { translations };
+  } catch (e) {
+    console.error('translate failed', e);
+    throw new HttpsError('unavailable', 'translate-failed');
+  }
 });

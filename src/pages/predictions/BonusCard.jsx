@@ -1,6 +1,7 @@
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useTeams } from '../../contexts/TeamsContext.jsx';
 import PlayerPicker from '../../components/PlayerPicker.jsx';
+import TeamPicker from '../../components/TeamPicker.jsx';
 import { formatCountdown } from '../../utils/dates.js';
 import { isOptionType, scoreBonus } from '@shared/bonus.js';
 
@@ -41,9 +42,8 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
     if (q.type === 'numeric' || q.type === 'closest') return <input className="input num wide" dir="ltr" type="number" inputMode="decimal" value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
     if (q.type === 'text') return <input className="input" dir="auto" maxLength={200} value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
     if (q.type === 'player') return <PlayerPicker players={players} value={value} onChange={onChange} max={maxPicks} />;
-    const list = isOptionType(q.type)
-      ? (q.options || []).map((o) => ({ id: o.id, label: `${o[lang] || o.en}${q.type === 'dynamic_score' ? ` (+${o.pts})` : ''}` }))
-      : Object.values(teams).sort((a, b) => (a[lang] || a.en).localeCompare(b[lang] || b.en, lang)).map((tm) => ({ id: tm.abbr, label: tm[lang] || tm.en }));
+    if (q.type === 'team') return <TeamPicker value={value} onChange={onChange} max={maxPicks} />;
+    const list = (q.options || []).map((o) => ({ id: o.id, label: `${o[lang] || o.en}${q.type === 'dynamic_score' ? ` (+${o.pts})` : ''}` }));
     return (
       <div className="bq-options">
         {list.map((o) => (

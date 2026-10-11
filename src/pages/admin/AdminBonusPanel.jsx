@@ -46,7 +46,7 @@ export default function AdminBonusPanel() {
 
       {tab === 'players' && <PlayersManager />}
 
-      {tab === 'questions' && editing !== undefined && <BonusForm question={editing} onDone={() => setEditing(undefined)} />}
+      {tab === 'questions' && editing !== undefined && <BonusForm question={editing} onDone={(m) => { setEditing(undefined); setMsg(m || ''); }} />}
 
       {tab === 'questions' && editing === undefined && (
         <>

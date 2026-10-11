@@ -313,9 +313,15 @@
   "err.bqPts": "Points must be a number, 0 or more.",
   "err.bqDeadline": "Choose a deadline.",
   "err.bqMonth": "Choose a month.",
-  "err.bqOptions": "Add at least 2 options with text in both languages.",
+  "err.bqOptions": "Add at least 2 options, each with text in at least one language.",
   "err.bqPenalty": "Points lost per unit must be a number, 0 or more.",
   "err.bqMax": "Max answers must be a whole number, 1 or more.",
   "err.bqAnswer": "The correct answer isn't valid for this question.",
-  "bq.choosePlayer": "Choose a player…"
+  "bq.choosePlayer": "Choose a player…",
+  "bq.chooseTeam": "Choose a team…",
+  "bq.saveAll": "Save answers ({n} of {total} saved)",
+  "bq.langHint": "Fill one language only if you like: the other is translated automatically when you save.",
+  "bq.translatedNote": "Saved. The missing language was translated automatically. Open the question again to review it.",
+  "err.bqEmpty": "Enter the question in at least one language.",
+  "err.bqTranslate": "Automatic translation failed. Fill both languages, or check that the Cloud Translation API is enabled."
 }

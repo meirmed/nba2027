@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Timestamp, collection, doc, getDocs, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { db } from '../../firebase.js';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../firebase.js';
 import PlayerPicker from '../../components/PlayerPicker.jsx';
+import TeamPicker from '../../components/TeamPicker.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { useTeams } from '../../contexts/TeamsContext.jsx';
 import { usePlayers } from '../../hooks/usePlayers.js';
 import { addAudit } from '../../utils/audit.js';
 import { toLocalInput } from '../../utils/dates.js';
@@ -58,7 +59,6 @@ function TextAnswers({ qid, value, onChange }) {
 export default function BonusForm({ question, onDone }) {
   const { t, lang } = useLang();
   const { user } = useAuth();
-  const { teams } = useTeams();
   const { players } = usePlayers(true);
   const [f, setF] = useState(() => init(question));
   const [errs, setErrs] = useState([]);
@@ -66,21 +66,41 @@ export default function BonusForm({ question, onDone }) {
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const setOpt = (i, k, v) => setF((x) => ({ ...x, options: x.options.map((o, j) => (j === i ? { ...o, [k]: v } : o)) }));
   const toggleAnswer = (id) => setF((x) => ({ ...x, answer: x.answer.includes(id) ? x.answer.filter((a) => a !== id) : [...x.answer, id] }));
-  const teamList = Object.values(teams).sort((a, b) => (a[lang] || a.en).localeCompare(b[lang] || b.en, lang));
 
-  const build = () => ({
-    question: { he: f.qHe.trim(), en: f.qEn.trim() }, type: f.type, category: f.category, month: f.category === 'month' ? f.month : null,
-    deadlineMs: f.deadlineLocal ? new Date(f.deadlineLocal).getTime() : NaN, pts: f.type === 'dynamic_score' ? 0 : n(f.pts), penalty: n(f.penalty),
-    multi: isMultiType(f.type) && f.multi, maxPicks: isMultiType(f.type) && f.multi && f.maxPicks !== '' ? Number(f.maxPicks) : null,
-    options: isOptionType(f.type) ? f.options.map((o) => ({ id: o.id, he: o.he.trim(), en: o.en.trim(), ...(f.type === 'dynamic_score' ? { pts: n(o.pts) } : {}) })) : [],
-    answer: f.answer,
+  const build = (v) => ({
+    question: { he: v.qHe.trim(), en: v.qEn.trim() }, type: v.type, category: v.category, month: v.category === 'month' ? v.month : null,
+    deadlineMs: v.deadlineLocal ? new Date(v.deadlineLocal).getTime() : NaN, pts: v.type === 'dynamic_score' ? 0 : n(v.pts), penalty: n(v.penalty),
+    multi: isMultiType(v.type) && v.multi, maxPicks: isMultiType(v.type) && v.multi && v.maxPicks !== '' ? Number(v.maxPicks) : null,
+    options: isOptionType(v.type) ? v.options.map((o) => ({ id: o.id, he: o.he.trim(), en: o.en.trim(), ...(v.type === 'dynamic_score' ? { pts: n(o.pts) } : {}) })) : [],
+    answer: v.answer,
   });
 
+  /** One language is enough: fill the missing Hebrew/English (question and options) with Google Translate. */
+  const fillMissing = async (v) => {
+    const next = { ...v, options: v.options.map((o) => ({ ...o })) };
+    const jobs = [];
+    const need = (he, en, setHe, setEn) => {
+      if (he.trim() && !en.trim()) jobs.push({ text: he.trim(), to: 'en', set: setEn });
+      if (en.trim() && !he.trim()) jobs.push({ text: en.trim(), to: 'he', set: setHe });
+    };
+    need(v.qHe, v.qEn, (x) => { next.qHe = x; }, (x) => { next.qEn = x; });
+    if (isOptionType(v.type)) next.options.forEach((o) => need(o.he, o.en, (x) => { o.he = x; }, (x) => { o.en = x; }));
+    if (jobs.length === 0) return { next, translated: false };
+    const r = await httpsCallable(functions, 'translateTexts')({ items: jobs.map((j) => ({ text: j.text, to: j.to })) });
+    r.data.translations.forEach((tr, i) => jobs[i].set(tr));
+    return { next, translated: true };
+  };
+
   const save = async () => {
-    const q = build();
-    const problems = validateQuestion(q);
-    if (problems.length) { setErrs(problems); return; }
+    setErrs([]);
+    if (!f.qHe.trim() && !f.qEn.trim()) { setErrs(['err.bqEmpty']); return; }
     setBusy(true);
+    let filled;
+    try { filled = await fillMissing(f); } catch (e) { console.error(e); setErrs(['err.bqTranslate']); setBusy(false); return; }
+    setF(filled.next);
+    const q = build(filled.next);
+    const problems = validateQuestion(q);
+    if (problems.length) { setErrs(problems); setBusy(false); return; }
     try {
       const ref = question ? doc(db, 'bonus', question.id) : doc(collection(db, 'bonus'));
       const data = {
@@ -90,9 +110,9 @@ export default function BonusForm({ question, onDone }) {
       };
       const batch = writeBatch(db);
       if (question) batch.update(ref, data); else batch.set(ref, { ...data, createdAt: serverTimestamp() });
-      addAudit(batch, user.uid, { action: question ? 'bonus.update' : 'bonus.create', target: ref.path, before: question ? { ...question } : null, after: { ...data, updatedAt: null, deadline: q.deadlineMs } });
+      addAudit(batch, user.uid, { action: question ? 'bonus.update' : 'bonus.create', target: ref.path, before: question ? { ...question } : null, after: { ...data, updatedAt: null, deadline: q.deadlineMs, autoTranslated: filled.translated } });
       await batch.commit();
-      onDone();
+      onDone(filled.translated ? t('bq.translatedNote') : '');
     } catch (e) { console.error(e); setErrs(['common.error']); setBusy(false); }
   };
 
@@ -100,7 +120,7 @@ export default function BonusForm({ question, onDone }) {
   const answerEditor = (() => {
     if (f.type === 'numeric' || f.type === 'closest') return <input className="input num wide" dir="ltr" type="number" inputMode="decimal" value={f.answer[0] ?? ''} onChange={(e) => set('answer', e.target.value === '' ? [] : [e.target.value])} />;
     if (optionTypes) return <div className="bq-options">{f.options.map((o) => <label key={o.id} className="check"><input type="checkbox" checked={f.answer.includes(o.id)} onChange={() => toggleAnswer(o.id)} /> {o[lang] || o.en || o.he || '…'}</label>)}</div>;
-    if (f.type === 'team') return <div className="bq-options">{teamList.map((tm) => <label key={tm.abbr} className="check"><input type="checkbox" checked={f.answer.includes(tm.abbr)} onChange={() => toggleAnswer(tm.abbr)} /> {tm.shortEn ? (lang === 'he' ? tm.shortHe : tm.shortEn) : tm.abbr}</label>)}</div>;
+    if (f.type === 'team') return <TeamPicker value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} />;
     if (f.type === 'player') return <PlayerPicker players={players} value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} />;
     if (f.type === 'text') return question ? <TextAnswers qid={question.id} value={f.answer} onChange={(v) => set('answer', v)} /> : <p className="muted small">{t('bq.textAfterSave')}</p>;
     return null;
@@ -109,6 +129,7 @@ export default function BonusForm({ question, onDone }) {
   return (
     <div className="card">
       <h3>{question ? t('bq.edit') : t('bq.new')}</h3>
+      <p className="muted small">{t('bq.langHint')}</p>
       <div className="grid-form">
         <label className="field">{t('bq.questionHe')}<input className="input" dir="rtl" value={f.qHe} onChange={(e) => set('qHe', e.target.value)} /></label>
         <label className="field">{t('bq.questionEn')}<input className="input" dir="ltr" value={f.qEn} onChange={(e) => set('qEn', e.target.value)} /></label>
