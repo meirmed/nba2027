@@ -33,7 +33,7 @@ export default function AdminBonusPanel() {
     } catch (e) { console.error(e); setMsg(t('common.error')); }
   };
 
-  const state = (q) => ((q.answer || []).length > 0 ? ['finished', t('bq.answerSet')] : q.deadlineMs > nowMs ? ['scheduled', t('status.scheduled')] : ['live', t('pred.locked')]);
+  const state = (q) => ((q.answer || []).length > 0 ? ['finished', t('bq.answerSet')] : q.deadlineMs > nowMs ? ['scheduled', t('status.scheduled')] : ['', t('pred.locked')]);
   const catLabel = (q) => (q.category === 'month' ? q.month : t(`bq.cat.${q.category}`));
 
   return (

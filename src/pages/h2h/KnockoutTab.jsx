@@ -23,7 +23,7 @@ export default function KnockoutTab() {
       {stages.map(([id, stage]) => (
         <section key={id}>
           <h3 className="bq-title">
-            {t('h2h.stage', { n: stage.stageNum })} · <span className={`badge ${stage.endDay ? 'finished' : 'live'}`}>{stage.endDay ? t('h2h.stageClosed') : t('h2h.stageOpen')}</span>
+            {t('h2h.stage', { n: stage.stageNum })} · <span className={`badge ${stage.endDay ? 'finished' : 'scheduled'}`}>{stage.endDay ? t('h2h.stageClosed') : t('h2h.stageOpen')}</span>
             <span className="muted small"> · {stage.startDay}{stage.endDay ? ` → ${stage.endDay}` : ''}</span>
           </h3>
           {Object.entries(stage.pairs || {}).sort(pairOrder).map(([pid, p]) => {
