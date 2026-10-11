@@ -2,6 +2,7 @@
 // reconciliation) and unit-tested. Pure: no Firestore here. One module = one source of truth for every total.
 import { scoreGame, mergeScoring, compareRows } from './scoring.js';
 import { countsForStandings } from './games.js';
+import { dayKeyOfMs } from './daykeys.js';
 
 const sideOf = (a, b) => (a > b ? 1 : a < b ? 2 : 0);
 const validPick = (p) => p && Number.isInteger(p.s1) && Number.isInteger(p.s2) && p.s1 !== p.s2;
@@ -38,11 +39,11 @@ export function scoreGamePicks({ game, picks, scoring }) {
  * Returns {uid: {...stats, byGame:{gameId:{pts,w,x,u,r,d}}}}.  gameHits === winnerCorrect (a hit needs the right winner).
  * "unique" = exactly ONE non-auto-filled exact pick on that game.  Risk % = share of ALL picks on the game with the same winner.
  */
-export function computeAllPoints({ games, predictions, uids, scoring, countedRounds }) {
+export function computeAllPoints({ games, predictions, uids, scoring, countedRounds, timezone = 'Asia/Jerusalem' }) {
   const sc = mergeScoring(scoring);
   const out = {};
   const seq = {};
-  uids.forEach((u) => { out[u] = { ...emptyStats(), gamePtsByRound: {}, byGame: {} }; seq[u] = []; });
+  uids.forEach((u) => { out[u] = { ...emptyStats(), gamePtsByRound: {}, byGame: {}, byDay: {} }; seq[u] = []; });
 
   const finished = games
     .filter((g) => g.status === 'finished' && countsForStandings(g, countedRounds) && Number.isInteger(g.s1) && Number.isInteger(g.s2) && g.s1 !== g.s2)
@@ -63,6 +64,8 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
       if (r.exact) u.exactHits += 1;
       if (r.uniquePts > 0) u.uniqueHits += 1;
       if (r.riskPts > 0) u.riskHits += 1;
+      const cell = (u.byDay[dayKeyOfMs(g.tipoffMs, timezone)] ||= [0, 0, 0]); // [game points, exact hits, unique hits] per Israel day
+      cell[0] += r.pts; if (r.exact) cell[1] += 1; if (r.uniquePts > 0) cell[2] += 1;
       u.byGame[g.id] = { pts: r.pts, w: r.winnerCorrect ? 1 : 0, x: r.exact ? 1 : 0, u: r.uniquePts > 0 ? 1 : 0, r: r.riskPts > 0 ? 1 : 0, d: r.diffPts };
       seq[uid].push(r.winnerCorrect);
     });

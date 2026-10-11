@@ -74,6 +74,17 @@ describe('scoreGamePicks (drives the "Everyone\'s picks" badges)', () => {
   });
 });
 
+describe('byDay (feeds Head to Head)', () => {
+  it('sums points / exact / unique per day in the given timezone; bonus is never part of it', () => {
+    const d1 = Date.parse('2026-10-30T20:00:00Z');
+    const d2 = Date.parse('2026-10-30T23:30:00Z'); // 01:30 next day in Israel
+    const games = [game('g1', d1, 110, 100), game('g2', d2, 110, 100)];
+    const r = computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'Asia/Jerusalem' });
+    expect(r.A.byDay).toEqual({ '2026-10-30': [17, 1, 1], '2026-10-31': [8, 0, 0] });
+    expect(computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'UTC' }).A.byDay).toEqual({ '2026-10-30': [25, 1, 1] });
+  });
+});
+
 describe('rankRows', () => {
   it('uses tiebreakers and gives tied rows the same rank', () => {
     const rows = [{ id: 'a', total: 10, exactHits: 1 }, { id: 'b', total: 10, exactHits: 3 }, { id: 'c', total: 12 }, { id: 'd', total: 10, exactHits: 1 }];

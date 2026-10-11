@@ -6,3 +6,6 @@ const nul = (o) => (o === undefined ? null : o);
 export function addAudit(batch, uid, { action, target, before = null, after = null }) {
   batch.set(doc(collection(db, 'auditLog')), { action, by: uid, ts: serverTimestamp(), target, before: nul(before), after: nul(after) });
 }
+
+/** Same entry as addAudit, for use inside transactions: tx.set(doc(collection(db, 'auditLog')), auditEntry(uid, {...})). */
+export const auditEntry = (uid, { action, target, before = null, after = null }) => ({ action, by: uid, ts: serverTimestamp(), target, before, after });

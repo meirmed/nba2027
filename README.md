@@ -54,3 +54,9 @@ firebase deploy --only firestore:indexes,firestore:rules,functions   # first dep
 Admin -> Bonus: questions (numeric / as-close-as-possible / choice / team / player / odds-based / free text; "ranking" is reserved) and the players list.
 Users answer under Predictions -> Bonus (autosave; the server checks the deadline). Setting a correct answer in Admin closes the question and rescores
 everyone (`onBonusUpdated`). Bonus points have their own leaderboard column and tab.
+
+## Head to Head (Phase 6)
+Admin -> H2H -> Tournament: pick participants, draw groups (random, then move players by hand), start the league. League standings = game points
+(bonus never counts) from the league start day. "Close the league" creates knockout stage 1 (seeded: group winners first). Each stage's points = game points
+inside its day window; the admin closes a stage to create the next one (winners re-paired by seed). Admin -> H2H -> Pairs for fun: any two players, optional day window.
+Everything is computed live from `points/{uid}.byDay`; run "Recalculate all points" once after deploying this version so `byDay` exists.

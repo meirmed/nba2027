@@ -19,7 +19,7 @@ export async function loadState(db) {
   const settings = s.data() || {};
   const uids = [...new Set([...Object.keys(predictions), ...Object.keys(stored)])];
   const questions = b.docs.map((d) => ({ id: d.id, ...d.data() }));
-  return { games, predictions, stored, uids, questions, scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
+  return { games, predictions, stored, uids, questions, timezone: settings.timezone || 'Asia/Jerusalem', scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
 }
 
 /** Full recompute of every user's points from raw data (idempotent): game points + bonus points. total = gamePts + bonus. */
@@ -29,8 +29,8 @@ export async function recalcAllPoints(db) {
   const bon = computeBonusPoints({ questions: st.questions, predictions: st.predictions, uids: st.uids });
   const writes = [];
   st.uids.forEach((uid) => {
-    const { byGame, ...stats } = res[uid];
-    const data = { ...stats, bonus: bon[uid].bonus, bonusByCategory: bon[uid].byCategory, total: Math.round((stats.gamePts + bon[uid].bonus) * 100) / 100, updatedAt: FieldValue.serverTimestamp() };
+    const { byGame, byDay, ...stats } = res[uid];
+    const data = { ...stats, byDay, bonus: bon[uid].bonus, bonusByCategory: bon[uid].byCategory, total: Math.round((stats.gamePts + bon[uid].bonus) * 100) / 100, updatedAt: FieldValue.serverTimestamp() };
     // mergeFields replaces each listed field WHOLE (so gamePtsByRound can't keep stale round keys)
     writes.push({ ref: db.doc(`points/${uid}`), data, opts: { mergeFields: Object.keys(data) } });
     writes.push({ ref: db.doc(`pointsDetail/${uid}`), data: { byGame, bonus: bon[uid].byQuestion, updatedAt: FieldValue.serverTimestamp() }, opts: undefined });
@@ -62,6 +62,7 @@ export async function reconcileAll(db) {
     if (sortedJson(stored.bonusByCategory) !== sortedJson(bon[uid].byCategory)) mismatches.push({ uid, name, field: 'bonusByCategory', stored: sortedJson(stored.bonusByCategory), expected: sortedJson(bon[uid].byCategory) });
     const expTotal = Math.round((exp.gamePts + bon[uid].bonus) * 100) / 100;
     if ((stored.total ?? 0) !== expTotal) mismatches.push({ uid, name, field: 'total', stored: stored.total ?? 0, expected: expTotal });
+    if (sortedJson(stored.byDay) !== sortedJson(exp.byDay)) mismatches.push({ uid, name, field: 'byDay', stored: 'differs', expected: 'recompute' });
     if (sortedJson(stored.gamePtsByRound) !== sortedJson(exp.gamePtsByRound)) mismatches.push({ uid, name, field: 'gamePtsByRound', stored: sortedJson(stored.gamePtsByRound), expected: sortedJson(exp.gamePtsByRound) });
   });
   return { users: st.uids.length, ok: mismatches.length === 0, mismatches: mismatches.slice(0, 200), mismatchCount: mismatches.length };

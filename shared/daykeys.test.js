@@ -12,3 +12,11 @@ describe('addDaysToKey', () => {
     expect(addDaysToKey('2026-10-10', 0)).toBe('2026-10-10');
   });
 });
+
+import { dayKeyOfMs } from './daykeys.js';
+describe('dayKeyOfMs', () => {
+  it('uses the timezone: a late US game is the NEXT Israel day', () => {
+    expect(dayKeyOfMs(Date.parse('2026-10-30T23:30:00Z'), 'Asia/Jerusalem')).toBe('2026-10-31');
+    expect(dayKeyOfMs(Date.parse('2026-10-30T23:30:00Z'), 'UTC')).toBe('2026-10-30');
+  });
+});
