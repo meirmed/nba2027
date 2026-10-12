@@ -224,3 +224,19 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 
 .count-badge.warn { background: rgba(245, 158, 11, .2); color: #f59e0b; }
 .tab .count-badge { margin-inline-start: .4rem; }
+
+/* leaderboard names are links */
+.lb-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; }
+.lb-link:hover span { text-decoration: underline; }
+
+/* Predictions: tighter cards so more games fit on the screen */
+.pred-card { padding: .5rem .75rem; margin-block: .3rem; gap: .25rem; }
+.pred-head { gap: .5rem; }
+.pred-body { gap: .35rem; }
+.pred-team small { font-size: .7rem; line-height: 1.1; }
+.pred-inputs .input { padding: .35rem .3rem; }
+.pred-card .actions { margin-block: 0; }
+.pred-card .btn { padding: .3rem .7rem; font-size: .82rem; }
+.pred-card p { margin: 0; }
+.day-nav { margin-bottom: .3rem; }
+@media (max-width: 600px) { .pred-card { padding: .45rem .6rem; } .pred-inputs .num { width: 3.2rem; } }

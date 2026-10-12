@@ -35,3 +35,10 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 - Third tab (Games | Next 7 days | Bonus): counted games from today through the next 6 days (7 calendar days, Israel time) in one list grouped by day (`useWeekGames`, `rangeFor('next7')`). Same cards, autosave, jokers and Save bar as Games; the tab shows an amber number = open games in those 7 days without a pick.
 - Editing state (typed scores, joker changes, autosave, rejection reasons) moved into `PredictionEditorProvider` (above the tabs), so it is shared by Games and Next 7 days and survives tab switches. `SaveBar` counts the saved games of the games shown in the current tab.
 - Deep links: `/predictions?tab=week`. No server or data changes.
+
+## Update: player pages from the leaderboard + tighter prediction cards
+- Clicking a name in the leaderboard (Table) opens `/player/:uid` = the "My predictions" view for that player: header with stats, Games tab (finished + LIVE games only, with pick, result and points; 🎲/⭐ markers) and Bonus tab (CLOSED questions only). My own row opens My predictions.
+- Privacy by design: upcoming picks stay in `predictions/{uid}` (owner/admin only). The player page reads only public data: `pointsDetail/{uid}.byGame` (now also holds the pick: `s1,s2,j,a` of FINISHED games; rules now let any signed-in player read it), `picks/{gameId}` for live games, `bonusPicks/{id}` for closed questions (`usePublicPredictions`; `usePredictionsOf` picks self / admin-full / public automatically).
+- **After deploying, press Admin -> Scoring -> Recalculate all points once**: older finished games have no pick inside `pointsDetail` until a recalculation (the next finished game also does it).
+- Prediction cards use less padding/margins (CSS only).
+- Deploy: `firebase deploy --only firestore:rules,functions` + push the app.

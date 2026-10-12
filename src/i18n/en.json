@@ -561,5 +561,9 @@
   "rb.allAnswers": "All answers ({n})",
   "tabs.week": "Next 7 days",
   "pred.noGamesWeek": "No games in the next 7 days.",
-  "pred.missingTip": "{n} games in the next 7 days without a prediction"
+  "pred.missingTip": "{n} games in the next 7 days without a prediction",
+  "pl.back": "Back",
+  "pl.notFound": "Player not found.",
+  "pl.note": "Only finished and live games are shown.",
+  "pl.noGames": "No finished or live games with a prediction yet."
 }

@@ -10,14 +10,15 @@ import { maxBonusPoints, scoreBonus } from '@shared/bonus.js';
 import { answerLabel } from './predictions/BonusCard.jsx';
 
 /** Bonus tracking of ONE player (me, or any player for the admin): answers, correct answers and points per question + the total. */
-export default function UserBonusView({ uid, self = false }) {
+export default function UserBonusView({ uid, self = false, publicOnly = false }) {
   const { t, lang } = useLang();
   const { questions, loading } = useBonus();
   const { teams } = useTeams();
   const { rows } = usePoints();
-  const mine = usePredictionsOf(uid);
+  const mine = usePredictionsOf(uid, { publicOnly });
   const nowMs = useNow(1000);
-  const list = [...questions].filter((q) => q.type !== 'ranking').reverse();
+  // another player's page shows CLOSED questions only (open questions stay private until their deadline)
+  const list = [...questions].filter((q) => q.type !== 'ranking' && (!publicOnly || (q.answer || []).length > 0 || nowMs >= q.deadlineMs)).reverse();
   const { byId: playersById } = usePlayers(list.some((q) => q.type === 'player'));
   const ctx = { lang, teams, playersById };
   const total = rows.find((r) => r.uid === uid)?.bonus ?? 0;

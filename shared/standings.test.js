@@ -15,7 +15,7 @@ describe('computeAllPoints', () => {
     expect(r.B.gamePts).toBe(5 + 3); // margin error 2
     expect(r.C.gamePts).toBe(0);
     expect(r.A).toMatchObject({ exactHits: 1, uniqueHits: 1, winnerCorrect: 1, gamesPlayed: 1 });
-    expect(r.A.byGame.g1).toMatchObject({ pts: 17, x: 1, u: 1 });
+    expect(r.A.byGame.g1).toMatchObject({ pts: 17, x: 1, u: 1, s1: 110, s2: 100, j: 0, a: 0 });
   });
   it('two exact picks -> nobody is unique', () => {
     const r = run([g1], { A: { games: { g1: P(110, 100) } }, B: { games: { g1: P(110, 100) } } });

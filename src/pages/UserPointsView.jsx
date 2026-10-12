@@ -16,13 +16,13 @@ import { rankRows } from '@shared/standings.js';
 
 // GAMES part: one line per game = teams | pick | actual result | points, grouped by day (newest first). Default = last 7 days.
 // Used by My Points (uid = me) and by Admin -> Users -> Details (uid = any player).
-export default function UserPointsView({ uid, self = false, showAdjustments = true }) {
+export default function UserPointsView({ uid, self = false, showAdjustments = true, publicOnly = false }) {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const { jokerMultiplier, tiebreakers } = useScoring();
   const pointsAll = usePoints();
   const { games } = useGames();
-  const mine = usePredictionsOf(uid);
+  const mine = usePredictionsOf(uid, { publicOnly, bonus: false });
   const period = usePeriod(timezone);
   const [detail, setDetail] = useState({}); // pointsDetail/{uid}.byGame
 
@@ -49,7 +49,7 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
 
   return (
     <>
-      {mineAll.length === 0 && <p className="muted">{t(self ? 'mp.empty' : 'au.noPicks')}</p>}
+      {mineAll.length === 0 && !mine.loading && <p className="muted">{t(self ? 'mp.empty' : publicOnly ? 'pl.noGames' : 'au.noPicks')}</p>}
       {mineAll.length > 0 && (
         <>
           <PeriodFilter period={period} />
