@@ -3,8 +3,8 @@ export const MENU = [
   { key: 'home', to: '/', label: 'nav.home', icon: '🏠' },
   { key: 'leaderboard', to: '/leaderboard', label: 'nav.leaderboard', icon: '🏆' },
   { key: 'results', to: '/results', label: 'nav.results', icon: '📊' },
-  { key: 'games', to: '/predictions?tab=games', label: 'nav.gamePredictions', icon: '🏀' },
-  { key: 'mypoints', to: '/my-points', label: 'nav.myPoints', icon: '🧾' },
+  { key: 'games', to: '/predictions?tab=games', label: 'nav.gamePredictions', icon: '🏀', playerOnly: true },
+  { key: 'mypoints', to: '/my-points', label: 'nav.myPoints', icon: '🧾', playerOnly: true },
   { key: 'h2h', to: '/h2h', label: 'nav.h2h', icon: '⚔️' },
   { key: 'rules', to: '/rules', label: 'nav.rules', icon: '📖' },
   { key: 'profile', to: '/profile', label: 'nav.profile', icon: '👤' },
@@ -14,7 +14,7 @@ export const MENU = [
 // Mobile bottom nav (WC): Home | Predictions | Results | Leaderboard | H2H | More
 export const BOTTOM = [
   { key: 'home', to: '/', label: 'nav.home', icon: '🏠' },
-  { key: 'predictions', to: '/predictions', label: 'nav.predictions', icon: '🏀' },
+  { key: 'predictions', to: '/predictions', label: 'nav.predictions', icon: '🏀', playerOnly: true },
   { key: 'results', to: '/results', label: 'nav.results', icon: '📊' },
   { key: 'leaderboard', to: '/leaderboard', label: 'nav.leaderboard', icon: '🏆' },
   { key: 'h2h', to: '/h2h', label: 'nav.h2h', icon: '⚔️' },

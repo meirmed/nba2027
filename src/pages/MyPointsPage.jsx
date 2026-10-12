@@ -9,8 +9,9 @@ import UserBonusView from './UserBonusView.jsx';
 // "My predictions": my game picks with points | my bonus answers with points.
 export default function MyPointsPage() {
   const { t } = useLang();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [tab, setTab] = useState('games');
+  if (isAdmin) return <PageShell titleKey="nav.myPoints"><div className="card"><p>{t('adm.noPlay')}</p></div></PageShell>;
   return (
     <PageShell titleKey="nav.myPoints">
       <div className="utabs" role="tablist">

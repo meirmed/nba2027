@@ -2,6 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { computeAllPoints } from '../shared/standings.js';
 import { computeBonusPoints } from '../shared/bonus.js';
 import { DEFAULT_SETTINGS } from '../shared/constants.js';
+import { adminUidSet } from './admins.js';
 
 /** Reads RAW data only: games + predictions (+ stored points for bonus/names) + settings. */
 export async function loadState(db) {
@@ -17,11 +18,12 @@ export async function loadState(db) {
   const stored = {};
   pts.forEach((d) => { stored[d.id] = d.data(); });
   const settings = s.data() || {};
-  const uids = [...new Set([...Object.keys(predictions), ...Object.keys(stored)])];
+  const admins = await adminUidSet(); // admins never take part: their picks must not influence anyone's risk % / unique bonus
+  const uids = [...new Set([...Object.keys(predictions), ...Object.keys(stored)])].filter((u) => !admins.has(u));
   const questions = b.docs.map((d) => ({ id: d.id, ...d.data() }));
   const adjust = {};
   adj.forEach((d) => { const x = d.data(); adjust[x.uid] = (adjust[x.uid] || 0) + (x.pts || 0); }); // manual admin adjustments (with a reason each)
-  return { games, predictions, stored, uids, questions, adjust, timezone: settings.timezone || 'Asia/Jerusalem', scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
+  return { games, predictions, stored, uids, admins, questions, adjust, timezone: settings.timezone || 'Asia/Jerusalem', scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
 }
 
 /** Full recompute of every user's points from raw data (idempotent): game points + bonus points. total = gamePts + bonus. */
@@ -30,6 +32,8 @@ export async function recalcAllPoints(db) {
   const res = computeAllPoints(st);
   const bon = computeBonusPoints({ questions: st.questions, predictions: st.predictions, uids: st.uids });
   const writes = [];
+  // flag the admin accounts so every table (leaderboard, H2H, ...) can leave them out; nothing else is written for them
+  st.admins.forEach((uid) => writes.push({ ref: db.doc(`points/${uid}`), data: { isAdmin: true }, opts: { mergeFields: ['isAdmin'] } }));
   st.uids.forEach((uid) => {
     const { byGame, byDay, ...stats } = res[uid];
     const data = { ...stats, byDay, bonus: bon[uid].bonus, adjust: st.adjust[uid] || 0, bonusByCategory: bon[uid].byCategory, total: Math.round((stats.gamePts + bon[uid].bonus + (st.adjust[uid] || 0)) * 100) / 100, updatedAt: FieldValue.serverTimestamp() };

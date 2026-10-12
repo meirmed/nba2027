@@ -11,7 +11,7 @@ export function addProfileDocs({ db, batch, uid, name, email, phone = '', partic
     isAdmin, participantId, createdAt: now, updatedAt: now,
   });
   batch.set(db.doc(`points/${uid}`), {
-    name, total: 0, gamePts: 0, bonus: 0, bonusByRound: {}, gamePtsByRound: {}, gameHits: 0, exactHits: 0,
+    name, isAdmin, total: 0, gamePts: 0, bonus: 0, bonusByRound: {}, gamePtsByRound: {}, gameHits: 0, exactHits: 0,
     winnerCorrect: 0, uniqueHits: 0, bestStreak: 0, curStreak: 0, bestMiss: 0, curMiss: 0, gamesPlayed: 0, updatedAt: now,
   });
   batch.set(db.doc(`predictions/${uid}`), { games: {}, bonus: {}, jokers: {}, updatedAt: now });

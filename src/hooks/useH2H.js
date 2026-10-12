@@ -31,8 +31,8 @@ export function useFunPairs() {
 
 /** Names + windowed GAME-point stats for everyone, from points/{uid}.byDay (bonus points are never part of it). */
 export function usePlayerStats() {
-  const { rows } = usePoints();
-  const byUid = useMemo(() => Object.fromEntries(rows.map((r) => [r.uid, r])), [rows]);
+  const { rows, allRows } = usePoints();
+  const byUid = useMemo(() => Object.fromEntries(allRows.map((r) => [r.uid, r])), [allRows]); // names also resolve for admins (audit log)
   const nameOf = (uid) => byUid[uid]?.name || '…';
   const statsOf = (uid, from = null, to = null) => windowStats(byUid[uid]?.byDay, from, to);
   return { rows, byUid, nameOf, statsOf };

@@ -8,7 +8,7 @@ export default function BottomNav() {
   const { t } = useLang();
   const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
-  const more = MENU.filter((m) => MORE_KEYS.includes(m.key) && (!m.adminOnly || isAdmin));
+  const more = MENU.filter((m) => MORE_KEYS.includes(m.key) && (!m.adminOnly || isAdmin) && !(m.playerOnly && isAdmin));
 
   return (
     <>
@@ -24,7 +24,7 @@ export default function BottomNav() {
         </div>
       )}
       <nav className="bottom-nav" aria-label="main">
-        {BOTTOM.map((m) => (
+        {BOTTOM.filter((m) => !(m.playerOnly && isAdmin)).map((m) => (
           <NavLink key={m.key} to={m.to} end={m.to === '/'} className="bn-item">
             <span aria-hidden>{m.icon}</span>
             <small>{t(m.label)}</small>

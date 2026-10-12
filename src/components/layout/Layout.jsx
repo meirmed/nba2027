@@ -13,7 +13,7 @@ export default function Layout() {
       <header className="topbar">
         <strong>🏀 {t('app.name')}</strong>
         <nav className="topnav" aria-label="desktop">
-          {MENU.filter((m) => !m.adminOnly || isAdmin).map((m) => (
+          {MENU.filter((m) => (!m.adminOnly || isAdmin) && !(m.playerOnly && isAdmin)).map((m) => (
             <NavLink key={m.key} to={m.to} end={m.to === '/'} className="topnav-link">{t(m.label)}</NavLink>
           ))}
         </nav>

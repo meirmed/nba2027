@@ -85,6 +85,18 @@ describe('byDay (feeds Head to Head)', () => {
   });
 });
 
+describe('players only: a user left out of `uids` (an admin) has no influence', () => {
+  it("an admin's picks do not change anyone's risk % or unique bonus", () => {
+    const g = game('g', 1, 110, 100);
+    const preds = { A: { games: { g: P(110, 100) } }, B: { games: { g: P(90, 100) } }, ADMIN: { games: { g: P(110, 100) } } };
+    const without = computeAllPoints({ games: [g], predictions: preds, uids: ['A', 'B'], scoring: sc, countedRounds: ['RS'] });
+    const withAdmin = computeAllPoints({ games: [g], predictions: preds, uids: ['A', 'B', 'ADMIN'], scoring: sc, countedRounds: ['RS'] });
+    expect(without.A.uniqueHits).toBe(1); // A is the only exact pick among the players
+    expect(withAdmin.A.uniqueHits).toBe(0); // if the admin counted, A would lose the unique bonus
+    expect(without.ADMIN).toBeUndefined();
+  });
+});
+
 describe('rankRows', () => {
   it('uses tiebreakers and gives tied rows the same rank', () => {
     const rows = [{ id: 'a', total: 10, exactHits: 1 }, { id: 'b', total: 10, exactHits: 3 }, { id: 'c', total: 12 }, { id: 'd', total: 10, exactHits: 1 }];

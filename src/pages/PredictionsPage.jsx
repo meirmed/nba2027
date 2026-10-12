@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { useLang } from '../contexts/LangContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { useNow } from '../hooks/useNow.js';
 import { useWeekGames } from '../hooks/useWeekGames.js';
@@ -39,5 +40,8 @@ function Tabs() {
 
 // The provider sits ABOVE the tabs: what you typed survives switching tabs.
 export default function PredictionsPage() {
+  const { t } = useLang();
+  const { isAdmin } = useAuth();
+  if (isAdmin) return <div className="card"><p>{t('adm.noPlay')}</p></div>; // admins don't take part in the competition
   return <PredictionEditorProvider><Tabs /></PredictionEditorProvider>;
 }

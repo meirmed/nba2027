@@ -22,7 +22,7 @@ const DAY = 86400000;
 
 export default function HomePage() {
   const { t, lang } = useLang();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const settings = useSettings();
   const { tiebreakers } = useScoring();
   const { games } = useGames();
@@ -37,7 +37,7 @@ export default function HomePage() {
   const tip = (g) => g.tipoff?.toMillis?.() ?? 0;
   const open = counted.filter((g) => g.status === 'scheduled' && g.t1 && g.t2 && tip(g) > nowMs);
   const next = open[0];
-  const missing = open.filter((g) => tip(g) - nowMs < DAY && !mine.games[g.id]).length;
+  const missing = isAdmin ? 0 : open.filter((g) => tip(g) - nowMs < DAY && !mine.games[g.id]).length;
 
   const todayKey = dayKey(new Date(nowMs), tz);
   const firstShown = counted.find((g) => dayKey(g.tipoff, tz) >= todayKey);
@@ -46,13 +46,13 @@ export default function HomePage() {
 
   const ranked = useMemo(() => rankRows(rows, tiebreakers), [rows, tiebreakers]);
   const me = ranked.find((r) => r.uid === user?.uid);
-  const bonusPending = questions.filter((q) => !bonusClosedReason(q, nowMs) && !mine.bonus[q.id]?.answer?.length).length;
+  const bonusPending = isAdmin ? 0 : questions.filter((q) => !bonusClosedReason(q, nowMs) && !mine.bonus[q.id]?.answer?.length).length;
   const announcement = (settings.announcement?.[lang] || '').trim();
 
   return (
     <PageShell titleKey="nav.home">
       {announcement && <div className="card announce" dir="auto">📣 {announcement}</div>}
-      {profile && !profile.phone && (
+      {!isAdmin && profile && !profile.phone && (
         <div className="card announce">
           <span>📞 {t('home.needPhone')}</span>
           <div className="actions"><Link className="btn" to="/profile">{t('home.goProfile')}</Link></div>
@@ -68,7 +68,7 @@ export default function HomePage() {
         ) : <span className="muted">{t('home.noNext')}</span>}
         {missing > 0 && <p className="error small">{t('home.missing', { n: missing })}</p>}
         {bonusPending > 0 && <p className="muted small">{t('home.bonusPending', { n: bonusPending })}</p>}
-        <div className="actions"><Link className="btn" to="/predictions">{t('home.goPredict')}</Link></div>
+        {!isAdmin && <div className="actions"><Link className="btn" to="/predictions">{t('home.goPredict')}</Link></div>}
       </div>
 
       {me && (

@@ -20,6 +20,7 @@ import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { makeAutoPick } from './shared/autofill.js';
 import { normalizePhone } from './shared/phone.js';
+import { adminUidSet } from './lib/admins.js';
 import { RESTORE_ALLOWED, validBackupName } from './shared/backup.js';
 import { saveBackup, pruneAutoBackups, loadBackup, removeBackup, restoreDiff, applyRestore, resetSeason, stamp, safeLabel, de } from './lib/backup.js';
 import { mergeScoring } from './shared/scoring.js';
@@ -195,9 +196,10 @@ export const importScheduleGames = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------- predictions
-/** A registered, not-blocked player. */
-async function assertCanPlay(uid) {
-  const p = await db.doc(`users/${uid}`).get();
+/** A registered, not-blocked PLAYER. Admin accounts do not take part in the competition. */
+async function assertCanPlay(request) {
+  if (request.auth.token.admin === true) throw new HttpsError('permission-denied', 'admin-cannot-play');
+  const p = await db.doc(`users/${request.auth.uid}`).get();
   if (!p.exists) throw new HttpsError('permission-denied', 'no-profile');
   if (p.data().blocked) throw new HttpsError('permission-denied', 'blocked');
 }
@@ -215,7 +217,7 @@ export const savePredictions = onCall(async (request) => {
   if (!isObj(picks) || !isObj(jokers)) throw new HttpsError('invalid-argument', 'shape');
   const ids = [...new Set([...Object.keys(picks), ...Object.keys(jokers)])];
   if (ids.length === 0 || ids.length > 100 || ids.some((id) => id.length > 80 || id.includes('/'))) throw new HttpsError('invalid-argument', 'ids');
-  await assertCanPlay(uid);
+  await assertCanPlay(request);
 
   const ref = db.doc(`predictions/${uid}`);
   return db.runTransaction(async (tx) => {
@@ -269,7 +271,7 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
   const todo = snap.docs.filter((d) => !d.data().picksLockedAt && d.data().status !== 'cancelled');
   if (todo.length === 0) return;
 
-  const [preds, points, settingsSnap] = await Promise.all([db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get()]);
+  const [preds, points, settingsSnap, admins] = await Promise.all([db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get(), adminUidSet()]);
   const settings = settingsSnap.data() || {};
   const autoFillOn = (settings.features?.autoFill ?? DEFAULT_SETTINGS.features.autoFill) !== false;
   const counted = settings.countedRounds || DEFAULT_SETTINGS.countedRounds;
@@ -282,6 +284,7 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
     const picks = {};
     const fills = [];
     preds.forEach((p) => {
+      if (admins.has(p.id)) return; // admins are not players: nothing published, nothing auto-filled
       const d = p.data();
       const pick = d.games?.[g.id];
       if (pick) {
@@ -308,11 +311,11 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
 /** Copies everyone's answers of the given questions into bonusPicks/{id} (readable by all signed-in users) and marks the question. */
 async function publishBonusPicks(ids) {
   if (ids.length === 0) return;
-  const [preds, points] = await Promise.all([db.collection('predictions').get(), db.collection('points').get()]);
+  const [preds, points, admins] = await Promise.all([db.collection('predictions').get(), db.collection('points').get(), adminUidSet()]);
   const names = new Map(points.docs.map((d) => [d.id, d.data().name || '']));
   for (const id of ids) {
     const picks = {};
-    preds.forEach((p) => { const a = p.data().bonus?.[id]?.answer; if (a?.length) picks[p.id] = { name: names.get(p.id) || '', answer: a }; });
+    preds.forEach((p) => { const a = p.data().bonus?.[id]?.answer; if (a?.length && !admins.has(p.id)) picks[p.id] = { name: names.get(p.id) || '', answer: a }; });
     const batch = db.batch();
     batch.set(db.doc(`bonusPicks/${id}`), { questionId: id, lockedAt: FieldValue.serverTimestamp(), count: Object.keys(picks).length, picks });
     batch.update(db.doc(`bonus/${id}`), { answersLockedAt: FieldValue.serverTimestamp() }); // key unchanged for onBonusUpdated -> no rescoring loop
@@ -394,7 +397,7 @@ export const saveBonusAnswers = onCall(async (request) => {
   if (!answers || typeof answers !== 'object' || Array.isArray(answers)) throw new HttpsError('invalid-argument', 'shape');
   const ids = Object.keys(answers);
   if (ids.length === 0 || ids.length > 50 || ids.some((id) => id.length > 80 || id.includes('/'))) throw new HttpsError('invalid-argument', 'ids');
-  await assertCanPlay(uid);
+  await assertCanPlay(request);
 
   const snaps = await db.getAll(...ids.map((id) => db.doc(`bonus/${id}`)));
   const nowMs = Date.now();
@@ -559,6 +562,7 @@ export const adminEditPredictions = onCall({ timeoutSeconds: 120 }, async (reque
   if (gameIds.length + qIds.length === 0 || gameIds.length + qIds.length > 100 || [...gameIds, ...qIds].some((id) => !okId(id))) throw new HttpsError('invalid-argument', 'ids');
   const user = await db.doc(`users/${uid}`).get();
   if (!user.exists) throw new HttpsError('not-found', 'user');
+  if ((await adminUidSet()).has(uid)) throw new HttpsError('failed-precondition', 'admin-cannot-play');
 
   const [predSnap, settingsSnap, ...rest] = await Promise.all([
     db.doc(`predictions/${uid}`).get(), db.doc('appSettings/main').get(),

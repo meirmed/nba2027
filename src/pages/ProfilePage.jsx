@@ -22,7 +22,7 @@ async function toAvatarBlob(file, size = 256) {
 // The name is shown read-only (only the admin renames a player; the rules enforce it). The phone number is mandatory.
 export default function ProfilePage() {
   const { t, lang, setLang } = useLang();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { teams } = useTeams();
   const [u, setU] = useState(undefined);
   const [form, setForm] = useState(null);
@@ -41,10 +41,10 @@ export default function ProfilePage() {
 
   const save = async () => {
     const phone = normalizePhone(form.phone);
-    if (!phone) { setMsg(t('auth.errPhone')); return; }
+    if (!phone && !(isAdmin && !form.phone.trim())) { setMsg(t('auth.errPhone')); return; } // the phone is mandatory for players only
     setBusy(true); setMsg('');
     try {
-      await updateDoc(userRef, { team: form.team || null, phone, lang: form.lang, updatedAt: serverTimestamp() });
+      await updateDoc(userRef, { team: form.team || null, phone: phone ?? '', lang: form.lang, updatedAt: serverTimestamp() });
       setLang(form.lang);
       setMsg(`✓ ${t('pf.saved')}`);
     } catch (e) { console.error(e); setMsg(t('common.error')); }
