@@ -7,7 +7,7 @@ import { usePlayers } from '../hooks/usePlayers.js';
 import { useNow } from '../hooks/useNow.js';
 import { formatCountdown } from '../utils/dates.js';
 import { maxBonusPoints, scoreBonus } from '@shared/bonus.js';
-import { answerLabel } from './predictions/BonusCard.jsx';
+import { AnswerView, answerLabel } from './predictions/BonusCard.jsx';
 
 /** Bonus tracking of ONE player (me, or any player for the admin): answers, correct answers and points per question + the total. */
 export default function UserBonusView({ uid, self = false, publicOnly = false }) {
@@ -18,7 +18,7 @@ export default function UserBonusView({ uid, self = false, publicOnly = false })
   const mine = usePredictionsOf(uid, { publicOnly });
   const nowMs = useNow(1000);
   // another player's page shows CLOSED questions only (open questions stay private until their deadline)
-  const list = [...questions].filter((q) => q.type !== 'ranking' && (!publicOnly || (q.answer || []).length > 0 || nowMs >= q.deadlineMs)).reverse();
+  const list = [...questions].filter((q) => (!publicOnly || (q.answer || []).length > 0 || nowMs >= q.deadlineMs)).reverse();
   const { byId: playersById } = usePlayers(list.some((q) => q.type === 'player'));
   const ctx = { lang, teams, playersById };
   const total = rows.find((r) => r.uid === uid)?.bonus ?? 0;
@@ -47,8 +47,8 @@ export default function UserBonusView({ uid, self = false, publicOnly = false })
               </div>
             </div>
             <div className="bonus-mine small">
-              <div>{t('bq.yourAnswer')}: <strong dir="auto">{my?.length ? answerLabel(q, my, ctx) : t('bq.noAnswer')}</strong></div>
-              {done && <div>{t('bq.correctAnswer')}: <strong dir="auto" className="save-ok">{answerLabel(q, q.answer, ctx)}</strong></div>}
+              <div>{t('bq.yourAnswer')}: <AnswerView q={q} answer={my} ctx={ctx} /></div>
+              {done && q.type !== 'ranking' && <div>{t('bq.correctAnswer')}: <strong dir="auto" className="save-ok">{answerLabel(q, q.answer, ctx)}</strong></div>}
               {pts !== null && <div className={pts > 0 ? 'save-ok' : 'muted'}>{t('bq.earned', { n: pts })}</div>}
               {!self && !closed && !my?.length && <div className="muted">{t('ub.notYet')}</div>}
             </div>

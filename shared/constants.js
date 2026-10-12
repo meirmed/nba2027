@@ -6,7 +6,7 @@ export const GAME_ROUNDS = ['RS', ...ROUNDS];
 // Explicit previous-round map. NEVER use ROUNDS[i-1] (WC lesson #3).
 export const PREV_ROUND = { R1: null, R2: 'R1', CF: 'R2', F: 'CF' };
 
-// Bonus questions: category = general | season | month (+ month 'YYYY-MM'). 'ranking' is RESERVED (owner will specify it later).
+// Bonus questions: category = general | season | month (+ month 'YYYY-MM'). 'ranking' = rank the 15 East + 15 West teams (final standings).
 export const BONUS_CATEGORIES = ['general', 'season', 'month'];
 export const BONUS_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text', 'ranking'];
 

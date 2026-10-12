@@ -2,17 +2,36 @@ import { useLang } from '../../contexts/LangContext.jsx';
 import { useTeams } from '../../contexts/TeamsContext.jsx';
 import PlayerPicker from '../../components/PlayerPicker.jsx';
 import TeamPicker from '../../components/TeamPicker.jsx';
+import RankingInput from '../../components/RankingInput.jsx';
+import RankingTable from '../../components/RankingTable.jsx';
 import { formatCountdown } from '../../utils/dates.js';
 import { isOptionType, scoreBonus } from '@shared/bonus.js';
 
 /** Human-readable answer (option / team / player names). Used for my answer and the correct answer. */
 export function answerLabel(q, list, { lang, teams, playersById }) {
+  if (q.type === 'ranking') { // short form: the top 3 of each conference
+    const nm = (a) => (teams[a] ? (lang === 'he' ? teams[a].shortHe : teams[a].shortEn) || teams[a][lang] : a);
+    return `${(list || []).slice(0, 3).map(nm).join(', ')} … | ${(list || []).slice(15, 18).map(nm).join(', ')} …`;
+  }
   return (list || []).map((v) => {
     if (isOptionType(q.type)) { const o = (q.options || []).find((x) => x.id === v); return o ? o[lang] || o.en : v; }
     if (q.type === 'team') return teams[v] ? teams[v][lang] || teams[v].en : v;
     if (q.type === 'player') return playersById[v]?.name || '…';
     return v;
   }).join(', ');
+}
+
+/** A player's answer as text; a RANKING opens as a table with the final place and the places missed per team (once the final order is set). */
+export function AnswerView({ q, answer, ctx }) {
+  const { t } = useLang();
+  if (!answer?.length) return <strong>{t('bq.noAnswer')}</strong>;
+  if (q.type !== 'ranking') return <strong dir="auto">{answerLabel(q, answer, ctx)}</strong>;
+  return (
+    <details className="rank-details">
+      <summary>{t('rk.myRank')}</summary>
+      <RankingTable order={answer} actual={(q.answer || []).length ? q.answer : null} />
+    </details>
+  );
 }
 
 /** One bonus question. Display only: draft/save state lives in BonusTab. */
@@ -26,6 +45,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
 
   const info = (() => {
     if (q.type === 'closest') return t('bq.closestInfo', { n: q.pts, p: q.penalty ?? 1 });
+    if (q.type === 'ranking') return t('bq.rankInfo', { n: q.pts, p: q.penalty ?? 0.5 });
     if (q.type === 'dynamic_score') return t('bq.dynamicInfo');
     if (q.multi) return t('bq.ptsPerPickInfo', { n: q.pts });
     return t('bq.ptsInfo', { n: q.pts });
@@ -39,6 +59,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
   };
 
   const input = (() => {
+    if (q.type === 'ranking') return <RankingInput value={value} onChange={onChange} />;
     if (q.type === 'numeric' || q.type === 'closest') return <input className="input num wide" dir="ltr" type="number" inputMode="decimal" value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
     if (q.type === 'text') return <input className="input" dir="auto" maxLength={200} value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
     if (q.type === 'player') return <PlayerPicker players={players} value={value} onChange={onChange} max={maxPicks} />;
@@ -78,7 +99,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
 
       {closed && (
         <div className="small">
-          <div>{t('bq.yourAnswer')}: <strong dir="auto">{mine.length ? answerLabel(q, mine, ctx) : t('bq.noAnswer')}</strong></div>
+          <div>{t('bq.yourAnswer')}: <AnswerView q={q} answer={mine} ctx={ctx} /></div>
           {answered && <div>{t('bq.correctAnswer')}: <strong dir="auto">{answerLabel(q, q.answer, ctx)}</strong></div>}
           {answered && <div className={score.pts > 0 ? 'save-ok' : 'muted'}>{t('bq.earned', { n: score.pts })}</div>}
         </div>

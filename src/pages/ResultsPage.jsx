@@ -20,7 +20,7 @@ export default function ResultsPage() {
   const counts = {
     live: games.filter((g) => g.status === 'live').length,
     finished: games.filter((g) => g.status === 'finished').length,
-    bonus: questions.filter((q) => q.type !== 'ranking').length,
+    bonus: questions.length,
   };
   return (
     <PageShell titleKey="results.pageTitle">

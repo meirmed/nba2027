@@ -37,7 +37,7 @@ export default function AdminPredictionEditor({ uid }) {
   const [busy, setBusy] = useState(false);
 
   const dayGames = useMemo(() => games.filter((g) => g.t1 && g.t2 && dayKey(g.tipoff, timezone) === day), [games, day, timezone]);
-  const bonusList = useMemo(() => [...questions].filter((q) => q.type !== 'ranking').reverse(), [questions]);
+  const bonusList = useMemo(() => [...questions].reverse(), [questions]);
   const question = questions.find((q) => q.id === qid);
 
   useEffect(() => { // load the current pick when a game is selected (not while typing)

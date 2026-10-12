@@ -325,7 +325,7 @@ async function publishDueBonusPicks(nowMs) {
     .where('deadline', '>', Timestamp.fromMillis(nowMs - 3600000))
     .where('deadline', '<=', Timestamp.fromMillis(nowMs - 10000))
     .get();
-  await publishBonusPicks(snap.docs.filter((d) => !d.data().answersLockedAt && d.data().type !== 'ranking').map((d) => d.id));
+  await publishBonusPicks(snap.docs.filter((d) => !d.data().answersLockedAt).map((d) => d.id));
 }
 
 // ---------------------------------------------------------------- scoring (Phase 3)
@@ -427,7 +427,7 @@ export const onBonusUpdated = onDocumentWritten({ document: 'bonus/{id}', timeou
   const key = (q) => (q ? JSON.stringify([q.type, q.pts, q.penalty ?? null, !!q.multi, q.category, q.month ?? null, q.answer ?? [], (q.options || []).map((o) => [o.id, o.pts ?? null])]) : 'none');
   if (!after) await db.doc(`bonusPicks/${event.params.id}`).delete().catch(() => {}); // question deleted
   // closed (correct answer set, or deadline passed) and not published yet -> publish everyone's answers
-  else if (!after.answersLockedAt && after.type !== 'ranking' && ((after.answer?.length || 0) > 0 || (after.deadline?.toMillis?.() ?? Infinity) <= Date.now())) await publishBonusPicks([event.params.id]);
+  else if (!after.answersLockedAt && ((after.answer?.length || 0) > 0 || (after.deadline?.toMillis?.() ?? Infinity) <= Date.now())) await publishBonusPicks([event.params.id]);
   if (key(before) === key(after)) return;
   await recalcAllPoints(db);
 });

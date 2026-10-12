@@ -8,9 +8,16 @@ import { useBonusPicks } from '../../hooks/useBonusPicks.js';
 import { usePlayers } from '../../hooks/usePlayers.js';
 import { useNow } from '../../hooks/useNow.js';
 import { formatCountdown } from '../../utils/dates.js';
-import { bonusStats, maxBonusPoints, scoreBonus } from '@shared/bonus.js';
+import { bonusStats, cleanAnswer, maxBonusPoints, rankingMisses, scoreBonus } from '@shared/bonus.js';
 import { normalizeName } from '@shared/names.js';
-import { answerLabel } from '../predictions/BonusCard.jsx';
+import RankingTable from '../../components/RankingTable.jsx';
+import { AnswerView, answerLabel } from '../predictions/BonusCard.jsx';
+
+const missesOf = (q, answer) => {
+  const fin = cleanAnswer(q, q.answer);
+  const a = cleanAnswer(q, answer);
+  return fin.error || a.error ? null : rankingMisses(fin.value, a.value).total;
+};
 
 const OTHER_COLORS = ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#84cc16', '#38bdf8'];
 const GREEN = '#22c55e';
@@ -63,7 +70,7 @@ function AllAnswers({ q, picks, ctx }) {
             {rows.map((r) => (
               <tr key={r.uid} className={r.uid === user?.uid ? 'me' : ''}>
                 <td dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</td>
-                <td dir="auto">{answerLabel(q, r.answer, ctx)}</td>
+                <td dir="auto">{answerLabel(q, r.answer, ctx)}{q.type === 'ranking' && answered && missesOf(q, r.answer) !== null ? <small className="muted"> · {t('rk.missed', { n: missesOf(q, r.answer) })}</small> : null}</td>
                 <td dir="ltr">{r.pts === null ? '' : <strong className={r.pts > 0 ? 'save-ok' : 'muted'}>{r.pts}</strong>}</td>
               </tr>
             ))}
@@ -102,16 +109,17 @@ export default function BonusResultsTab() {
               <div className="bonus-title" dir="auto">{q.question?.[lang] || q.question?.en}</div>
               <div className="bonus-meta">
                 {answered
-                  ? <span className="bonus-ok" dir="auto">{t('bq.correctAnswer')}: ✅ {answerLabel(q, q.answer, ctx)}</span>
+                  ? <span className="bonus-ok" dir="auto">{q.type === 'ranking' ? `✅ ${t('rk.finalOrder')}` : `${t('bq.correctAnswer')}: ✅ ${answerLabel(q, q.answer, ctx)}`}</span>
                   : <span className="muted small">{closed ? `🔒 ${t('rb.waiting')}` : `${t('rb.open')} · ${t('bq.locksIn', { time: formatCountdown(q.deadlineMs - nowMs) })}`}</span>}
                 <span className="pill-max">{t('rb.max', { n: maxBonusPoints(q) })}</span>
               </div>
             </div>
-            {closed && stats.n > 0 && <div className="bonus-body"><Distribution q={q} stats={stats} ctx={ctx} /></div>}
-            {closed && stats.n === 0 && <div className="bonus-body muted small">{picks === undefined ? t('rb.soon') : t('rb.noAnswers')}</div>}
+            {closed && q.type === 'ranking' && <div className="bonus-body">{answered ? <RankingTable order={q.answer} /> : <span className="muted small">{t('rb.answeredCount', { n: stats.n })}</span>}</div>}
+            {closed && q.type !== 'ranking' && stats.n > 0 && <div className="bonus-body"><Distribution q={q} stats={stats} ctx={ctx} /></div>}
+            {closed && q.type !== 'ranking' && stats.n === 0 && <div className="bonus-body muted small">{picks === undefined ? t('rb.soon') : t('rb.noAnswers')}</div>}
             {closed && (
               <div className="bonus-mine small">
-                {t('bq.yourAnswer')}: <strong dir="auto">{my?.length ? answerLabel(q, my, ctx) : t('bq.noAnswer')}</strong>
+                {t('bq.yourAnswer')}: <AnswerView q={q} answer={my} ctx={ctx} />
                 {answered && my?.length ? <span className={scoreBonus(q, my).pts > 0 ? 'save-ok' : 'muted'}> · {t('bq.earned', { n: scoreBonus(q, my).pts })}</span> : null}
               </div>
             )}

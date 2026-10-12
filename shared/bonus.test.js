@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
+import { EAST_TEAMS, WEST_TEAMS, rankingMisses, scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
 
 const opts = [{ id: 'a', he: 'א', en: 'A', pts: 10 }, { id: 'b', he: 'ב', en: 'B', pts: 25 }, { id: 'c', he: 'ג', en: 'C', pts: 4 }];
 
@@ -75,7 +75,7 @@ describe('cleanAnswer', () => {
     expect(cleanAnswer({ type: 'player', multi: true }, ['p1', 'p2']).value).toEqual(['p1', 'p2']);
     expect(cleanAnswer({ type: 'player' }, ['a/b']).error).toBe('invalid-answer');
     expect(cleanAnswer({ type: 'text' }, 'x'.repeat(201)).error).toBe('invalid-answer');
-    expect(cleanAnswer({ type: 'ranking' }, ['a']).error).toBe('not-supported');
+    expect(cleanAnswer({ type: 'bogus' }, ['a']).error).toBe('not-supported');
   });
 });
 
@@ -85,7 +85,7 @@ describe('bonusClosedReason', () => {
     expect(bonusClosedReason(q, 999)).toBeNull();
     expect(bonusClosedReason(q, 1000)).toBe('locked');
     expect(bonusClosedReason({ ...q, answer: ['1'] }, 0)).toBe('answered');
-    expect(bonusClosedReason({ ...q, type: 'ranking' }, 0)).toBe('not-supported');
+    expect(bonusClosedReason({ ...q, type: 'bogus' }, 0)).toBe('not-supported');
     expect(bonusClosedReason(undefined, 0)).toBe('not-found');
   });
 });
@@ -116,7 +116,7 @@ describe('validateQuestion', () => {
     expect(validateQuestion({ ...base, pts: -1 })).toContain('err.bqPts');
     expect(validateQuestion({ ...base, deadlineMs: NaN })).toContain('err.bqDeadline');
     expect(validateQuestion({ ...base, category: 'month', month: '2026-13' })).toContain('err.bqMonth');
-    expect(validateQuestion({ ...base, type: 'ranking' })).toContain('err.bqType');
+    expect(validateQuestion({ ...base, type: 'bogus' })).toContain('err.bqType');
   });
   it('options, penalty, max answers, answers', () => {
     expect(validateQuestion({ ...base, type: 'choice', options: [{ id: 'a', he: 'א', en: 'A' }] })).toContain('err.bqOptions');
@@ -166,5 +166,57 @@ describe('bonusStats', () => {
     const r = bonusStats({ type: 'closest' }, { u1: { answer: ['10'] }, u2: { answer: ['15'] }, u3: { answer: ['x'] } });
     expect(r.numeric).toEqual({ avg: 12.5, min: 10, max: 15, count: 2 });
     expect(bonusStats({ type: 'numeric' }, {}).numeric).toBeNull();
+  });
+});
+
+describe('ranking questions (East + West, option D: pool split per conference, 0.5 per place)', () => {
+  const FINAL = [...EAST_TEAMS, ...WEST_TEAMS]; // the real final order (any valid order works as the truth)
+  const q = { type: 'ranking', pts: 50, penalty: 0.5, answer: FINAL };
+  const swap = (arr, i, j) => { const a = [...arr]; [a[i], a[j]] = [a[j], a[i]]; return a; };
+
+  it('a valid answer = 15 East then 15 West teams, all distinct', () => {
+    expect(EAST_TEAMS).toHaveLength(15);
+    expect(WEST_TEAMS).toHaveLength(15);
+    expect(cleanAnswer({ type: 'ranking' }, FINAL).value).toEqual(FINAL);
+    expect(cleanAnswer({ type: 'ranking' }, FINAL.slice(1)).error).toBe('invalid-answer'); // 29 teams
+    expect(cleanAnswer({ type: 'ranking' }, [...WEST_TEAMS, ...EAST_TEAMS]).error).toBe('invalid-answer'); // conferences swapped
+    expect(cleanAnswer({ type: 'ranking' }, [...FINAL.slice(0, 29), FINAL[0]]).error).toBe('invalid-answer'); // duplicate
+  });
+  it('perfect ranking = the full pool (25 + 25)', () => {
+    expect(scoreBonus(q, FINAL)).toEqual({ pts: 50, correct: true });
+  });
+  it('two neighbours swapped = 2 places missed = -1 point', () => {
+    expect(rankingMisses(FINAL, swap(FINAL, 3, 4))).toEqual({ east: 2, west: 0, total: 2 });
+    expect(scoreBonus(q, swap(FINAL, 3, 4)).pts).toBe(49);
+  });
+  it('each conference has its own pool: a bad East does not touch the West points', () => {
+    const reversedEast = [...EAST_TEAMS].reverse();
+    const given = [...reversedEast, ...WEST_TEAMS];
+    const m = rankingMisses(FINAL, given);
+    expect(m.east).toBe(112); // reversing 15 places: 14+12+...+0+...+14
+    expect(m.west).toBe(0);
+    expect(scoreBonus(q, given).pts).toBe(25); // East floored at 0, West full
+  });
+  it('never below 0, and the penalty per place is a setting', () => {
+    const worst = [...[...EAST_TEAMS].reverse(), ...[...WEST_TEAMS].reverse()];
+    expect(scoreBonus(q, worst).pts).toBe(0);
+    expect(scoreBonus({ ...q, penalty: 1 }, swap(FINAL, 3, 4)).pts).toBe(48);
+    expect(scoreBonus({ ...q, pts: 100 }, FINAL).pts).toBe(100);
+  });
+  it('invalid answer = 0; no final order yet = not scored', () => {
+    expect(scoreBonus(q, ['BOS'])).toEqual({ pts: 0, correct: false });
+    expect(scoreBonus({ ...q, answer: [] }, FINAL)).toEqual({ pts: 0, correct: null });
+  });
+  it('question settings: needs a valid final order and a penalty; max points = the pool', () => {
+    const base = { question: { he: 'ש', en: 'Q' }, type: 'ranking', category: 'season', deadlineMs: 5, pts: 50, penalty: 0.5, answer: [] };
+    expect(validateQuestion(base)).toEqual([]);
+    expect(validateQuestion({ ...base, answer: FINAL })).toEqual([]);
+    expect(validateQuestion({ ...base, answer: FINAL.slice(5) })).toContain('err.bqAnswer');
+    expect(validateQuestion({ ...base, penalty: -1 })).toContain('err.bqPenalty');
+    expect(maxBonusPoints(base)).toBe(50);
+  });
+  it('closing logic works for ranking and its stats are not a chart', () => {
+    expect(bonusClosedReason({ type: 'ranking', deadlineMs: 10, answer: [] }, 0)).toBeNull();
+    expect(bonusStats(q, { u1: { answer: FINAL } }).ranking).toBe(true);
   });
 });

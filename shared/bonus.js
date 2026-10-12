@@ -1,8 +1,19 @@
 // Bonus questions: validation + scoring. Pure, unit-tested; used by the Cloud Functions (authoritative) and the UI (display).
-import { TEAMS_BY_ABBR } from './teams.js';
+import { TEAMS, TEAMS_BY_ABBR } from './teams.js';
 import { normalizeName } from './names.js';
 
-export const SCORABLE_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text']; // 'ranking' is reserved, not scorable yet
+export const SCORABLE_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text', 'ranking'];
+/** Conference teams, alphabetical by code. A ranking answer = 30 team codes: the 15 EAST teams in predicted order, then the 15 WEST teams. */
+export const EAST_TEAMS = TEAMS.filter((t) => t.conf === 'E').map((t) => t.abbr);
+export const WEST_TEAMS = TEAMS.filter((t) => t.conf === 'W').map((t) => t.abbr);
+
+/** Places missed: sum over the teams of |predicted place - final place|, per conference. Both lists = 30 valid codes (east first). */
+export function rankingMisses(finalOrder, given) {
+  const part = (a, b) => { const pos = new Map(a.map((t, i) => [t, i])); return b.reduce((s, t, i) => s + Math.abs(i - pos.get(t)), 0); };
+  const east = part(finalOrder.slice(0, 15), given.slice(0, 15));
+  const west = part(finalOrder.slice(15), given.slice(15));
+  return { east, west, total: east + west };
+}
 const OPTION_TYPES = ['choice', 'dynamic_score'];
 const MULTI_TYPES = ['choice', 'team', 'player', 'dynamic_score'];
 export const isOptionType = (t) => OPTION_TYPES.includes(t);
@@ -48,6 +59,13 @@ export function cleanAnswer(q, raw) {
       if (picks.length > limitOf(q)) return { error: 'too-many' };
       return { value: picks };
     }
+    case 'ranking': {
+      const east = new Set(EAST_TEAMS);
+      const west = new Set(WEST_TEAMS);
+      if (list.length !== 30 || new Set(list).size !== 30) return bad;
+      if (!list.slice(0, 15).every((t) => east.has(t)) || !list.slice(15).every((t) => west.has(t))) return bad;
+      return { value: list };
+    }
     default:
       return { error: 'not-supported' };
   }
@@ -58,6 +76,8 @@ export function cleanAnswer(q, raw) {
  *  numeric: exact number -> pts.   closest: pts - penalty * |distance|, never below 0 (exact = full pts).
  *  choice/team/player: pts per correct pick (several picks allowed when q.multi), no penalty for wrong picks.
  *  dynamic_score: the points of each correct option picked.   text: normalized match against the accepted answers.
+ *  ranking: the pool (q.pts) is split equally between East and West; in each conference you lose q.penalty (default 0.5) per place a team
+ *           is off from its final place, never below 0 per conference.
  */
 export function scoreBonus(q, answer) {
   const correct = strs(q.answer);
@@ -86,6 +106,16 @@ export function scoreBonus(q, answer) {
     case 'player': {
       const hits = [...new Set(given)].filter((g) => correct.includes(g)).length;
       return { pts: hits * q.pts, correct: hits > 0 };
+    }
+    case 'ranking': {
+      const fin = cleanAnswer(q, correct);
+      if (fin.error) return { pts: 0, correct: null };
+      const mine = cleanAnswer(q, given);
+      if (mine.error) return { pts: 0, correct: false };
+      const m = rankingMisses(fin.value, mine.value);
+      const half = q.pts / 2;
+      const pen = q.penalty ?? 0.5;
+      return { pts: round2(Math.max(0, half - pen * m.east) + Math.max(0, half - pen * m.west)), correct: m.total === 0 };
     }
     case 'dynamic_score': {
       const optPts = new Map((q.options || []).map((o) => [o.id, o.pts || 0]));
@@ -132,7 +162,7 @@ export function validateQuestion(q) {
     if (!ok) e.push('err.bqOptions');
     if (q.type === 'dynamic_score' && !o.every((x) => Number.isFinite(x.pts) && x.pts >= 0)) e.push('err.bqPts');
   }
-  if (q.type === 'closest' && !(Number.isFinite(q.penalty) && q.penalty >= 0)) e.push('err.bqPenalty');
+  if ((q.type === 'closest' || q.type === 'ranking') && !(Number.isFinite(q.penalty) && q.penalty >= 0)) e.push('err.bqPenalty');
   if (isMultiType(q.type) && q.multi && q.maxPicks != null && !(Number.isInteger(q.maxPicks) && q.maxPicks >= 1)) e.push('err.bqMax');
   if (arr(q.answer).length > 0) {
     const okAns = q.type === 'text'
@@ -167,6 +197,7 @@ export function maxBonusPoints(q) {
 export function bonusStats(q, picks) {
   const entries = Object.values(picks || {}).map((p) => strs(p?.answer)).filter((a) => a.length);
   const n = entries.length;
+  if (q.type === 'ranking') return { n, buckets: [], numeric: null, ranking: true }; // shown as the final order, not as a chart
   if (q.type === 'numeric' || q.type === 'closest') {
     const nums = entries.map((a) => num(a[0])).filter(Number.isFinite);
     if (nums.length === 0) return { n, buckets: [], numeric: null };

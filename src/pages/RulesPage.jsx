@@ -57,6 +57,11 @@ export default function RulesPage() {
           <p>{t('rules.closest.example')}</p>
           <p className="muted">{t('rules.closest.min')}</p>
         </Note>
+        <Note tone="blue">
+          <strong>{t('rules.rank.title')}</strong>
+          <p>{t('rules.rank.body')}</p>
+          <p>{t('rules.rank.example')}</p>
+        </Note>
         <Note tone="green">{t('rules.bonus.multi')}</Note>
         <Note tone="green">{t('rules.bonus.odds')}</Note>
         <Note tone="amber">{t('rules.bonus.lock')}</Note>

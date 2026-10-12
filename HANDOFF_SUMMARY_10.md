@@ -42,3 +42,10 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 - **After deploying, press Admin -> Scoring -> Recalculate all points once**: older finished games have no pick inside `pointsDetail` until a recalculation (the next finished game also does it).
 - Prediction cards use less padding/margins (CSS only).
 - Deploy: `firebase deploy --only firestore:rules,functions` + push the app.
+
+## Update: RANKING bonus type (owner spec, option D)
+- Players rank the 15 East + 15 West teams (answer = 30 team codes: East 1..15 then West 1..15; `cleanAnswer` checks both sets and no duplicates). Answerable until the question's deadline like every bonus question.
+- Scoring (`scoreBonus`, `rankingMisses`): the pool `pts` (default **50**, admin-editable per question) is split equally between East and West (25 each). In each conference: `max(0, pool/2 - penalty * sum(|predicted place - final place|))`, `penalty` = points lost per place (default **0.5**, admin-editable per question). Results of the simulation used for the decision are in the chat; 8 new tests (143 total).
+- The admin sets the FINAL ORDER as the question's correct answer (same ranking list in the question form); saving it closes the question and rescores everyone (`onBonusUpdated`). Everyone's answers are published at the deadline like the other types (`bonusPicks`).
+- UI: `RankingInput` (up/down buttons for phones, drag with a mouse; the default order is alphabetical and nothing is saved until a team is moved), `RankingTable` (my ranking vs the final order: final place + places missed per team), Results -> Bonus shows the final order and each player's places missed, My predictions -> Bonus opens my ranking as a table, Rules page explains it. The "reserved" restrictions were removed everywhere.
+- Deploy: `firebase deploy --only functions` (the publish rules changed) + push the app.

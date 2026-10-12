@@ -4,6 +4,7 @@ import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../firebase.js';
 import PlayerPicker from '../../components/PlayerPicker.jsx';
 import TeamPicker from '../../components/TeamPicker.jsx';
+import RankingInput from '../../components/RankingInput.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { usePlayers } from '../../hooks/usePlayers.js';
@@ -105,7 +106,7 @@ export default function BonusForm({ question, onDone }) {
       const ref = question ? doc(db, 'bonus', question.id) : doc(collection(db, 'bonus'));
       const data = {
         question: q.question, type: q.type, category: q.category, month: q.month, deadline: Timestamp.fromDate(new Date(q.deadlineMs)),
-        pts: q.pts, penalty: q.type === 'closest' ? q.penalty : null, multi: q.multi, maxPicks: q.maxPicks, options: q.options, answer: q.answer,
+        pts: q.pts, penalty: q.type === 'closest' || q.type === 'ranking' ? q.penalty : null, multi: q.multi, maxPicks: q.maxPicks, options: q.options, answer: q.answer,
         updatedAt: serverTimestamp(),
       };
       const batch = writeBatch(db);
@@ -122,6 +123,7 @@ export default function BonusForm({ question, onDone }) {
     if (optionTypes) return <div className="bq-options">{f.options.map((o) => <label key={o.id} className="check"><input type="checkbox" checked={f.answer.includes(o.id)} onChange={() => toggleAnswer(o.id)} /> {o[lang] || o.en || o.he || '…'}</label>)}</div>;
     if (f.type === 'team') return <TeamPicker value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} />;
     if (f.type === 'player') return <PlayerPicker players={players} value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} />;
+    if (f.type === 'ranking') return <><p className="muted small">{t('bq.rankHint')}</p><RankingInput value={f.answer} onChange={(v) => set('answer', v)} /></>;
     if (f.type === 'text') return question ? <TextAnswers qid={question.id} value={f.answer} onChange={(v) => set('answer', v)} /> : <p className="muted small">{t('bq.textAfterSave')}</p>;
     return null;
   })();
@@ -134,8 +136,8 @@ export default function BonusForm({ question, onDone }) {
         <label className="field">{t('bq.questionHe')}<input className="input" dir="rtl" value={f.qHe} onChange={(e) => set('qHe', e.target.value)} /></label>
         <label className="field">{t('bq.questionEn')}<input className="input" dir="ltr" value={f.qEn} onChange={(e) => set('qEn', e.target.value)} /></label>
         <label className="field">{t('bq.type')}
-          <select className="input" value={f.type} onChange={(e) => set('type', e.target.value)}>
-            {BONUS_TYPES.map((x) => <option key={x} value={x} disabled={x === 'ranking'}>{t(`bq.type.${x}`)}</option>)}
+          <select className="input" value={f.type} onChange={(e) => { const v = e.target.value; setF((x) => ({ ...x, type: v, ...(v === 'ranking' ? { pts: x.pts === '' ? '50' : x.pts, penalty: x.penalty === '1' ? '0.5' : x.penalty } : {}) })); }}>
+            {BONUS_TYPES.map((x) => <option key={x} value={x}>{t(`bq.type.${x}`)}</option>)}
           </select></label>
         <label className="field">{t('bq.category')}
           <select className="input" value={f.category} onChange={(e) => set('category', e.target.value)}>
@@ -143,9 +145,9 @@ export default function BonusForm({ question, onDone }) {
           </select></label>
         {f.category === 'month' && <label className="field">{t('bq.month')}<input className="input" dir="ltr" type="month" value={f.month} onChange={(e) => set('month', e.target.value)} /></label>}
         <label className="field">{t('bq.deadline')}<input className="input" dir="ltr" type="datetime-local" value={f.deadlineLocal} onChange={(e) => set('deadlineLocal', e.target.value)} /></label>
-        {f.type !== 'dynamic_score' && <label className="field">{f.type === 'closest' ? t('bq.maxPts') : isMultiType(f.type) && f.multi ? t('bq.ptsPerPick') : t('bq.pts')}
+        {f.type !== 'dynamic_score' && <label className="field">{f.type === 'ranking' ? t('bq.poolPts') : f.type === 'closest' ? t('bq.maxPts') : isMultiType(f.type) && f.multi ? t('bq.ptsPerPick') : t('bq.pts')}
           <input className="input num wide" dir="ltr" inputMode="decimal" value={f.pts} onChange={(e) => set('pts', e.target.value)} /></label>}
-        {f.type === 'closest' && <label className="field">{t('bq.penalty')}<input className="input num wide" dir="ltr" inputMode="decimal" value={f.penalty} onChange={(e) => set('penalty', e.target.value)} /></label>}
+        {(f.type === 'closest' || f.type === 'ranking') && <label className="field">{f.type === 'ranking' ? t('bq.penaltyRank') : t('bq.penalty')}<input className="input num wide" dir="ltr" inputMode="decimal" value={f.penalty} onChange={(e) => set('penalty', e.target.value)} /></label>}
       </div>
 
       {isMultiType(f.type) && (
@@ -170,7 +172,7 @@ export default function BonusForm({ question, onDone }) {
         </>
       )}
 
-      {f.type !== 'ranking' && (
+      {(
         <>
           <h4>{t('bq.correct')}</h4>
           <p className="muted small">{t('bq.correctHint')}</p>

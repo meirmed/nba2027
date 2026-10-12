@@ -32,7 +32,7 @@ export default function BonusTab() {
   const savingRef = useRef(false);
   const saveRef = useRef(null);
 
-  const visible = useMemo(() => questions.filter((q) => q.type !== 'ranking'), [questions]);
+  const visible = questions;
   const qById = useMemo(() => Object.fromEntries(visible.map((q) => [q.id, q])), [visible]);
   const savedOf = (id) => opt[id] ?? mine.bonus[id]?.answer;
   const valueOf = (id) => draft[id] ?? savedOf(id) ?? [];

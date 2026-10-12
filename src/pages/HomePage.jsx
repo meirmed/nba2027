@@ -46,7 +46,7 @@ export default function HomePage() {
 
   const ranked = useMemo(() => rankRows(rows, tiebreakers), [rows, tiebreakers]);
   const me = ranked.find((r) => r.uid === user?.uid);
-  const bonusPending = questions.filter((q) => q.type !== 'ranking' && !bonusClosedReason(q, nowMs) && !mine.bonus[q.id]?.answer?.length).length;
+  const bonusPending = questions.filter((q) => !bonusClosedReason(q, nowMs) && !mine.bonus[q.id]?.answer?.length).length;
   const announcement = (settings.announcement?.[lang] || '').trim();
 
   return (
