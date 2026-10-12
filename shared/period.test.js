@@ -8,6 +8,7 @@ describe('rangeFor / inRange', () => {
     expect(rangeFor({ preset: '30', today })).toEqual({ lo: '2026-09-21', hi: today });
     expect(rangeFor({ preset: 'upcoming', today })).toEqual({ lo: '2026-10-21', hi: null });
     expect(rangeFor({ preset: 'all', today })).toEqual({ lo: null, hi: null });
+    expect(rangeFor({ preset: 'next7', today })).toEqual({ lo: today, hi: '2026-10-26' });
     expect(rangeFor({ preset: 'custom', today, from: '2026-10-01', to: '' })).toEqual({ lo: '2026-10-01', hi: null });
   });
   it('inclusive on both ends', () => {

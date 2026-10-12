@@ -558,5 +558,8 @@
   "rb.max": "max {n} pts",
   "rb.avg": "Average of guesses: {n}",
   "rb.range": "range {min}–{max}",
-  "rb.allAnswers": "All answers ({n})"
+  "rb.allAnswers": "All answers ({n})",
+  "tabs.week": "Next 7 days",
+  "pred.noGamesWeek": "No games in the next 7 days.",
+  "pred.missingTip": "{n} games in the next 7 days without a prediction"
 }

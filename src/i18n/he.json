@@ -558,5 +558,8 @@
   "rb.max": "עד {n} נק׳",
   "rb.avg": "ממוצע ניחושים: {n}",
   "rb.range": "טווח {min}–{max}",
-  "rb.allAnswers": "כל התשובות ({n})"
+  "rb.allAnswers": "כל התשובות ({n})",
+  "tabs.week": "7 הימים הקרובים",
+  "pred.noGamesWeek": "אין משחקים ב-7 הימים הקרובים.",
+  "pred.missingTip": "{n} משחקים ב-7 הימים הקרובים בלי ניחוש"
 }

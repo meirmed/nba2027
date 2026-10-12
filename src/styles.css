@@ -221,3 +221,6 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .bonus-foot-wrap { border-top: 1px solid var(--line); }
 .bonus-foot { width: 100%; background: none; border: 0; color: var(--muted); padding: .75rem; font: inherit; cursor: pointer; }
 .bonus-foot-wrap .table-wrap { padding: 0 1rem 1rem; }
+
+.count-badge.warn { background: rgba(245, 158, 11, .2); color: #f59e0b; }
+.tab .count-badge { margin-inline-start: .4rem; }

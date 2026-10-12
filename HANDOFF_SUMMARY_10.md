@@ -30,3 +30,8 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 - Results -> **Bonus** tab (World Cup look): per question a card with the correct answer, a "max N pts" pill (`maxBonusPoints`), the answer distribution as bars with % of the players who answered (`bonusStats`; correct answer green) or "average of guesses" for number questions, my answer + points, and "All answers (n)". Open questions show only their status (nothing is revealed before the deadline). The **Bonus tracking** tab was removed.
 - "My points and predictions" is now **"My predictions" / "הניחושים שלי"** with two tabs: **Games** (`UserPointsView`) and **Bonus** (`UserBonusView`: my answer, the correct answer, points earned of max, bonus total, answered X of Y). The admin's user Details page shows the same bonus view for any player.
 - Tests: 135 (new: `maxBonusPoints`, `bonusStats`).
+
+## Update: "Next 7 days" tab on Predictions
+- Third tab (Games | Next 7 days | Bonus): counted games from today through the next 6 days (7 calendar days, Israel time) in one list grouped by day (`useWeekGames`, `rangeFor('next7')`). Same cards, autosave, jokers and Save bar as Games; the tab shows an amber number = open games in those 7 days without a pick.
+- Editing state (typed scores, joker changes, autosave, rejection reasons) moved into `PredictionEditorProvider` (above the tabs), so it is shared by Games and Next 7 days and survives tab switches. `SaveBar` counts the saved games of the games shown in the current tab.
+- Deep links: `/predictions?tab=week`. No server or data changes.
