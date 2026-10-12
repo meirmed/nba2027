@@ -7,6 +7,7 @@ import PeriodFilter from '../components/PeriodFilter.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { usePredictionsOf } from '../hooks/usePredictionsOf.js';
+import { useAdjustments } from '../hooks/useAdjustments.js';
 import { usePoints } from '../contexts/PointsContext.jsx';
 import { useBonus } from '../contexts/BonusContext.jsx';
 import { useTeams } from '../contexts/TeamsContext.jsx';
@@ -21,13 +22,14 @@ import { answerLabel } from './predictions/BonusCard.jsx';
 
 // One line per game = teams | pick | actual result | points, grouped by day (newest first). Default = last 7 days.
 // Used by My Points (uid = me) and by Admin -> Users -> Details (uid = any player).
-export default function UserPointsView({ uid, self = false }) {
+export default function UserPointsView({ uid, self = false, showAdjustments = true }) {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const { jokerMultiplier, tiebreakers } = useScoring();
   const pointsAll = usePoints();
   const { games } = useGames();
   const mine = usePredictionsOf(uid);
+  const adjustments = useAdjustments(uid);
   const { questions } = useBonus();
   const { teams } = useTeams();
   const period = usePeriod(timezone);
@@ -79,6 +81,18 @@ export default function UserPointsView({ uid, self = false }) {
             </div>
           )}
         </>
+      )}
+
+      {showAdjustments && adjustments.length > 0 && (
+        <div className="day">
+          <h3>{t('ad.mine')}</h3>
+          {adjustments.map((a) => (
+            <div key={a.id} className="mp-row">
+              <div className="mp-line"><span className="grow" dir="auto">{a.reason}</span><strong className="mp-pts" dir="ltr">{a.pts > 0 ? '+' : ''}{a.pts}</strong></div>
+              <div className="muted small">{a.ts ? formatDateTime(a.ts, lang, timezone) : ''}</div>
+            </div>
+          ))}
+        </div>
       )}
 
       {myBonus.length > 0 && (

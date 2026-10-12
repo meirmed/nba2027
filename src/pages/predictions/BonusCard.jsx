@@ -16,7 +16,7 @@ export function answerLabel(q, list, { lang, teams, playersById }) {
 }
 
 /** One bonus question. Display only: draft/save state lives in BonusTab. */
-export default function BonusCard({ q, nowMs, closedReason, value, onChange, status, reason, players, playersById, savedAnswer }) {
+export default function BonusCard({ q, nowMs, closedReason, value, onChange, status, reason, players, playersById, savedAnswer, hideLock = false }) {
   const { t, lang } = useLang();
   const { teams } = useTeams();
   const ctx = { lang, teams, playersById };
@@ -67,8 +67,8 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
       <div className="muted small">
         {info}
         {multi && Number.isFinite(maxPicks) ? ` · ${t('bq.pickUpTo', { n: maxPicks })}` : ''}
-        {' · '}
-        {closed ? `🔒 ${t('pred.locked')}` : t('bq.locksIn', { time: formatCountdown(q.deadlineMs - nowMs) })}
+        {!hideLock && ' · '}
+        {!hideLock && (closed ? `🔒 ${t('pred.locked')}` : t('bq.locksIn', { time: formatCountdown(q.deadlineMs - nowMs) }))}
       </div>
 
       {!closed && input}

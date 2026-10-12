@@ -5,8 +5,8 @@ import { DEFAULT_SETTINGS } from '../shared/constants.js';
 
 /** Reads RAW data only: games + predictions (+ stored points for bonus/names) + settings. */
 export async function loadState(db) {
-  const [g, p, pts, s, b] = await Promise.all([
-    db.collection('games').get(), db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get(), db.collection('bonus').get(),
+  const [g, p, pts, s, b, adj] = await Promise.all([
+    db.collection('games').get(), db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get(), db.collection('bonus').get(), db.collection('adjustments').get(),
   ]);
   const games = g.docs.map((d) => {
     const x = d.data();
@@ -19,7 +19,9 @@ export async function loadState(db) {
   const settings = s.data() || {};
   const uids = [...new Set([...Object.keys(predictions), ...Object.keys(stored)])];
   const questions = b.docs.map((d) => ({ id: d.id, ...d.data() }));
-  return { games, predictions, stored, uids, questions, timezone: settings.timezone || 'Asia/Jerusalem', scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
+  const adjust = {};
+  adj.forEach((d) => { const x = d.data(); adjust[x.uid] = (adjust[x.uid] || 0) + (x.pts || 0); }); // manual admin adjustments (with a reason each)
+  return { games, predictions, stored, uids, questions, adjust, timezone: settings.timezone || 'Asia/Jerusalem', scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
 }
 
 /** Full recompute of every user's points from raw data (idempotent): game points + bonus points. total = gamePts + bonus. */
@@ -30,7 +32,7 @@ export async function recalcAllPoints(db) {
   const writes = [];
   st.uids.forEach((uid) => {
     const { byGame, byDay, ...stats } = res[uid];
-    const data = { ...stats, byDay, bonus: bon[uid].bonus, bonusByCategory: bon[uid].byCategory, total: Math.round((stats.gamePts + bon[uid].bonus) * 100) / 100, updatedAt: FieldValue.serverTimestamp() };
+    const data = { ...stats, byDay, bonus: bon[uid].bonus, adjust: st.adjust[uid] || 0, bonusByCategory: bon[uid].byCategory, total: Math.round((stats.gamePts + bon[uid].bonus + (st.adjust[uid] || 0)) * 100) / 100, updatedAt: FieldValue.serverTimestamp() };
     // mergeFields replaces each listed field WHOLE (so gamePtsByRound can't keep stale round keys)
     writes.push({ ref: db.doc(`points/${uid}`), data, opts: { mergeFields: Object.keys(data) } });
     writes.push({ ref: db.doc(`pointsDetail/${uid}`), data: { byGame, bonus: bon[uid].byQuestion, updatedAt: FieldValue.serverTimestamp() }, opts: undefined });
@@ -60,7 +62,8 @@ export async function reconcileAll(db) {
     FIELDS.forEach((f) => { if ((stored[f] ?? 0) !== exp[f]) mismatches.push({ uid, name, field: f, stored: stored[f] ?? 0, expected: exp[f] }); });
     if ((stored.bonus ?? 0) !== bon[uid].bonus) mismatches.push({ uid, name, field: 'bonus', stored: stored.bonus ?? 0, expected: bon[uid].bonus });
     if (sortedJson(stored.bonusByCategory) !== sortedJson(bon[uid].byCategory)) mismatches.push({ uid, name, field: 'bonusByCategory', stored: sortedJson(stored.bonusByCategory), expected: sortedJson(bon[uid].byCategory) });
-    const expTotal = Math.round((exp.gamePts + bon[uid].bonus) * 100) / 100;
+    if ((stored.adjust ?? 0) !== (st.adjust[uid] || 0)) mismatches.push({ uid, name, field: 'adjust', stored: stored.adjust ?? 0, expected: st.adjust[uid] || 0 });
+    const expTotal = Math.round((exp.gamePts + bon[uid].bonus + (st.adjust[uid] || 0)) * 100) / 100;
     if ((stored.total ?? 0) !== expTotal) mismatches.push({ uid, name, field: 'total', stored: stored.total ?? 0, expected: expTotal });
     if (sortedJson(stored.byDay) !== sortedJson(exp.byDay)) mismatches.push({ uid, name, field: 'byDay', stored: 'differs', expected: 'recompute' });
     if (sortedJson(stored.gamePtsByRound) !== sortedJson(exp.gamePtsByRound)) mismatches.push({ uid, name, field: 'gamePtsByRound', stored: sortedJson(stored.gamePtsByRound), expected: sortedJson(exp.gamePtsByRound) });

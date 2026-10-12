@@ -11,7 +11,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { v2 as translateV2 } from '@google-cloud/translate';
 import { addProfileDocs, adminEmails, normEmail } from './lib/profile.js';
 import { mapScheduleGame, validateImportItem } from './shared/schedule.js';
-import { planSave } from './shared/predictions.js';
+import { planSave, pickIssue, countJokers } from './shared/predictions.js';
 import { normalizeName } from './shared/names.js';
 import { recalcAllPoints, reconcileAll } from './lib/recalc.js';
 import { fetchGamesRange, fetchGamesByDates, apiDatesFor } from './lib/balldontlie.js';
@@ -20,6 +20,8 @@ import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { makeAutoPick } from './shared/autofill.js';
 import { normalizePhone } from './shared/phone.js';
+import { RESTORE_ALLOWED, validBackupName } from './shared/backup.js';
+import { saveBackup, pruneAutoBackups, loadBackup, restoreDiff, applyRestore, resetSeason, stamp, safeLabel } from './lib/backup.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -192,6 +194,13 @@ export const importScheduleGames = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------- predictions
+/** A registered, not-blocked player. */
+async function assertCanPlay(uid) {
+  const p = await db.doc(`users/${uid}`).get();
+  if (!p.exists) throw new HttpsError('permission-denied', 'no-profile');
+  if (p.data().blocked) throw new HttpsError('permission-denied', 'blocked');
+}
+
 /**
  * The ONLY way picks/jokers are written (rules deny direct client writes). Tip-off is checked against SERVER time,
  * inside a transaction. Writes are merge-sets on map keys (never whole-map rewrites), each entry has its own updatedAt.
@@ -205,7 +214,7 @@ export const savePredictions = onCall(async (request) => {
   if (!isObj(picks) || !isObj(jokers)) throw new HttpsError('invalid-argument', 'shape');
   const ids = [...new Set([...Object.keys(picks), ...Object.keys(jokers)])];
   if (ids.length === 0 || ids.length > 100 || ids.some((id) => id.length > 80 || id.includes('/'))) throw new HttpsError('invalid-argument', 'ids');
-  if (!(await db.doc(`users/${uid}`).get()).exists) throw new HttpsError('permission-denied', 'no-profile');
+  await assertCanPlay(uid);
 
   const ref = db.doc(`predictions/${uid}`);
   return db.runTransaction(async (tx) => {
@@ -263,6 +272,7 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
   const autoFillOn = (settings.features?.autoFill ?? DEFAULT_SETTINGS.features.autoFill) !== false;
   const counted = settings.countedRounds || DEFAULT_SETTINGS.countedRounds;
   const names = new Map(points.docs.map((d) => [d.id, d.data().name || '']));
+  const blocked = new Set(points.docs.filter((d) => d.data().blocked).map((d) => d.id));
 
   for (const g of todo) {
     const gd = g.data();
@@ -274,7 +284,7 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
       const pick = d.games?.[g.id];
       if (pick) {
         picks[p.id] = { name: names.get(p.id) || '', s1: pick.s1, s2: pick.s2, joker: !!d.jokers?.[g.id], autoFilled: !!pick.autoFilled };
-      } else if (canFill) {
+      } else if (canFill && !blocked.has(p.id)) {
         const f = makeAutoPick();
         fills.push({ ref: p.ref, f });
         picks[p.id] = { name: names.get(p.id) || '', s1: f.s1, s2: f.s2, joker: false, autoFilled: true };
@@ -358,7 +368,7 @@ export const saveBonusAnswers = onCall(async (request) => {
   if (!answers || typeof answers !== 'object' || Array.isArray(answers)) throw new HttpsError('invalid-argument', 'shape');
   const ids = Object.keys(answers);
   if (ids.length === 0 || ids.length > 50 || ids.some((id) => id.length > 80 || id.includes('/'))) throw new HttpsError('invalid-argument', 'ids');
-  if (!(await db.doc(`users/${uid}`).get()).exists) throw new HttpsError('permission-denied', 'no-profile');
+  await assertCanPlay(uid);
 
   const snaps = await db.getAll(...ids.map((id) => db.doc(`bonus/${id}`)));
   const nowMs = Date.now();
@@ -422,8 +432,8 @@ export const onUserUpdated = onDocumentWritten('users/{uid}', async (event) => {
   const a = event.data?.after?.data();
   if (!a) return;
   const b = event.data?.before?.data();
-  if (b && b.name === a.name && (b.photoURL ?? null) === (a.photoURL ?? null) && (b.team ?? null) === (a.team ?? null)) return;
-  await db.doc(`points/${event.params.uid}`).set({ name: a.name, photoURL: a.photoURL ?? null, team: a.team ?? null }, { merge: true });
+  if (b && b.name === a.name && (b.photoURL ?? null) === (a.photoURL ?? null) && (b.team ?? null) === (a.team ?? null) && !!b.blocked === !!a.blocked) return;
+  await db.doc(`points/${event.params.uid}`).set({ name: a.name, photoURL: a.photoURL ?? null, team: a.team ?? null, blocked: !!a.blocked }, { merge: true });
 });
 
 /** Admin: rename an approved participant. If already registered, also renames the account everywhere (users, leaderboard, login profile). Audited. */
@@ -447,4 +457,220 @@ export const renameParticipant = onCall(async (request) => {
   await batch.commit();
   if (p.claimedBy) await getAuth().updateUser(p.claimedBy, { displayName: name }).catch((e) => console.error('auth rename failed', e));
   return { ok: true };
+});
+
+// ---------------------------------------------------------------- admin tools (Phase 7b)
+const writeAudit = (by, action, target, before, after) => db.collection('auditLog').add({ action, by, ts: FieldValue.serverTimestamp(), target, before: before ?? null, after: after ?? null });
+const okId = (v) => typeof v === 'string' && v.length > 0 && v.length <= 80 && !v.includes('/');
+
+/** Admin: block / unblock a player (cannot sign in, cannot save picks, not auto-filled). Admins cannot be blocked. Audited. */
+export const setUserBlocked = onCall(async (request) => {
+  requireAdmin(request);
+  const { uid, blocked } = request.data || {};
+  if (!okId(uid) || typeof blocked !== 'boolean') throw new HttpsError('invalid-argument', 'input');
+  const auth = getAuth();
+  const record = await auth.getUser(uid).catch(() => null);
+  if (!record) throw new HttpsError('not-found', 'user');
+  if (record.customClaims?.admin === true) throw new HttpsError('failed-precondition', 'cannot-block-admin');
+  await auth.updateUser(uid, { disabled: blocked });
+  if (blocked) await auth.revokeRefreshTokens(uid);
+  await db.doc(`users/${uid}`).set({ blocked, updatedAt: FieldValue.serverTimestamp() }, { merge: true }); // onUserUpdated copies it to points
+  await writeAudit(request.auth.uid, blocked ? 'user.block' : 'user.unblock', `users/${uid}`, null, { email: record.email ?? null });
+  return { ok: true };
+});
+
+/**
+ * Admin: someone registered under a wrong name. Deletes that account (login, profile, predictions, points, adjustments) and frees the
+ * approved name so the right person can register. Rescores everyone (their picks no longer count). Audited. Admins can't be reset.
+ */
+export const resetParticipantClaim = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  const { participantId } = request.data || {};
+  if (!okId(participantId)) throw new HttpsError('invalid-argument', 'input');
+  const ref = db.doc(`participants/${participantId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'participant');
+  const p = snap.data();
+  if (!p.claimedBy) throw new HttpsError('failed-precondition', 'not-claimed');
+  const uid = p.claimedBy;
+  const record = await getAuth().getUser(uid).catch(() => null);
+  if (record?.customClaims?.admin === true) throw new HttpsError('failed-precondition', 'cannot-reset-admin');
+
+  const userData = (await db.doc(`users/${uid}`).get()).data() || {};
+  const before = { uid, name: p.displayName, email: p.email ?? null, phone: userData.phone ?? null };
+  const adj = await db.collection('adjustments').where('uid', '==', uid).get();
+  const batch = db.batch();
+  batch.update(ref, { claimedBy: null, claimedAt: null, email: null, registeringEmail: FieldValue.delete(), registeringAt: FieldValue.delete() });
+  ['users', 'points', 'predictions', 'pointsDetail'].forEach((c) => batch.delete(db.doc(`${c}/${uid}`)));
+  adj.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  await getAuth().deleteUser(uid).catch((e) => { if (e.code !== 'auth/user-not-found') throw e; });
+  await writeAudit(request.auth.uid, 'participant.resetClaim', ref.path, before, null);
+  await recalcAllPoints(db);
+  return { ok: true };
+});
+
+/**
+ * Admin: set / change / remove any player's game picks, jokers and bonus answers - at any time (after tip-off, after a game
+ * finished, after a deadline). An admin-set pick is a normal pick (auto-fill flag removed). Updates the published picks/{gameId}
+ * if it exists, rescores everyone, and records old + new values in the audit log (nothing is shown to other players).
+ */
+export const adminEditPredictions = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  const { uid } = request.data || {};
+  const picks = request.data?.picks ?? {};
+  const jokers = request.data?.jokers ?? {};
+  const bonus = request.data?.bonus ?? {};
+  const isObj = (o) => o && typeof o === 'object' && !Array.isArray(o);
+  if (!okId(uid) || !isObj(picks) || !isObj(jokers) || !isObj(bonus)) throw new HttpsError('invalid-argument', 'input');
+  const gameIds = [...new Set([...Object.keys(picks), ...Object.keys(jokers)])];
+  const qIds = Object.keys(bonus);
+  if (gameIds.length + qIds.length === 0 || gameIds.length + qIds.length > 100 || [...gameIds, ...qIds].some((id) => !okId(id))) throw new HttpsError('invalid-argument', 'ids');
+  const user = await db.doc(`users/${uid}`).get();
+  if (!user.exists) throw new HttpsError('not-found', 'user');
+
+  const [predSnap, settingsSnap, ...rest] = await Promise.all([
+    db.doc(`predictions/${uid}`).get(), db.doc('appSettings/main').get(),
+    ...gameIds.map((id) => db.doc(`games/${id}`).get()), ...qIds.map((id) => db.doc(`bonus/${id}`).get()),
+  ]);
+  const gameSnaps = rest.slice(0, gameIds.length);
+  const qSnaps = rest.slice(gameIds.length);
+  const existing = predSnap.data() || {};
+  const maxJokers = mergeScoring(settingsSnap.data()?.scoring).jokersPerSeason;
+  const rejected = [];
+  const gm = {}; const jm = {}; const bm = {}; const touched = new Set();
+  const finalPicks = { ...(existing.games || {}) };
+  const finalJokers = { ...(existing.jokers || {}) };
+
+  gameIds.forEach((id, i) => {
+    if (!gameSnaps[i].exists) { rejected.push({ id, reason: 'not-found' }); return; }
+    if (!(id in picks)) return;
+    const p = picks[id];
+    if (p === null) { gm[id] = FieldValue.delete(); jm[id] = FieldValue.delete(); delete finalPicks[id]; delete finalJokers[id]; touched.add(id); return; }
+    const issue = pickIssue(p);
+    if (issue) { rejected.push({ id, reason: issue }); return; }
+    gm[id] = { s1: p.s1, s2: p.s2, updatedAt: FieldValue.serverTimestamp(), autoFilled: FieldValue.delete() };
+    finalPicks[id] = { s1: p.s1, s2: p.s2 };
+    touched.add(id);
+  });
+  gameIds.forEach((id, i) => {
+    if (!(id in jokers) || !gameSnaps[i].exists || rejected.some((r) => r.id === id)) return;
+    if (jokers[id] === true) {
+      if (!finalPicks[id]) { rejected.push({ id, reason: 'joker-needs-pick' }); return; }
+      finalJokers[id] = true; jm[id] = true;
+    } else { delete finalJokers[id]; jm[id] = FieldValue.delete(); }
+    touched.add(id);
+  });
+  if (countJokers(finalJokers) > maxJokers) throw new HttpsError('failed-precondition', 'joker-limit');
+
+  for (let i = 0; i < qIds.length; i += 1) {
+    const id = qIds[i];
+    if (!qSnaps[i].exists) { rejected.push({ id, reason: 'not-found' }); continue; }
+    if (bonus[id] === null) { bm[id] = FieldValue.delete(); continue; }
+    const q = { id, ...qSnaps[i].data() };
+    const c = cleanAnswer(q, bonus[id]);
+    if (c.error) { rejected.push({ id, reason: c.error }); continue; }
+    if (q.type === 'player') {
+      const ps = await db.getAll(...c.value.map((pid) => db.doc(`players/${pid}`)));
+      if (ps.some((x) => !x.exists)) { rejected.push({ id, reason: 'invalid-answer' }); continue; }
+    }
+    bm[id] = { answer: c.value, updatedAt: FieldValue.serverTimestamp() };
+  }
+
+  const patch = {};
+  if (Object.keys(gm).length) patch.games = gm;
+  if (Object.keys(jm).length) patch.jokers = jm;
+  if (Object.keys(bm).length) patch.bonus = bm;
+  if (Object.keys(patch).length === 0) return { saved: [], rejected };
+  patch.updatedAt = FieldValue.serverTimestamp();
+  await db.doc(`predictions/${uid}`).set(patch, { merge: true });
+
+  const name = user.data().name || '';
+  for (const id of touched) { // keep the already-published "everyone's picks" in line
+    const pubRef = db.doc(`picks/${id}`);
+    if (!(await pubRef.get()).exists) continue;
+    const entry = finalPicks[id] ? { name, s1: finalPicks[id].s1, s2: finalPicks[id].s2, joker: !!finalJokers[id], autoFilled: false } : FieldValue.delete();
+    await pubRef.set({ picks: { [uid]: entry } }, { merge: true });
+  }
+  const before = {
+    picks: Object.fromEntries([...touched].map((id) => [id, existing.games?.[id] ? { s1: existing.games[id].s1, s2: existing.games[id].s2, autoFilled: !!existing.games[id].autoFilled, joker: !!existing.jokers?.[id] } : null])),
+    bonus: Object.fromEntries(qIds.map((id) => [id, existing.bonus?.[id]?.answer ?? null])),
+  };
+  await writeAudit(request.auth.uid, 'predictions.adminEdit', `predictions/${uid}`, before, { picks, jokers, bonus, rejected });
+  await recalcAllPoints(db);
+  return { saved: [...touched, ...Object.keys(bm)], rejected };
+});
+
+/** Admin: add a manual points adjustment (+/-) with a reason. Part of the player's total. Audited. */
+export const addAdjustment = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  const { uid } = request.data || {};
+  const pts = Number(request.data?.pts);
+  const reason = typeof request.data?.reason === 'string' ? request.data.reason.trim() : '';
+  if (!okId(uid) || !Number.isFinite(pts) || pts === 0 || Math.abs(pts) > 1000 || !reason || reason.length > 200) throw new HttpsError('invalid-argument', 'input');
+  if (!(await db.doc(`users/${uid}`).get()).exists) throw new HttpsError('not-found', 'user');
+  const ref = await db.collection('adjustments').add({ uid, pts: Math.round(pts * 100) / 100, reason, by: request.auth.uid, ts: FieldValue.serverTimestamp() });
+  await writeAudit(request.auth.uid, 'points.adjust', `adjustments/${ref.id}`, null, { uid, pts, reason });
+  await recalcAllPoints(db);
+  return { id: ref.id };
+});
+
+/** Admin: remove a manual adjustment. Audited. */
+export const deleteAdjustment = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  const { id } = request.data || {};
+  if (!okId(id)) throw new HttpsError('invalid-argument', 'input');
+  const ref = db.doc(`adjustments/${id}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'adjustment');
+  await ref.delete();
+  await writeAudit(request.auth.uid, 'points.adjustDelete', ref.path, snap.data(), null);
+  await recalcAllPoints(db);
+  return { ok: true };
+});
+
+// ---- backups (JSON files in Storage: backups/{name}.json; only admins can read them, nobody can write from a browser)
+/** Admin: create a named backup now. */
+export const createBackup = onCall({ timeoutSeconds: 300, memory: '1GiB' }, async (request) => {
+  requireAdmin(request);
+  const label = safeLabel(request.data?.label) || 'manual';
+  const r = await saveBackup(db, `${label}-${stamp()}`);
+  await writeAudit(request.auth.uid, 'backup.create', `backups/${r.name}`, null, { bytes: r.bytes, docs: r.docs });
+  return r;
+});
+
+/** Every night 03:30 (Israel): automatic backup, keeps the newest 14. */
+export const dailyAutoBackup = onSchedule({ schedule: '30 3 * * *', timeZone: 'Asia/Jerusalem', timeoutSeconds: 300, memory: '1GiB' }, async () => {
+  await saveBackup(db, `auto-${stamp()}`);
+  await pruneAutoBackups(14);
+});
+
+/**
+ * Admin: restore selected collections from a backup. dryRun=true only reports what would change. A real restore needs confirm='RESTORE',
+ * first saves a "pre-restore" backup, never touches accounts / participants / audit log, then rescores everyone.
+ */
+export const restoreBackup = onCall({ timeoutSeconds: 540, memory: '1GiB' }, async (request) => {
+  requireAdmin(request);
+  const { name, dryRun, confirm } = request.data || {};
+  const collections = Array.isArray(request.data?.collections) ? request.data.collections : [];
+  if (!validBackupName(name) || collections.length === 0 || collections.some((c) => !RESTORE_ALLOWED.includes(c))) throw new HttpsError('invalid-argument', 'input');
+  const backup = await loadBackup(name).catch(() => null);
+  if (!backup?.collections) throw new HttpsError('not-found', 'backup');
+  if (dryRun !== false) return { dryRun: true, diff: await restoreDiff(db, backup, collections) };
+  if (confirm !== 'RESTORE') throw new HttpsError('failed-precondition', 'confirm');
+  const safety = await saveBackup(db, `pre-restore-${stamp()}`);
+  const applied = await applyRestore(db, backup, collections);
+  await recalcAllPoints(db);
+  await writeAudit(request.auth.uid, 'backup.restore', `backups/${name}`, { safetyBackup: safety.name }, { collections, applied });
+  return { dryRun: false, applied, safetyBackup: safety.name };
+});
+
+/** Admin: start a new season. Needs confirm='RESET'; saves a "pre-reset" backup first. Keeps accounts, participants, teams, players, settings, audit log. */
+export const seasonReset = onCall({ timeoutSeconds: 540, memory: '1GiB' }, async (request) => {
+  requireAdmin(request);
+  if (request.data?.confirm !== 'RESET') throw new HttpsError('failed-precondition', 'confirm');
+  const safety = await saveBackup(db, `pre-reset-${stamp()}`);
+  await resetSeason(db, FieldValue);
+  await writeAudit(request.auth.uid, 'season.reset', 'season', { safetyBackup: safety.name }, null);
+  return { ok: true, safetyBackup: safety.name };
 });

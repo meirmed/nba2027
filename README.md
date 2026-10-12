@@ -65,3 +65,9 @@ Everything is computed live from `points/{uid}.byDay`; run "Recalculate all poin
 `lockGamePicks` (every minute) auto-fills players who made no pick when a game tips off: random scores 20-99, margin 1-30, flagged `autoFilled`
 (50% points, floored; never the unique bonus), then publishes everyone's picks. Switch: Admin -> Settings. Avatars live in Firebase Storage `avatars/{uid}.jpg`
 (enable Storage once in the console, then `firebase deploy --only storage`). Names can only be changed by the admin (Admin -> Users -> Rename).
+
+## Admin tools (Phase 7b)
+Admin -> Users -> Details: block / unblock, edit ANY pick / joker / bonus answer at any time (audit log only, nothing shown to players), manual points adjustments with a reason.
+Admin -> Users: rename, reset a wrongly claimed registration. Admin -> Audit: every admin action with before/after. Admin -> Backup: backups (nightly 03:30 Israel, newest 14 kept),
+download, restore with a preview and a typed confirmation, and the season reset (typed RESET; a backup is saved first).
+Backup files: Storage `backups/*.json` (admin read only). Deploy: `firebase deploy --only firestore:rules,storage,functions`.

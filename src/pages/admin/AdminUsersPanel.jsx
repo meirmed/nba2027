@@ -8,6 +8,8 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useParticipants } from '../../hooks/useParticipants.js';
 import { addAudit } from '../../utils/audit.js';
 import AdminUserDetail from './AdminUserDetail.jsx';
+import { usePlayerStats } from '../../hooks/useH2H.js';
+import { normalizeName } from '@shared/names.js';
 import { normalizeName as normName } from '@shared/names.js';
 
 
@@ -18,6 +20,7 @@ export default function AdminUsersPanel() {
   const { participants, loading, error } = useParticipants();
   const [text, setText] = useState('');
   const [msg, setMsg] = useState('');
+  const { byUid } = usePlayerStats();
   const [detail, setDetail] = useState(null); // participant whose details are open
 
   const run = async (fn) => { setMsg(''); try { await fn(); } catch (e) { console.error(e); setMsg(t('common.error')); } };
@@ -53,6 +56,15 @@ export default function AdminUsersPanel() {
     }
   });
 
+  const resetClaim = (p) => run(async () => {
+    const typed = window.prompt(t('au.confirmReset', { name: p.displayName }));
+    if (!typed) return;
+    if (normalizeName(typed) !== normalizeName(p.displayName)) { setMsg(t('au.resetMismatch')); return; }
+    try { await httpsCallable(functions, 'resetParticipantClaim')({ participantId: p.id }); setMsg(t('au.resetDone')); } catch (e) {
+      if (String(e.code).includes('failed-precondition')) setMsg(t('au.cannotBlockAdmin')); else throw e;
+    }
+  });
+
   const remove = (p) => run(async () => {
     if (p.claimedBy) { setMsg(t('ap.cantDeleteClaimed')); return; }
     if (!window.confirm(t('common.confirmDelete'))) return;
@@ -80,11 +92,12 @@ export default function AdminUsersPanel() {
       {participants.map((p) => (
         <div key={p.id} className="row">
           <div className="grow">
-            <strong>{p.displayName}</strong>
+            <strong>{p.displayName}</strong>{p.claimedBy && byUid[p.claimedBy]?.blocked && <span className="badge"> 🚫 {t('au.blocked')}</span>}
             <div className="muted small" dir="ltr">{p.claimedBy ? p.email : t('ap.unclaimed')}</div>
           </div>
           <label className="check"><input type="checkbox" checked={!!p.paid} onChange={() => togglePaid(p)} /> {t('ap.paid')}</label>
           {p.claimedBy && <button className="btn ghost" onClick={() => setDetail(p)}>{t('au.details')}</button>}
+          {p.claimedBy && <button className="btn ghost" onClick={() => resetClaim(p)}>{t('au.resetClaim')}</button>}
           <button className="btn ghost" onClick={() => rename(p)}>{t('ap.rename')}</button>
           <button className="btn ghost" onClick={() => remove(p)}>{t('common.delete')}</button>
         </div>

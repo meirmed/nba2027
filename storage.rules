@@ -1,6 +1,12 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Backups: only admins can read (list + download); nobody writes from a browser (functions use the Admin SDK).
+    match /backups/{file} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
     // Avatars: one small JPEG per user. Anyone signed in can see it; only the owner can replace it.
     match /avatars/{fileName} {
       allow read: if request.auth != null;
