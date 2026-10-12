@@ -535,5 +535,9 @@
   "rules.tb.h2h.sub": "If tied on points: {order}",
   "rules.tb.board.title": "Tie-breaker: leaderboard",
   "rules.tb.board.sub": "If tied on total points: {order}.",
-  "rules.lock": "A prediction locks the moment a game starts. Predictions can't be changed after the lock, and everyone's picks become visible then."
+  "rules.lock": "A prediction locks the moment a game starts. Predictions can't be changed after the lock, and everyone's picks become visible then.",
+  "lb.streak": "Streak",
+  "lb.hotTip": "{n} correct winners in a row",
+  "lb.coldTip": "{n} misses in a row",
+  "lb.streakLegend": "🔥 3 or more correct winners in a row · ❄️ 3 or more misses in a row"
 }

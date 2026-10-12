@@ -15,6 +15,13 @@ const COLS = {
   games: [['lb.games', 'gamePts', 'pts-games']],
   bonus: [['lb.bonus', 'bonus', 'pts-bonus']],
 };
+// Current streak (like the World Cup app): 🔥 = 3+ correct winners in a row, ❄️ = 3+ misses in a row, otherwise a dash.
+function Streak({ r }) {
+  const { t } = useLang();
+  if ((r.curStreak ?? 0) >= 3) return <span className="streak hot" title={t('lb.hotTip', { n: r.curStreak })}>🔥 {r.curStreak}</span>;
+  if ((r.curMiss ?? 0) >= 3) return <span className="streak cold" title={t('lb.coldTip', { n: r.curMiss })}>❄️ {r.curMiss}</span>;
+  return <span className="muted">–</span>;
+}
 const pct = (a, b) => (b > 0 ? `${Math.round((100 * a) / b)}%` : '–');
 
 function Board({ tab }) {
@@ -45,6 +52,7 @@ function Board({ tab }) {
                 <th>{t('lb.played')}</th><th>{t('lb.accuracy')}</th><th>{t('lb.bestStreak')}</th><th>{t('lb.points')}</th>
               </>
             ) : COLS[tab].map(([h]) => <th key={h}>{t(h)}</th>)}
+            {tab === 'total' && <th>{t('lb.streak')}</th>}
           </tr>
         </thead>
         <tbody>
@@ -59,10 +67,12 @@ function Board({ tab }) {
                   <td><strong>{r.total ?? 0}</strong></td>
                 </>
               ) : COLS[tab].map(([h, f, cls]) => <td key={h}><strong className={cls}>{r[f] ?? 0}</strong></td>)}
+              {tab === 'total' && <td><Streak r={r} /></td>}
             </tr>
           ))}
         </tbody>
       </table>
+      {tab === 'total' && <p className="muted small">{t('lb.streakLegend')}</p>}
     </div>
   );
 }

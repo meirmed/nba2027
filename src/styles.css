@@ -189,3 +189,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .note ul { margin: .45rem 0 0; padding-inline-start: 1.2rem; }
 .note li { margin-block: .25rem; }
 .note.green { --tone: #22c55e; } .note.amber { --tone: #f59e0b; } .note.blue { --tone: #3b82f6; } .note.teal { --tone: #14b8a6; }
+
+/* streak column */
+.streak { font-weight: 700; white-space: nowrap; }
+.streak.hot { color: #f97316; } .streak.cold { color: #38bdf8; }
