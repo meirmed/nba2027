@@ -1,10 +1,11 @@
 :root {
   color-scheme: dark; /* native controls (calendar icon, dropdowns, scrollbars) render light-on-dark */
   --bg: #0f1420; --surface: #181f30; --text: #eef1f8; --muted: #94a0b8;
+  --line: #ffffff1c;
   --accent: #f58426; --danger: #ff6b6b; --radius: 12px; --nav-h: 60px;
 }
 @media (prefers-color-scheme: light) {
-  :root { color-scheme: light; --bg: #f4f6fb; --surface: #fff; --text: #141a2a; --muted: #5d6882; }
+  :root { color-scheme: light; --line: #00000018; --bg: #f4f6fb; --surface: #fff; --text: #141a2a; --muted: #5d6882; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); }
@@ -174,3 +175,17 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 /* Disabled controls must LOOK disabled (they were styled like enabled ones) */
 .btn:disabled, .tab:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.5); }
 .input:disabled, select.input:disabled, textarea.input:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---- Rules page (World Cup look): green headings, rule cards with the points on the other side, coloured notes ---- */
+.rules-h { color: #22c55e; font-size: .95rem; font-weight: 700; margin: 1.6rem 0 .6rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line); }
+.rules-intro { color: var(--muted); margin-block: .4rem .8rem; line-height: 1.5; }
+.rule { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem 1rem; margin-block: .5rem; }
+.rule.hl { border-color: #22c55e66; }
+.rule-main { min-width: 0; }
+.rule-sub { color: var(--muted); font-size: .8rem; margin-top: .15rem; line-height: 1.4; }
+.rule-val { color: #22c55e; font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.note { border-inline-start: 3px solid var(--tone, #22c55e); background: color-mix(in srgb, var(--tone, #22c55e) 9%, transparent); border-start-end-radius: 10px; border-end-end-radius: 10px; padding: .75rem 1rem; margin-block: .6rem; font-size: .9rem; line-height: 1.55; }
+.note p { margin: .4rem 0 0; }
+.note ul { margin: .45rem 0 0; padding-inline-start: 1.2rem; }
+.note li { margin-block: .25rem; }
+.note.green { --tone: #22c55e; } .note.amber { --tone: #f59e0b; } .note.blue { --tone: #3b82f6; } .note.teal { --tone: #14b8a6; }
