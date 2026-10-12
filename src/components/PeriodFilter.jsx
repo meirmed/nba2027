@@ -4,12 +4,12 @@ const PRESETS = ['7', '30', 'all', 'upcoming', 'custom'];
 const LABEL = { 7: 'mp.range7', 30: 'mp.range30', all: 'mp.rangeAll', upcoming: 'mp.rangeUpcoming', custom: 'mp.rangeCustom' };
 
 /** Buttons (last 7 days / 30 days / season / upcoming / custom) + From/To dates for "custom". `period` = usePeriod(). */
-export default function PeriodFilter({ period }) {
+export default function PeriodFilter({ period, presets = PRESETS }) {
   const { t } = useLang();
   return (
     <>
       <div className="tabs scroll" role="tablist">
-        {PRESETS.map((p) => (
+        {presets.map((p) => (
           <button key={p} role="tab" aria-selected={period.preset === p} className={`tab ${period.preset === p ? 'active' : ''}`} onClick={() => period.setPreset(p)}>
             {t(LABEL[p])}
           </button>

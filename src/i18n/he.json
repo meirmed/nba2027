@@ -539,5 +539,21 @@
   "lb.streak": "רצף",
   "lb.hotTip": "{n} מנצחים נכונים ברצף",
   "lb.coldTip": "{n} החטאות ברצף",
-  "lb.streakLegend": "🔥 3 מנצחים נכונים ברצף או יותר · ❄️ 3 החטאות ברצף או יותר"
+  "lb.streakLegend": "🔥 3 מנצחים נכונים ברצף או יותר · ❄️ 3 החטאות ברצף או יותר",
+  "results.pageTitle": "📺 תוצאות",
+  "results.tab.live": "משחקים חיים",
+  "results.tab.finished": "הסתיימו",
+  "results.tab.bonus": "בונוס",
+  "results.tab.tracking": "מעקב בונוס",
+  "results.noLive": "אין משחקים חיים כרגע",
+  "results.noFinished": "אין משחקים שהסתיימו בתקופה הזו.",
+  "rb.open": "פתוחה",
+  "rb.answered": "סגורה",
+  "rb.waiting": "סגורה, ממתינה לתשובה הנכונה",
+  "rb.everyone": "התשובות של כולם",
+  "rb.hide": "הסתר תשובות",
+  "rb.soon": "התשובות יוצגו בעוד רגע.",
+  "rb.noAnswers": "אף אחד לא ענה על השאלה הזו.",
+  "rb.trackNone": "אין עדיין שאלות בונוס סגורות.",
+  "rb.legend": "שאלות"
 }

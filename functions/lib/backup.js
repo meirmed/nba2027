@@ -113,7 +113,7 @@ async function deleteAll(db, name) {
  * zeroes every points doc (keeps name / photo / team / blocked). Keeps users, participants, teams, players, settings and the audit log.
  */
 export async function resetSeason(db, FieldValue) {
-  for (const c of ['games', 'picks', 'bonus', 'pointsDetail', 'adjustments', 'h2h', 'h2hTournament']) await deleteAll(db, c);
+  for (const c of ['games', 'picks', 'bonusPicks', 'bonus', 'pointsDetail', 'adjustments', 'h2h', 'h2hTournament']) await deleteAll(db, c);
   const preds = await db.collection('predictions').get();
   await commitInChunks(db, preds.docs.map((d) => (b) => b.set(d.ref, { games: {}, bonus: {}, jokers: {}, updatedAt: FieldValue.serverTimestamp() })));
   const pts = await db.collection('points').get();

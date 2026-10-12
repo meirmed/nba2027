@@ -539,5 +539,21 @@
   "lb.streak": "Streak",
   "lb.hotTip": "{n} correct winners in a row",
   "lb.coldTip": "{n} misses in a row",
-  "lb.streakLegend": "🔥 3 or more correct winners in a row · ❄️ 3 or more misses in a row"
+  "lb.streakLegend": "🔥 3 or more correct winners in a row · ❄️ 3 or more misses in a row",
+  "results.pageTitle": "📺 Results",
+  "results.tab.live": "Live games",
+  "results.tab.finished": "Finished",
+  "results.tab.bonus": "Bonus",
+  "results.tab.tracking": "Bonus tracking",
+  "results.noLive": "No live games right now",
+  "results.noFinished": "No finished games in this period.",
+  "rb.open": "Open",
+  "rb.answered": "Closed",
+  "rb.waiting": "Closed, waiting for the correct answer",
+  "rb.everyone": "Everyone's answers",
+  "rb.hide": "Hide answers",
+  "rb.soon": "Answers will be visible in a moment.",
+  "rb.noAnswers": "Nobody answered this question.",
+  "rb.trackNone": "No closed bonus questions yet.",
+  "rb.legend": "Questions"
 }

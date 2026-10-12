@@ -20,3 +20,8 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Deploy
 `firebase deploy --only firestore:rules,functions` (rules: clientErrors) and push the app. No functions behaviour changed except that the points recalculation is faster (shared code).
+
+## Update: Results page = 4 tabs (World Cup layout)
+- Tabs: **Live games** (empty state "No live games right now"), **Finished** (count badge; last 7 days default + period filter), **Bonus** (count badge: each question with status, correct answer, my answer + points, everyone's answers once closed), **Bonus tracking** (players x closed questions matrix with points; first columns sticky).
+- New collection `bonusPicks/{questionId}` = everyone's bonus answers, published when a question closes (deadline passed within the last hour via `lockGamePicks`, or the correct answer is set / the question is saved after its deadline via `onBonusUpdated`). Signed-in read, functions-only write; kept in line by `adminEditPredictions`; included in backups, restore defaults and season reset. Scheduled/upcoming games are no longer listed on the Results page (they live in Predictions).
+- Deploy: `firebase deploy --only firestore:rules,functions` + push the app.

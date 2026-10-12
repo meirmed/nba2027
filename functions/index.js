@@ -261,6 +261,7 @@ export const savePredictions = onCall(async (request) => {
  */
 export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone: 'UTC' }, async () => {
   const now = Date.now();
+  await publishDueBonusPicks(now);
   const snap = await db.collection('games')
     .where('tipoff', '>', Timestamp.fromMillis(now - 30 * 60000))
     .where('tipoff', '<=', Timestamp.fromMillis(now - 10000))
@@ -302,6 +303,30 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
     await batch.commit();
   }
 });
+
+// ---------------------------------------------------------------- bonus answers become public when a question closes
+/** Copies everyone's answers of the given questions into bonusPicks/{id} (readable by all signed-in users) and marks the question. */
+async function publishBonusPicks(ids) {
+  if (ids.length === 0) return;
+  const [preds, points] = await Promise.all([db.collection('predictions').get(), db.collection('points').get()]);
+  const names = new Map(points.docs.map((d) => [d.id, d.data().name || '']));
+  for (const id of ids) {
+    const picks = {};
+    preds.forEach((p) => { const a = p.data().bonus?.[id]?.answer; if (a?.length) picks[p.id] = { name: names.get(p.id) || '', answer: a }; });
+    const batch = db.batch();
+    batch.set(db.doc(`bonusPicks/${id}`), { questionId: id, lockedAt: FieldValue.serverTimestamp(), count: Object.keys(picks).length, picks });
+    batch.update(db.doc(`bonus/${id}`), { answersLockedAt: FieldValue.serverTimestamp() }); // key unchanged for onBonusUpdated -> no rescoring loop
+    await batch.commit();
+  }
+}
+/** Questions whose deadline passed in the last hour and aren't published yet. */
+async function publishDueBonusPicks(nowMs) {
+  const snap = await db.collection('bonus')
+    .where('deadline', '>', Timestamp.fromMillis(nowMs - 3600000))
+    .where('deadline', '<=', Timestamp.fromMillis(nowMs - 10000))
+    .get();
+  await publishBonusPicks(snap.docs.filter((d) => !d.data().answersLockedAt && d.data().type !== 'ranking').map((d) => d.id));
+}
 
 // ---------------------------------------------------------------- scoring (Phase 3)
 /**
@@ -397,8 +422,13 @@ export const saveBonusAnswers = onCall(async (request) => {
 
 /** When a question's scoring-relevant fields change (correct answer, points, options, penalty...), rescore everyone. */
 export const onBonusUpdated = onDocumentWritten({ document: 'bonus/{id}', timeoutSeconds: 120 }, async (event) => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
   const key = (q) => (q ? JSON.stringify([q.type, q.pts, q.penalty ?? null, !!q.multi, q.category, q.month ?? null, q.answer ?? [], (q.options || []).map((o) => [o.id, o.pts ?? null])]) : 'none');
-  if (key(event.data?.before?.data()) === key(event.data?.after?.data())) return;
+  if (!after) await db.doc(`bonusPicks/${event.params.id}`).delete().catch(() => {}); // question deleted
+  // closed (correct answer set, or deadline passed) and not published yet -> publish everyone's answers
+  else if (!after.answersLockedAt && after.type !== 'ranking' && ((after.answer?.length || 0) > 0 || (after.deadline?.toMillis?.() ?? Infinity) <= Date.now())) await publishBonusPicks([event.params.id]);
+  if (key(before) === key(after)) return;
   await recalcAllPoints(db);
 });
 
@@ -592,6 +622,12 @@ export const adminEditPredictions = onCall({ timeoutSeconds: 120 }, async (reque
     if (!(await pubRef.get()).exists) continue;
     const entry = finalPicks[id] ? { name, s1: finalPicks[id].s1, s2: finalPicks[id].s2, joker: !!finalJokers[id], autoFilled: false } : FieldValue.delete();
     await pubRef.set({ picks: { [uid]: entry } }, { merge: true });
+  }
+  for (const id of qIds) {
+    if (!(id in bm)) continue;
+    const pubRef = db.doc(`bonusPicks/${id}`);
+    if (!(await pubRef.get()).exists) continue;
+    await pubRef.set({ picks: { [uid]: bm[id]?.answer ? { name, answer: bm[id].answer } : FieldValue.delete() } }, { merge: true });
   }
   const before = {
     picks: Object.fromEntries([...touched].map((id) => [id, existing.games?.[id] ? { s1: existing.games[id].s1, s2: existing.games[id].s2, autoFilled: !!existing.games[id].autoFilled, joker: !!existing.jokers?.[id] } : null])),
