@@ -71,3 +71,7 @@ Admin -> Users -> Details: block / unblock, edit ANY pick / joker / bonus answer
 Admin -> Users: rename, reset a wrongly claimed registration. Admin -> Audit: every admin action with before/after. Admin -> Backup: backups (nightly 03:30 Israel, newest 14 kept),
 download, restore with a preview and a typed confirmation, and the season reset (typed RESET; a backup is saved first).
 Backup files: Storage `backups/*.json` (admin read only). Deploy: `firebase deploy --only firestore:rules,storage,functions`.
+
+## Hardening (Phase 8)
+`node scripts/simulate-season.mjs` (full-size load check), `node scripts/estimate-cost.mjs`, docs: `docs/GO_LIVE_CHECKLIST.md`, `docs/QA_CHECKLIST.md`, `docs/COST_ESTIMATE.md`.
+`npm run test` also checks Hebrew/English completeness, RTL-safe CSS and secrets.

@@ -53,6 +53,17 @@ service cloud.firestore {
     // Manual point adjustments (written by functions only). ADMIN-ONLY: the reason is never exposed to players (they see only the total in points/{uid}.adjust).
     match /adjustments/{id} { allow read: if isAdmin(); allow write: if false; }
 
+    // App errors reported by players' devices: any signed-in user may CREATE a small report about themselves; only admins read / clear them.
+    match /clientErrors/{id} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid','message','stack','context','route','ua','ts'])
+        && request.resource.data.message is string && request.resource.data.message.size() <= 300
+        && request.resource.data.stack is string && request.resource.data.stack.size() <= 1500
+        && request.resource.data.ts == request.time;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
     // Poller heartbeat (written by pollLiveScores only)
     match /system/{id} { allow read: if isAdmin(); allow write: if false; }
 

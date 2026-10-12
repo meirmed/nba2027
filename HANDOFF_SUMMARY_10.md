@@ -1,0 +1,22 @@
+# HANDOFF_SUMMARY_10 — Phase 8 (hardening)
+
+## What was done
+- **Season dry run** (`scripts/lib/simulate.mjs`, `shared/simulation.test.js`, `scripts/simulate-season.mjs`): a seeded fake season with the REAL scoring / auto-fill / jokers / bonus / Head to Head code. Checks: per-game, per-day and per-round points all equal each player's total; results are deterministic and independent of user order; <= 1 unique bonus per game and never for auto-filled picks; jokers <= 3; bonus sums per question/category; ranks and ties; Head to Head windows partition the season exactly; a whole tournament (groups -> 16 qualifiers -> 8/4/2/1 pairs -> champion).
+  - The Firebase emulators cannot run in the build environment (they need a Java download), so this replaces the emulator seed run. Firestore security rules are NOT unit-tested yet (they need the emulator): reviewed by hand instead (below).
+- **Performance bug found and fixed by the dry run**: full recalculation of a finished season (60 players x 1,235 games) took **5.7 s**, now **0.24 s** (date formatter cached; day computed once per game).
+- **Document sizes at season end** (Firestore limit 1,024 KB): predictions 38 KB, pointsDetail 61 KB, points + daily totals 4 KB. All comfortably small.
+- **Safety nets in `npm run test`** (`shared/static-checks.test.js`, mutation-checked): Hebrew and English have identical keys and placeholders, every text key used in code exists, every template text family is complete, no physical left/right CSS (RTL safety), no secrets committed, client never imports server code.
+- **Production error logging**: crashes on players' devices (error boundaries, `window.onerror`, unhandled promise rejections) are written to `clientErrors` (throttled, 5 per session, admin-read; rules validate shape and size). Admin -> Audit -> **App errors** shows them.
+- **Faster, cache-friendly loading**: admin screens are lazy-loaded (players never download them); Firebase and React are separate long-cached files. Main app file: 1,040 KB -> 330 KB (104 KB compressed). First-load total is similar (the Firebase SDK dominates), but an app update now re-downloads only the 104 KB app file.
+- **Cost model** (`scripts/estimate-cost.mjs`, `docs/COST_ESTIMATE.md`): about $3 / month at the busiest point of the season (<= ~$6 at higher regional prices), ~$0 early on.
+- **Docs**: `docs/GO_LIVE_CHECKLIST.md`, `docs/QA_CHECKLIST.md`, `docs/COST_ESTIMATE.md`.
+
+## Security review (manual, rules + functions)
+- All admin callables check the admin claim; players can only write through `savePredictions` / `saveBonusAnswers` (server-time locks); players cannot write `points`, `picks`, `adjustments`, `games`, `bonus`; `users` self-update is limited to username/phone/team/photoURL/lang; names only via admin; backups readable by admins only.
+- Known residual risks (accepted): `bonus` documents hold the correct answer (set it only after the deadline); `points` docs expose the adjustment TOTAL and the blocked flag to signed-in players (reasons are admin-only); a blocked player's existing token can read data for up to ~1 hour; `registerParticipant` is public (no rate limit; consider App Check if abused); anyone can pick any unclaimed name at registration (admin sees the email and can reset).
+
+## Owner to-do before launch (see the go-live checklist)
+Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H tie rule** - describe the **ranking bonus type** (still reserved) - test Head to Head (Recalculate all points first) - clear all test data (checklist section 5) - soft launch with 3-5 friends.
+
+## Deploy
+`firebase deploy --only firestore:rules,functions` (rules: clientErrors) and push the app. No functions behaviour changed except that the points recalculation is faster (shared code).

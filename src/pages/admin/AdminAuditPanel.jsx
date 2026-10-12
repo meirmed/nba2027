@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../../firebase.js';
 import PageShell from '../../components/PageShell.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
@@ -16,7 +16,7 @@ const plain = (v) => {
 };
 
 /** Every admin action (who, when, what, old -> new values). Read-only. Newest first, 100 at a time. */
-export default function AdminAuditPanel() {
+function ActionsView() {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const { nameOf } = usePlayerStats();
@@ -37,7 +37,7 @@ export default function AdminAuditPanel() {
   });
 
   return (
-    <PageShell titleKey="admin.audit">
+    <>
       <div className="grid-form">
         <label className="field">{t('al.filter')}
           <select className="input" value={filter} onChange={(e) => setFilter(e.target.value)}>
@@ -58,6 +58,49 @@ export default function AdminAuditPanel() {
         </div>
       ))}
       {rows.length >= count && <div className="actions"><button className="btn ghost" onClick={() => setCount((c) => c + 100)}>{t('al.more')}</button></div>}
+    </>
+  );
+}
+
+/** Crashes reported by players' devices (newest 50). */
+function ErrorsView() {
+  const { t, lang } = useLang();
+  const { timezone } = useSettings();
+  const { nameOf } = usePlayerStats();
+  const [rows, setRows] = useState([]);
+  const [open, setOpen] = useState(null);
+  useEffect(() => onSnapshot(query(collection(db, 'clientErrors'), orderBy('ts', 'desc'), limit(50)),
+    (s) => setRows(s.docs.map((d) => ({ id: d.id, ...d.data() }))), () => setRows([])), []);
+  return (
+    <>
+      {rows.length === 0 && <p className="muted">{t('al.noErrors')}</p>}
+      {rows.map((r) => (
+        <div key={r.id} className="row audit-row">
+          <div className="grow">
+            <strong dir="ltr">{r.message}</strong>
+            <div className="muted small"><span dir="auto">{nameOf(r.uid)}</span> · {r.ts ? formatDateTime(r.ts, lang, timezone) : '…'} · <span dir="ltr">{r.route} · {r.context}</span></div>
+            {open === r.id && <pre className="json" dir="ltr">{r.stack}{'\n\n'}{r.ua}</pre>}
+          </div>
+          <button className="btn ghost" onClick={() => setOpen(open === r.id ? null : r.id)}>{t('al.details')}</button>
+          <button className="btn ghost" onClick={() => deleteDoc(doc(db, 'clientErrors', r.id))}>{t('common.delete')}</button>
+        </div>
+      ))}
+    </>
+  );
+}
+
+// Shell: admin actions (who changed what) | errors from players' devices
+export default function AdminAuditPanel() {
+  const { t } = useLang();
+  const [view, setView] = useState('actions');
+  return (
+    <PageShell titleKey="admin.audit">
+      <div className="tabs" role="tablist">
+        {['actions', 'errors'].map((k) => (
+          <button key={k} role="tab" aria-selected={view === k} className={`tab ${view === k ? 'active' : ''}`} onClick={() => setView(k)}>{t(`al.view.${k}`)}</button>
+        ))}
+      </div>
+      {view === 'actions' ? <ActionsView /> : <ErrorsView />}
     </PageShell>
   );
 }

@@ -487,5 +487,8 @@
   "bk.recoverNow": "Recover selected",
   "bk.noLogin": "no login",
   "bk.noProfile": "no profile",
-  "bk.recoverDone": "Recovered {n} of {total}. Tell them to use \"Forgot password\" or Google sign-in."
+  "bk.recoverDone": "Recovered {n} of {total}. Tell them to use \"Forgot password\" or Google sign-in.",
+  "al.view.actions": "Admin actions",
+  "al.view.errors": "App errors",
+  "al.noErrors": "No errors reported. 🎉"
 }

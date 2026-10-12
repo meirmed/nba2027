@@ -55,6 +55,7 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
       const p = predictions[uid]?.games?.[g.id];
       if (validPick(p)) picks.push({ uid, p, joker: !!predictions[uid]?.jokers?.[g.id] });
     });
+    const day = dayKeyOfMs(g.tipoffMs, timezone);
     Object.entries(scoreGamePicks({ game: g, picks, scoring: sc })).forEach(([uid, r]) => {
       const u = out[uid];
       u.gamePts += r.pts;
@@ -64,7 +65,7 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
       if (r.exact) u.exactHits += 1;
       if (r.uniquePts > 0) u.uniqueHits += 1;
       if (r.riskPts > 0) u.riskHits += 1;
-      const cell = (u.byDay[dayKeyOfMs(g.tipoffMs, timezone)] ||= [0, 0, 0]); // [game points, exact hits, unique hits] per Israel day
+      const cell = (u.byDay[day] ||= [0, 0, 0]); // [game points, exact hits, unique hits] per Israel day
       cell[0] += r.pts; if (r.exact) cell[1] += 1; if (r.uniquePts > 0) cell[2] += 1;
       u.byGame[g.id] = { pts: r.pts, w: r.winnerCorrect ? 1 : 0, x: r.exact ? 1 : 0, u: r.uniquePts > 0 ? 1 : 0, r: r.riskPts > 0 ? 1 : 0, d: r.diffPts };
       seq[uid].push(r.winnerCorrect);

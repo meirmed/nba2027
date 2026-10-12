@@ -6,6 +6,9 @@ export function addDaysToKey(key, n) {
 }
 
 /** "YYYY-MM-DD" of an instant in a timezone (same grouping the app uses for "days": Israel date by default). */
+const formatters = new Map();
 export function dayKeyOfMs(ms, tz = 'Asia/Jerusalem') {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+  let f = formatters.get(tz);
+  if (!f) { f = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }); formatters.set(tz, f); }
+  return f.format(new Date(ms));
 }

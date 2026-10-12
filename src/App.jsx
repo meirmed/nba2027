@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext.jsx';
 import { useLang } from './contexts/LangContext.jsx';
@@ -12,7 +13,7 @@ import MyPointsPage from './pages/MyPointsPage.jsx';
 import H2HPage from './pages/H2HPage.jsx';
 import RulesPage from './pages/RulesPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
-import AdminPage from './pages/admin/AdminPage.jsx';
+const AdminPage = lazy(() => import('./pages/admin/AdminPage.jsx')); // players never download the admin code
 
 const page = (name, el) => <ErrorBoundary name={name}>{el}</ErrorBoundary>; // every page gets a boundary
 
@@ -38,7 +39,7 @@ export default function App() {
           <Route path="h2h" element={page('h2h', <H2HPage />)} />
           <Route path="rules" element={page('rules', <RulesPage />)} />
           <Route path="profile" element={page('profile', <ProfilePage />)} />
-          <Route path="admin" element={<Guard admin>{page('admin', <AdminPage />)}</Guard>} />
+          <Route path="admin" element={<Guard admin><Suspense fallback={<p className="muted center">…</p>}>{page('admin', <AdminPage />)}</Suspense></Guard>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

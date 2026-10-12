@@ -487,5 +487,8 @@
   "bk.recoverNow": "שחזר נבחרים",
   "bk.noLogin": "אין כניסה",
   "bk.noProfile": "אין פרופיל",
-  "bk.recoverDone": "שוחזרו {n} מתוך {total}. אמור להם להשתמש ב\"שכחתי סיסמה\" או בכניסה עם Google."
+  "bk.recoverDone": "שוחזרו {n} מתוך {total}. אמור להם להשתמש ב\"שכחתי סיסמה\" או בכניסה עם Google.",
+  "al.view.actions": "פעולות מנהל",
+  "al.view.errors": "שגיאות באפליקציה",
+  "al.noErrors": "לא דווחו שגיאות. 🎉"
 }
