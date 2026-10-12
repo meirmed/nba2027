@@ -475,5 +475,17 @@
   "bk.resetNow": "Reset the season",
   "bk.resetDone": "Season reset. A backup was saved: {name}",
   "ad.hidden": "The player sees only the total adjustment, never the reason.",
-  "bk.resetDisabled": "Disabled for now."
+  "bk.resetDisabled": "Disabled for now.",
+  "auth.forgot": "Forgot password?",
+  "auth.resetSent": "If this email is registered, we sent a link to reset the password.",
+  "auth.enterEmailFirst": "Enter your email above first.",
+  "bk.confirmDelete": "Delete the backup {name}? This can't be undone.",
+  "bk.recover": "Recover users",
+  "bk.recoverNote": "Finds players who are in this backup but missing now (login and/or profile) and brings them back with their predictions and points. It only ADDS: nothing existing is overwritten. Passwords cannot be restored: recovered players use \"Forgot password\" or sign in with Google.",
+  "bk.recoverFind": "Find missing players",
+  "bk.recoverNone": "Nobody is missing: every player in this backup exists now.",
+  "bk.recoverNow": "Recover selected",
+  "bk.noLogin": "no login",
+  "bk.noProfile": "no profile",
+  "bk.recoverDone": "Recovered {n} of {total}. Tell them to use \"Forgot password\" or Google sign-in."
 }

@@ -7,13 +7,13 @@ export const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(
 export const safeLabel = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
 
 // Timestamps <-> {__ts: millis} so a backup is plain JSON
-const ser = (v) => {
+export const ser = (v) => {
   if (v instanceof Timestamp) return { __ts: v.toMillis() };
   if (Array.isArray(v)) return v.map(ser);
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, ser(x)]));
   return v;
 };
-const de = (v) => {
+export const de = (v) => {
   if (Array.isArray(v)) return v.map(de);
   if (v && typeof v === 'object') {
     if (Object.keys(v).length === 1 && typeof v.__ts === 'number') return Timestamp.fromMillis(v.__ts);
@@ -48,6 +48,10 @@ export async function pruneAutoBackups(keep = 14) {
   const old = names.slice(0, Math.max(0, names.length - keep));
   await Promise.all(old.map((n) => bucket().file(n).delete().catch(() => {})));
   return old.length;
+}
+
+export async function removeBackup(name) {
+  await bucket().file(`backups/${name}.json`).delete();
 }
 
 export async function loadBackup(name) {

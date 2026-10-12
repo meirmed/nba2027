@@ -31,3 +31,8 @@ Emulator dry-run of a fake season, mobile/Hebrew QA, cost check, go-live checkli
 - **Season reset is DISABLED** (code kept): the button/input are disabled in AdminBackupPanel (`SEASON_RESET_ENABLED = false`) and the function refuses unless `SEASON_RESET_ENABLED=true` in functions/.env. To enable later: flip both and redeploy functions + app.
 - Audit log retention: unlimited (no automatic deletion; included in backups).
 - Backup "Download" marks the file as an attachment (Storage metadata) so it saves to the computer; admin may update backup file metadata (storage rule).
+
+## Update: delete backups, recover users, forgot password
+- `deleteBackup` (admin, audited) + Delete button per backup.
+- `recoverUsers` (admin, audited, ADD-ONLY): finds players in a backup whose login (Auth) and/or profile docs are missing now; re-creates the login with the SAME uid + email, restores users/predictions/points/pointsDetail and the registration claim on the approved name; rescoring. Passwords can't be restored -> "Forgot password" (new on the login page) or Google. Admin custom claim is not restored (use ADMIN_EMAILS bootstrap). Anything after the last backup is lost (nightly backups).
+- Login page: "Forgot password?" (Firebase `sendPasswordResetEmail`, same message whether or not the email exists).

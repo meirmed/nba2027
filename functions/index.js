@@ -21,7 +21,7 @@ import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { makeAutoPick } from './shared/autofill.js';
 import { normalizePhone } from './shared/phone.js';
 import { RESTORE_ALLOWED, validBackupName } from './shared/backup.js';
-import { saveBackup, pruneAutoBackups, loadBackup, restoreDiff, applyRestore, resetSeason, stamp, safeLabel } from './lib/backup.js';
+import { saveBackup, pruneAutoBackups, loadBackup, removeBackup, restoreDiff, applyRestore, resetSeason, stamp, safeLabel, de } from './lib/backup.js';
 import { mergeScoring } from './shared/scoring.js';
 import { DEFAULT_SETTINGS } from './shared/constants.js';
 
@@ -675,4 +675,66 @@ export const seasonReset = onCall({ timeoutSeconds: 540, memory: '1GiB' }, async
   await resetSeason(db, FieldValue);
   await writeAudit(request.auth.uid, 'season.reset', 'season', { safetyBackup: safety.name }, null);
   return { ok: true, safetyBackup: safety.name };
+});
+
+/** Admin: delete one backup file (e.g. when the list gets long). Audited. */
+export const deleteBackup = onCall(async (request) => {
+  requireAdmin(request);
+  const { name } = request.data || {};
+  if (!validBackupName(name)) throw new HttpsError('invalid-argument', 'input');
+  await removeBackup(name).catch(() => { throw new HttpsError('not-found', 'backup'); });
+  await writeAudit(request.auth.uid, 'backup.delete', `backups/${name}`, null, null);
+  return { ok: true };
+});
+
+/**
+ * Admin: bring back players that exist in a backup but are missing now (login account and/or profile). ADD-ONLY: never overwrites anything.
+ *  - login missing -> re-created with the SAME uid + email (all data is keyed by uid). Passwords cannot be restored: the player uses "Forgot password" or Google.
+ *  - profile missing -> users, predictions, points, pointsDetail restored from the backup, and the registration claim on the approved name.
+ * dryRun (default) lists who is missing. Then rescoring + audit.
+ */
+export const recoverUsers = onCall({ timeoutSeconds: 300, memory: '1GiB' }, async (request) => {
+  requireAdmin(request);
+  const { name, dryRun } = request.data || {};
+  const wanted = Array.isArray(request.data?.uids) ? request.data.uids.filter(okId) : null;
+  if (!validBackupName(name)) throw new HttpsError('invalid-argument', 'input');
+  const backup = await loadBackup(name).catch(() => null);
+  if (!backup?.collections) throw new HttpsError('not-found', 'backup');
+
+  const bUsers = backup.collections.users || {};
+  const curUsers = new Set((await db.collection('users').get()).docs.map((d) => d.id));
+  const auth = getAuth();
+  const rows = [];
+  for (const [uid, u] of Object.entries(bUsers)) {
+    const authExists = await auth.getUser(uid).then(() => true, () => false);
+    const docExists = curUsers.has(uid);
+    if (!authExists || !docExists) rows.push({ uid, name: u.name || '', email: u.email || '', authExists, docExists });
+  }
+  if (dryRun !== false) return { dryRun: true, players: rows };
+
+  const results = [];
+  for (const r of wanted ? rows.filter((x) => wanted.includes(x.uid)) : rows) {
+    const res = { uid: r.uid, name: r.name, ok: true, steps: [] };
+    try {
+      if (!r.authExists) { await auth.createUser({ uid: r.uid, email: r.email || undefined, displayName: r.name || undefined }); res.steps.push('login'); }
+      if (!r.docExists) {
+        const batch = db.batch();
+        ['users', 'predictions', 'points', 'pointsDetail'].forEach((c) => { const d = backup.collections[c]?.[r.uid]; if (d) batch.set(db.doc(`${c}/${r.uid}`), de(d)); });
+        await batch.commit();
+        res.steps.push('profile');
+      }
+      const entry = Object.entries(backup.collections.participants || {}).find(([, p]) => p.claimedBy === r.uid);
+      if (entry) {
+        const [pid, p] = entry;
+        const cur = await db.doc(`participants/${pid}`).get();
+        if (!cur.exists) { await db.doc(`participants/${pid}`).set(de(p)); res.steps.push('name'); }
+        else if (!cur.data().claimedBy) { await db.doc(`participants/${pid}`).update({ claimedBy: r.uid, claimedAt: p.claimedAt ? de(p.claimedAt) : null, email: p.email ?? null }); res.steps.push('name'); }
+        else if (cur.data().claimedBy !== r.uid) res.steps.push('name-taken');
+      }
+    } catch (e) { res.ok = false; res.error = String(e.code || e.message).slice(0, 120); }
+    results.push(res);
+  }
+  await recalcAllPoints(db);
+  await writeAudit(request.auth.uid, 'users.recover', `backups/${name}`, null, { results });
+  return { dryRun: false, results };
 });

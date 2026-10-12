@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut,
+  onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -33,8 +33,9 @@ export function AuthProvider({ children }) {
   const login = useCallback((email, password) => signInWithEmailAndPassword(auth, email, password), []);
   const loginGoogle = useCallback(() => signInWithPopup(auth, new GoogleAuthProvider()), []);
   const logout = useCallback(() => signOut(auth), []);
+  const resetPassword = useCallback((email) => sendPasswordResetEmail(auth, email), []);
 
-  const value = useMemo(() => ({ user, isAdmin, loading, login, loginGoogle, logout }), [user, isAdmin, loading, login, loginGoogle, logout]);
+  const value = useMemo(() => ({ user, isAdmin, loading, login, loginGoogle, logout, resetPassword }), [user, isAdmin, loading, login, loginGoogle, logout, resetPassword]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

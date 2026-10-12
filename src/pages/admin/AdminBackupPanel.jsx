@@ -26,6 +26,10 @@ export default function AdminBackupPanel() {
   const [diff, setDiff] = useState(null);
   const [confirm, setConfirm] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
+  const [recoverFile, setRecoverFile] = useState(null);
+  const [missing, setMissing] = useState(null);
+  const [pick, setPick] = useState(new Set());
+  const [recovered, setRecovered] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -55,6 +59,22 @@ export default function AdminBackupPanel() {
     const r = await call('restoreBackup', { name: restoreFile.replace(/\.json$/, ''), collections: [...cols], dryRun: false, confirm });
     setMsg(t('bk.restored', { name: r.safetyBackup })); setRestoreFile(null); setDiff(null); setConfirm(''); await load();
   });
+  const remove = (f) => run(async () => {
+    if (!window.confirm(t('bk.confirmDelete', { name: f.name }))) return;
+    await call('deleteBackup', { name: f.name.replace(/\.json$/, '') });
+    if (restoreFile === f.name) setRestoreFile(null);
+    if (recoverFile === f.name) setRecoverFile(null);
+    await load();
+  });
+  const findMissing = () => run(async () => {
+    const r = await call('recoverUsers', { name: recoverFile.replace(/\.json$/, ''), dryRun: true });
+    setMissing(r.players); setPick(new Set(r.players.map((p) => p.uid))); setRecovered(null);
+  });
+  const recover = () => run(async () => {
+    const r = await call('recoverUsers', { name: recoverFile.replace(/\.json$/, ''), dryRun: false, uids: [...pick] });
+    setRecovered(r.results); setMissing(null);
+    setMsg(t('bk.recoverDone', { n: r.results.filter((x) => x.ok).length, total: r.results.length }));
+  });
   const reset = () => run(async () => { const r = await call('seasonReset', { confirm: resetConfirm }); setResetConfirm(''); setMsg(t('bk.resetDone', { name: r.safetyBackup })); await load(); });
 
   return (
@@ -75,7 +95,9 @@ export default function AdminBackupPanel() {
         <div key={f.name} className="row">
           <div className="grow"><strong dir="ltr">{f.name}</strong><div className="muted small">{fmtSize(f.size)} · {formatDateTime(f.updated, lang, timezone)}</div></div>
           <button className="btn ghost" disabled={busy} onClick={() => download(f)}>{t('bk.download')}</button>
-          <button className="btn ghost" disabled={busy} onClick={() => { setRestoreFile(f.name); setDiff(null); setConfirm(''); }}>{t('bk.restore')}</button>
+          <button className="btn ghost" disabled={busy} onClick={() => { setRestoreFile(f.name); setRecoverFile(null); setDiff(null); setConfirm(''); }}>{t('bk.restore')}</button>
+          <button className="btn ghost" disabled={busy} onClick={() => { setRecoverFile(f.name); setRestoreFile(null); setMissing(null); setRecovered(null); }}>{t('bk.recover')}</button>
+          <button className="btn ghost" disabled={busy} onClick={() => remove(f)}>{t('common.delete')}</button>
         </div>
       ))}
 
@@ -97,6 +119,29 @@ export default function AdminBackupPanel() {
               <div className="actions"><button className="btn" disabled={busy || confirm !== 'RESTORE'} onClick={restore}>{t('bk.restoreNow')}</button></div>
             </>
           )}
+        </div>
+      )}
+
+      {recoverFile && (
+        <div className="card">
+          <h3>{t('bk.recover')} · <span dir="ltr">{recoverFile}</span></h3>
+          <p className="muted small">{t('bk.recoverNote')}</p>
+          <div className="actions"><button className="btn ghost" disabled={busy} onClick={findMissing}>{t('bk.recoverFind')}</button><button className="btn ghost" onClick={() => setRecoverFile(null)}>{t('common.cancel')}</button></div>
+          {missing && missing.length === 0 && <p className="muted">{t('bk.recoverNone')}</p>}
+          {missing && missing.length > 0 && (
+            <>
+              {missing.map((p) => (
+                <label key={p.uid} className="check">
+                  <input type="checkbox" checked={pick.has(p.uid)} onChange={() => setPick((s) => { const n = new Set(s); if (n.has(p.uid)) n.delete(p.uid); else n.add(p.uid); return n; })} />
+                  <span dir="auto">{p.name}</span> <span className="muted small" dir="ltr">{p.email}</span>
+                  {!p.authExists && <span className="badge">{t('bk.noLogin')}</span>}
+                  {!p.docExists && <span className="badge">{t('bk.noProfile')}</span>}
+                </label>
+              ))}
+              <div className="actions"><button className="btn" disabled={busy || pick.size === 0} onClick={recover}>{t('bk.recoverNow')}</button></div>
+            </>
+          )}
+          {recovered && recovered.map((r) => <p key={r.uid} className={r.ok ? 'small' : 'error small'}><span dir="auto">{r.name}</span>: {r.ok ? r.steps.join(', ') || '–' : r.error}</p>)}
         </div>
       )}
 
