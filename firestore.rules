@@ -50,8 +50,8 @@ service cloud.firestore {
     // Per-game points breakdown (written by functions only); private to the owner and admins.
     match /pointsDetail/{uid} { allow read: if isOwner(uid) || isAdmin(); allow write: if false; }
 
-    // Manual point adjustments (written by functions only). Admin reads all; a player reads their own.
-    match /adjustments/{id} { allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid); allow write: if false; }
+    // Manual point adjustments (written by functions only). ADMIN-ONLY: the reason is never exposed to players (they see only the total in points/{uid}.adjust).
+    match /adjustments/{id} { allow read: if isAdmin(); allow write: if false; }
 
     // Poller heartbeat (written by pollLiveScores only)
     match /system/{id} { allow read: if isAdmin(); allow write: if false; }

@@ -447,7 +447,7 @@
   "ad.reason": "Reason",
   "ad.add": "Add adjustment",
   "ad.empty": "No adjustments.",
-  "ad.mine": "Admin adjustments",
+  "ad.mine": "Admin adjustment",
   "al.filter": "Action type",
   "al.all": "All",
   "al.search": "Search",
@@ -473,5 +473,7 @@
   "bk.resetWarn": "Starts a NEW season: deletes all games, picks, bonus questions, point adjustments and Head to Head, empties every player's predictions and zeroes all points. Keeps accounts, participants, teams, players, settings and the audit log. A backup is saved first.",
   "bk.typeReset": "Type RESET to confirm",
   "bk.resetNow": "Reset the season",
-  "bk.resetDone": "Season reset. A backup was saved: {name}"
+  "bk.resetDone": "Season reset. A backup was saved: {name}",
+  "ad.hidden": "The player sees only the total adjustment, never the reason.",
+  "bk.resetDisabled": "Disabled for now."
 }

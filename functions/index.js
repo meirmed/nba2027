@@ -4,7 +4,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { beforeUserCreated, HttpsError as IdentityHttpsError } from 'firebase-functions/v2/identity';
-import { defineString, defineSecret } from 'firebase-functions/params';
+import { defineString, defineSecret, defineBoolean } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
@@ -31,6 +31,7 @@ const db = getFirestore();
 const ADMIN_EMAILS = defineString('ADMIN_EMAILS', { default: '' }); // comma-separated, set in functions/.env
 
 const NBA_API_KEY = defineSecret('NBA_API_KEY'); // firebase functions:secrets:set NBA_API_KEY
+const SEASON_RESET_ENABLED = defineBoolean('SEASON_RESET_ENABLED', { default: false }); // functions/.env; the season reset is OFF unless true
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
@@ -668,6 +669,7 @@ export const restoreBackup = onCall({ timeoutSeconds: 540, memory: '1GiB' }, asy
 /** Admin: start a new season. Needs confirm='RESET'; saves a "pre-reset" backup first. Keeps accounts, participants, teams, players, settings, audit log. */
 export const seasonReset = onCall({ timeoutSeconds: 540, memory: '1GiB' }, async (request) => {
   requireAdmin(request);
+  if (!SEASON_RESET_ENABLED.value()) throw new HttpsError('failed-precondition', 'disabled');
   if (request.data?.confirm !== 'RESET') throw new HttpsError('failed-precondition', 'confirm');
   const safety = await saveBackup(db, `pre-reset-${stamp()}`);
   await resetSeason(db, FieldValue);

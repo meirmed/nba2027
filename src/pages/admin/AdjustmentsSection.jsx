@@ -6,7 +6,7 @@ import { useSettings } from '../../contexts/SettingsContext.jsx';
 import { useAdjustments } from '../../hooks/useAdjustments.js';
 import { formatDateTime } from '../../utils/dates.js';
 
-/** Admin: manual +/- points with a reason. Counted in the player's total; the player sees them (with the reason) in My Points. */
+/** Admin: manual +/- points with a reason. Counted in the player's total. The player sees only the total adjustment, never the reason. */
 export default function AdjustmentsSection({ uid }) {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
@@ -28,6 +28,7 @@ export default function AdjustmentsSection({ uid }) {
   return (
     <div className="card">
       <h3>{t('ad.title')}</h3>
+      <p className="muted small">{t('ad.hidden')}</p>
       <div className="grid-form">
         <label className="field">{t('ad.pts')}<input className="input num wide" dir="ltr" inputMode="decimal" value={pts} onChange={(e) => setPts(e.target.value)} /></label>
         <label className="field">{t('ad.reason')}<input className="input" dir="auto" maxLength={200} value={reason} onChange={(e) => setReason(e.target.value)} /></label>

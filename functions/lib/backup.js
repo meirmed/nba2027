@@ -37,7 +37,7 @@ export async function exportAll(db) {
 export async function saveBackup(db, name) {
   const data = await exportAll(db);
   const json = JSON.stringify(data);
-  await bucket().file(`backups/${name}.json`).save(json, { contentType: 'application/json' });
+  await bucket().file(`backups/${name}.json`).save(json, { contentType: 'application/json', metadata: { contentDisposition: `attachment; filename="${name}.json"` } }); // downloads instead of opening in the browser
   return { name, bytes: Buffer.byteLength(json), docs: Object.values(data.collections).reduce((n, c) => n + Object.keys(c).length, 0) };
 }
 

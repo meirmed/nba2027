@@ -25,3 +25,9 @@ Head to Head testing (Recalculate all points first) · World Cup H2H tie rule ·
 
 ## Next: Phase 8 (hardening)
 Emulator dry-run of a fake season, mobile/Hebrew QA, cost check, go-live checklist.
+
+## Update (owner)
+- Adjustment reasons are hidden from players: `adjustments` is admin-read only in the rules; players see one row "Admin adjustment +X" from `points.adjust`.
+- **Season reset is DISABLED** (code kept): the button/input are disabled in AdminBackupPanel (`SEASON_RESET_ENABLED = false`) and the function refuses unless `SEASON_RESET_ENABLED=true` in functions/.env. To enable later: flip both and redeploy functions + app.
+- Audit log retention: unlimited (no automatic deletion; included in backups).
+- Backup "Download" marks the file as an attachment (Storage metadata) so it saves to the computer; admin may update backup file metadata (storage rule).

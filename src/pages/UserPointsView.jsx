@@ -7,7 +7,6 @@ import PeriodFilter from '../components/PeriodFilter.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { usePredictionsOf } from '../hooks/usePredictionsOf.js';
-import { useAdjustments } from '../hooks/useAdjustments.js';
 import { usePoints } from '../contexts/PointsContext.jsx';
 import { useBonus } from '../contexts/BonusContext.jsx';
 import { useTeams } from '../contexts/TeamsContext.jsx';
@@ -29,7 +28,6 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
   const pointsAll = usePoints();
   const { games } = useGames();
   const mine = usePredictionsOf(uid);
-  const adjustments = useAdjustments(uid);
   const { questions } = useBonus();
   const { teams } = useTeams();
   const period = usePeriod(timezone);
@@ -39,6 +37,7 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
     if (!uid) return undefined;
     return onSnapshot(doc(db, 'pointsDetail', uid), (snap) => setDetail(snap.data()?.byGame || {}), () => setDetail({}));
   }, [uid]);
+  const adjustTotal = pointsAll.rows.find((r) => r.uid === uid)?.adjust || 0; // only the TOTAL is public; reasons are admin-only
   const myRank = useMemo(() => rankRows(pointsAll.rows, tiebreakers).find((r) => r.uid === uid), [pointsAll.rows, tiebreakers, uid]);
 
   const myBonus = useMemo(() => questions.filter((q) => mine.bonus[q.id]?.answer?.length), [questions, mine.bonus]);
@@ -83,15 +82,11 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
         </>
       )}
 
-      {showAdjustments && adjustments.length > 0 && (
+      {showAdjustments && adjustTotal !== 0 && (
         <div className="day">
-          <h3>{t('ad.mine')}</h3>
-          {adjustments.map((a) => (
-            <div key={a.id} className="mp-row">
-              <div className="mp-line"><span className="grow" dir="auto">{a.reason}</span><strong className="mp-pts" dir="ltr">{a.pts > 0 ? '+' : ''}{a.pts}</strong></div>
-              <div className="muted small">{a.ts ? formatDateTime(a.ts, lang, timezone) : ''}</div>
-            </div>
-          ))}
+          <div className="mp-row">
+            <div className="mp-line"><span className="grow">{t('ad.mine')}</span><strong className="mp-pts" dir="ltr">{adjustTotal > 0 ? '+' : ''}{adjustTotal}</strong></div>
+          </div>
         </div>
       )}
 

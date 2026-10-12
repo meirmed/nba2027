@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getDownloadURL, getMetadata, listAll, ref as storageRef } from 'firebase/storage';
+import { getDownloadURL, getMetadata, listAll, ref as storageRef, updateMetadata } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { functions, storage } from '../../firebase.js';
 import PageShell from '../../components/PageShell.jsx';
@@ -8,6 +8,8 @@ import { useSettings } from '../../contexts/SettingsContext.jsx';
 import { formatDateTime } from '../../utils/dates.js';
 import { RESTORE_ALLOWED, RESTORE_DEFAULT } from '@shared/backup.js';
 
+// Season reset is switched OFF for now (too powerful). Flip to true AND set SEASON_RESET_ENABLED=true in functions/.env (then redeploy) to enable.
+const SEASON_RESET_ENABLED = false;
 const fmtSize = (n) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 const call = (name, data) => httpsCallable(functions, name, { timeout: 540000 })(data).then((r) => r.data);
 
@@ -37,7 +39,16 @@ export default function AdminBackupPanel() {
   const run = async (fn) => { setBusy(true); setMsg(''); try { await fn(); } catch (e) { console.error(e); setMsg(t('common.error')); } setBusy(false); };
 
   const create = () => run(async () => { const r = await call('createBackup', { label }); setLabel(''); setMsg(t('bk.created', { name: r.name })); await load(); });
-  const download = (f) => run(async () => { window.open(await getDownloadURL(f.ref), '_blank'); });
+  // Saves the file to the computer's Downloads folder: the file is marked "attachment", so the browser downloads it instead of opening it.
+  const download = (f) => run(async () => {
+    await updateMetadata(f.ref, { contentType: 'application/json', contentDisposition: `attachment; filename="${f.name}"` });
+    const a = document.createElement('a');
+    a.href = await getDownloadURL(f.ref);
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
   const toggle = (c) => { setDiff(null); setCols((s) => { const n = new Set(s); if (n.has(c)) n.delete(c); else n.add(c); return n; }); };
   const preview = () => run(async () => { setDiff((await call('restoreBackup', { name: restoreFile.replace(/\.json$/, ''), collections: [...cols], dryRun: true })).diff); });
   const restore = () => run(async () => {
@@ -92,8 +103,9 @@ export default function AdminBackupPanel() {
       <h3 className="bq-title">{t('bk.resetTitle')}</h3>
       <div className="card error-card">
         <p className="small">{t('bk.resetWarn')}</p>
-        <input className="input" dir="ltr" placeholder={t('bk.typeReset')} value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)} />
-        <div className="actions"><button className="btn" disabled={busy || resetConfirm !== 'RESET'} onClick={reset}>{t('bk.resetNow')}</button></div>
+        {!SEASON_RESET_ENABLED && <p className="error small"><strong>{t('bk.resetDisabled')}</strong></p>}
+        <input className="input" dir="ltr" disabled={!SEASON_RESET_ENABLED} placeholder={t('bk.typeReset')} value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)} />
+        <div className="actions"><button className="btn" disabled={!SEASON_RESET_ENABLED || busy || resetConfirm !== 'RESET'} onClick={reset}>{t('bk.resetNow')}</button></div>
       </div>
     </PageShell>
   );
