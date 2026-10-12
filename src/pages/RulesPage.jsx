@@ -27,7 +27,7 @@ export default function RulesPage() {
   const base = s.winner + s.exact; // exact score = winner points + exact bonus
   const tiers = [...s.diffBonus].sort((a, b) => a.maxErr - b.maxErr);
   const numbered = (keys, ns) => keys.map((k, i) => `${i + 1}) ${t(`${ns}${k}`)}`).join(', ');
-  const h2hTb = tournament?.tiebreakers || DEFAULT_H2H_TIEBREAKERS;
+  const h2hTb = (tournament?.tiebreakers || DEFAULT_H2H_TIEBREAKERS).filter((k) => k !== 'seed'); // the page lists exact hits, then unique hits
   const pct = Math.round(s.autoFillFactor * 100);
 
   return (
@@ -38,7 +38,6 @@ export default function RulesPage() {
         <Rule title={t('rules.r.winner')} sub={t('rules.r.winnerSub')} value={s.winner} />
         {tiers.map((d) => <Rule key={d.maxErr} title={t('rules.diff', { err: d.maxErr })} sub={t('rules.r.diffSub', { err: d.maxErr })} value={`${s.winner}+${d.pts}`} />)}
         <Rule title={t('rules.r.miss')} sub={t('rules.r.missSub')} value={0} />
-        <Note tone="amber">⚠️ {t('rules.exactNoDiff')}</Note>
         <Note tone="teal">🎲 {t('rules.note.auto', { pct })}</Note>
         <Note tone="green">🏀 {t('rules.ot')}</Note>
       </Section>
@@ -82,8 +81,6 @@ export default function RulesPage() {
           <ul>
             <li>{t('rules.h2h.ko.b1')}</li>
             <li>{t('rules.h2h.ko.b2')}</li>
-            <li>{t('rules.h2h.ko.b3')}</li>
-            <li>{t('rules.h2h.ko.b4')}</li>
           </ul>
         </Note>
         <Note tone="teal">
