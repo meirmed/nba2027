@@ -240,3 +240,6 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .pred-card p { margin: 0; }
 .day-nav { margin-bottom: .3rem; }
 @media (max-width: 600px) { .pred-card { padding: .45rem .6rem; } .pred-inputs .num { width: 3.2rem; } }
+
+/* joker button: the star is yellow only while the joker is ON; off (or not usable yet) = a plain grey star */
+.joker-star:not(.on) { filter: grayscale(1); opacity: .55; }

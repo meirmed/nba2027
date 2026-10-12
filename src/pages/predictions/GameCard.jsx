@@ -58,7 +58,7 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
       {!locked && ready && (
         <div className="actions">
           <button className={`btn ${jokerOn ? '' : 'ghost'}`} disabled={jokerDisabled} onClick={onJoker} aria-pressed={jokerOn}>
-            ⭐ {t('pred.joker', { n: jokerMultiplier })}
+            <span className={`joker-star ${jokerOn ? 'on' : ''}`} aria-hidden>⭐</span> {t('pred.joker', { n: jokerMultiplier })}
           </button>
         </div>
       )}
