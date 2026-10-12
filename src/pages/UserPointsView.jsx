@@ -8,18 +8,13 @@ import { useLang } from '../contexts/LangContext.jsx';
 import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { usePredictionsOf } from '../hooks/usePredictionsOf.js';
 import { usePoints } from '../contexts/PointsContext.jsx';
-import { useBonus } from '../contexts/BonusContext.jsx';
-import { useTeams } from '../contexts/TeamsContext.jsx';
 import { useGames } from '../hooks/useGames.js';
-import { usePlayers } from '../hooks/usePlayers.js';
 import { usePeriod } from '../hooks/usePeriod.js';
 import { dayKey, formatDateTime, formatDay } from '../utils/dates.js';
 import { inRange } from '@shared/period.js';
 import { rankRows } from '@shared/standings.js';
-import { scoreBonus } from '@shared/bonus.js';
-import { answerLabel } from './predictions/BonusCard.jsx';
 
-// One line per game = teams | pick | actual result | points, grouped by day (newest first). Default = last 7 days.
+// GAMES part: one line per game = teams | pick | actual result | points, grouped by day (newest first). Default = last 7 days.
 // Used by My Points (uid = me) and by Admin -> Users -> Details (uid = any player).
 export default function UserPointsView({ uid, self = false, showAdjustments = true }) {
   const { t, lang } = useLang();
@@ -28,8 +23,6 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
   const pointsAll = usePoints();
   const { games } = useGames();
   const mine = usePredictionsOf(uid);
-  const { questions } = useBonus();
-  const { teams } = useTeams();
   const period = usePeriod(timezone);
   const [detail, setDetail] = useState({}); // pointsDetail/{uid}.byGame
 
@@ -40,8 +33,6 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
   const adjustTotal = pointsAll.rows.find((r) => r.uid === uid)?.adjust || 0; // only the TOTAL is public; reasons are admin-only
   const myRank = useMemo(() => rankRows(pointsAll.rows, tiebreakers).find((r) => r.uid === uid), [pointsAll.rows, tiebreakers, uid]);
 
-  const myBonus = useMemo(() => questions.filter((q) => mine.bonus[q.id]?.answer?.length), [questions, mine.bonus]);
-  const { byId: playersById } = usePlayers(myBonus.some((q) => q.type === 'player'));
   const mineAll = useMemo(() => games.filter((g) => mine.games[g.id]), [games, mine.games]);
 
   const groups = useMemo(() => {
@@ -58,7 +49,7 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
 
   return (
     <>
-      {mineAll.length === 0 && myBonus.length === 0 && <p className="muted">{t(self ? 'mp.empty' : 'au.noPicks')}</p>}
+      {mineAll.length === 0 && <p className="muted">{t(self ? 'mp.empty' : 'au.noPicks')}</p>}
       {mineAll.length > 0 && (
         <>
           <PeriodFilter period={period} />
@@ -87,25 +78,6 @@ export default function UserPointsView({ uid, self = false, showAdjustments = tr
           <div className="mp-row">
             <div className="mp-line"><span className="grow">{t('ad.mine')}</span><strong className="mp-pts" dir="ltr">{adjustTotal > 0 ? '+' : ''}{adjustTotal}</strong></div>
           </div>
-        </div>
-      )}
-
-      {myBonus.length > 0 && (
-        <div className="day">
-          <h3>{t('mp.bonusTitle')}</h3>
-          {myBonus.map((q) => {
-            const answered = (q.answer || []).length > 0;
-            const my = mine.bonus[q.id].answer;
-            return (
-              <div key={q.id} className="mp-row">
-                <div className="mp-line">
-                  <span className="grow" dir="auto">{q.question?.[lang] || q.question?.en}</span>
-                  <strong className="mp-pts">{answered ? scoreBonus(q, my).pts : '–'}</strong>
-                </div>
-                <div className="muted small" dir="auto">{t('bq.yourAnswer')}: {answerLabel(q, my, { lang, teams, playersById })}{answered ? ` · ${t('bq.correctAnswer')}: ${answerLabel(q, q.answer, { lang, teams, playersById })}` : ''}</div>
-              </div>
-            );
-          })}
         </div>
       )}
 

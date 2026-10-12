@@ -7,10 +7,9 @@ import { useGames } from '../hooks/useGames.js';
 import LiveTab from './results/LiveTab.jsx';
 import FinishedTab from './results/FinishedTab.jsx';
 import BonusResultsTab from './results/BonusResultsTab.jsx';
-import BonusTrackingTab from './results/BonusTrackingTab.jsx';
 
-// Same four tabs as the World Cup results page: live games | finished (count) | bonus (count) | bonus tracking.
-const TABS = [['live', LiveTab], ['finished', FinishedTab], ['bonus', BonusResultsTab], ['tracking', BonusTrackingTab]];
+// Same tabs as the World Cup results page: live games | finished (count) | bonus (count).
+const TABS = [['live', LiveTab], ['finished', FinishedTab], ['bonus', BonusResultsTab]];
 
 export default function ResultsPage() {
   const { t } = useLang();

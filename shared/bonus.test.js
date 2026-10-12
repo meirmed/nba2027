@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion } from './bonus.js';
+import { scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
 
 const opts = [{ id: 'a', he: 'א', en: 'A', pts: 10 }, { id: 'b', he: 'ב', en: 'B', pts: 25 }, { id: 'c', he: 'ג', en: 'C', pts: 4 }];
 
@@ -126,5 +126,45 @@ describe('validateQuestion', () => {
     expect(validateQuestion({ ...base, type: 'choice', options: opts, answer: ['zzz'] })).toContain('err.bqAnswer');
     expect(validateQuestion({ ...base, type: 'choice', options: opts, answer: ['a', 'b'] })).toEqual([]);
     expect(validateQuestion({ ...base, type: 'text', answer: ['Jokic', 'Nikola'] })).toEqual([]);
+  });
+});
+
+describe('maxBonusPoints', () => {
+  it('single answers, closest and text = the question points', () => {
+    expect(maxBonusPoints({ type: 'numeric', pts: 6 })).toBe(6);
+    expect(maxBonusPoints({ type: 'closest', pts: 15 })).toBe(15);
+    expect(maxBonusPoints({ type: 'choice', pts: 5 })).toBe(5);
+  });
+  it('multi: points per pick x the picks that can be right', () => {
+    expect(maxBonusPoints({ type: 'team', pts: 3, multi: true, maxPicks: 4 })).toBe(12);
+    expect(maxBonusPoints({ type: 'team', pts: 3, multi: true, maxPicks: 4, answer: ['A', 'B'] })).toBe(6);
+    expect(maxBonusPoints({ type: 'team', pts: 3, multi: true })).toBe(3);
+  });
+  it('odds-based: the best option (or the best N options when several picks are allowed)', () => {
+    const options = [{ id: 'a', pts: 4 }, { id: 'b', pts: 12 }, { id: 'c', pts: 30 }];
+    expect(maxBonusPoints({ type: 'dynamic_score', options })).toBe(30);
+    expect(maxBonusPoints({ type: 'dynamic_score', options, multi: true, maxPicks: 2 })).toBe(42);
+  });
+});
+
+describe('bonusStats', () => {
+  const picks = { u1: { answer: ['a'] }, u2: { answer: ['a'] }, u3: { answer: ['b'] }, u4: { answer: [] } };
+  it('percentages of the players who answered, most popular first', () => {
+    const r = bonusStats({ type: 'choice' }, picks);
+    expect(r.n).toBe(3);
+    expect(r.buckets.map((b) => [b.value, b.count, b.pct])).toEqual([['a', 2, 67], ['b', 1, 33]]);
+  });
+  it('multi picks count once per player per option', () => {
+    const r = bonusStats({ type: 'team', multi: true }, { u1: { answer: ['BOS', 'DEN', 'BOS'] }, u2: { answer: ['BOS'] } });
+    expect(r.buckets.map((b) => [b.value, b.pct])).toEqual([['BOS', 100], ['DEN', 50]]);
+  });
+  it('free text is grouped ignoring case and spaces', () => {
+    const r = bonusStats({ type: 'text' }, { u1: { answer: ['Jokic'] }, u2: { answer: [' jokic '] }, u3: { answer: ['Embiid'] } });
+    expect(r.buckets[0]).toMatchObject({ value: 'jokic', label: 'Jokic', count: 2 });
+  });
+  it('numbers: average / min / max', () => {
+    const r = bonusStats({ type: 'closest' }, { u1: { answer: ['10'] }, u2: { answer: ['15'] }, u3: { answer: ['x'] } });
+    expect(r.numeric).toEqual({ avg: 12.5, min: 10, max: 15, count: 2 });
+    expect(bonusStats({ type: 'numeric' }, {}).numeric).toBeNull();
   });
 });

@@ -142,3 +142,50 @@ export function validateQuestion(q) {
   }
   return e;
 }
+
+/** The most a player can earn on this question (shown as "max N pts"). */
+export function maxBonusPoints(q) {
+  const ans = strs(q.answer);
+  const picks = () => {
+    let k = Number.isInteger(q.maxPicks) && q.maxPicks > 0 ? q.maxPicks : Infinity;
+    if (ans.length) k = Math.min(k, ans.length);
+    return Number.isFinite(k) ? k : 1;
+  };
+  if (q.type === 'dynamic_score') {
+    const pts = (q.options || []).map((o) => o.pts || 0).sort((a, b) => b - a);
+    return round2(pts.slice(0, q.multi ? picks() : 1).reduce((a, b) => a + b, 0));
+  }
+  if (['choice', 'team', 'player'].includes(q.type) && q.multi) return round2(q.pts * picks());
+  return q.pts; // numeric, closest, text, single-answer
+}
+
+/**
+ * What everyone answered (for the results chart). picks: {uid: {answer:[...]}}.
+ * -> {n, buckets:[{value,label?,count,pct}] (most popular first; pct = % of the players who answered), numeric?:{avg,min,max,count}}
+ * Multi-pick answers count once per player per option; free text is grouped ignoring case/spaces (label = first spelling).
+ */
+export function bonusStats(q, picks) {
+  const entries = Object.values(picks || {}).map((p) => strs(p?.answer)).filter((a) => a.length);
+  const n = entries.length;
+  if (q.type === 'numeric' || q.type === 'closest') {
+    const nums = entries.map((a) => num(a[0])).filter(Number.isFinite);
+    if (nums.length === 0) return { n, buckets: [], numeric: null };
+    const avg = Math.round((nums.reduce((s, x) => s + x, 0) / nums.length) * 10) / 10;
+    return { n, buckets: [], numeric: { avg, min: Math.min(...nums), max: Math.max(...nums), count: nums.length } };
+  }
+  const counts = new Map();
+  entries.forEach((a) => {
+    const seen = new Set();
+    a.forEach((v) => {
+      const key = q.type === 'text' ? normalizeName(v) : v;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const cur = counts.get(key);
+      counts.set(key, cur ? { ...cur, count: cur.count + 1 } : { value: key, label: v, count: 1 });
+    });
+  });
+  const buckets = [...counts.values()]
+    .map((b) => ({ ...b, pct: n ? Math.round((100 * b.count) / n) : 0 }))
+    .sort((a, b) => (b.count - a.count) || String(a.value).localeCompare(String(b.value)));
+  return { n, buckets, numeric: null };
+}

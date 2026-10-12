@@ -10,6 +10,7 @@ import { useTeams } from '../../contexts/TeamsContext.jsx';
 import { usePlayerStats } from '../../hooks/useH2H.js';
 import { formatDateTime } from '../../utils/dates.js';
 import UserPointsView from '../UserPointsView.jsx';
+import UserBonusView from '../UserBonusView.jsx';
 import AdminPredictionEditor from './AdminPredictionEditor.jsx';
 import AdjustmentsSection from './AdjustmentsSection.jsx';
 
@@ -64,6 +65,8 @@ export default function AdminUserDetail({ participant, onBack }) {
       <ErrorBoundary name="admin-user-editor"><AdminPredictionEditor uid={uid} /></ErrorBoundary>
       <ErrorBoundary name="admin-user-adjust"><AdjustmentsSection uid={uid} /></ErrorBoundary>
       <ErrorBoundary name="admin-user-points"><UserPointsView uid={uid} showAdjustments={false} /></ErrorBoundary>
+      <h3 className="bq-title">{t('mp.tab.bonus')}</h3>
+      <ErrorBoundary name="admin-user-bonus"><UserBonusView uid={uid} /></ErrorBoundary>
     </div>
   );
 }

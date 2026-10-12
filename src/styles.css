@@ -201,6 +201,23 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .count-badge { background: rgba(34, 197, 94, .16); color: #22c55e; border-radius: 999px; font-size: .7rem; padding: .12rem .5rem; margin-inline-start: .45rem; font-variant-numeric: tabular-nums; }
 .empty { text-align: center; padding: 3.5rem 1rem; color: var(--muted); }
 .empty-icon { font-size: 3.2rem; margin-bottom: .8rem; }
-.track th, .track td { padding: .4rem .55rem; }
-.track td.lb-name, .track th.lb-name { position: sticky; inset-inline-start: 0; background: var(--bg); z-index: 1; min-width: 7rem; width: auto; }
-.legend { padding-inline-start: 1.4rem; }
+
+/* ---- Bonus results (World Cup look): header with correct answer + max pill, answer bars, "all answers" footer ---- */
+.bonus-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin-block: .8rem; overflow: hidden; }
+.bonus-head { padding: .9rem 1rem .7rem; border-bottom: 1px solid var(--line); }
+.bonus-title { font-weight: 700; margin-bottom: .45rem; }
+.bonus-meta { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; }
+.bonus-ok { color: #22c55e; font-weight: 600; font-size: .85rem; }
+.pill-max { background: rgba(245, 158, 11, .16); color: #f59e0b; border-radius: 999px; font-size: .75rem; font-weight: 700; padding: .2rem .65rem; white-space: nowrap; }
+.bonus-body { margin: .8rem 1rem; padding: .8rem; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+.bars { display: flex; flex-direction: column; gap: .5rem; }
+.bar-row { display: flex; align-items: center; gap: .6rem; }
+.bar-name { flex: 0 0 38%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.bar-track { flex: 1; height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--muted) 18%, transparent); overflow: hidden; display: flex; }
+.bar-fill { height: 100%; border-radius: 999px; }
+.bar-pct { flex: 0 0 2.6rem; text-align: end; font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bonus-avg { color: #22c55e; font-size: 1.05rem; }
+.bonus-mine { padding: 0 1rem .6rem; color: var(--muted); }
+.bonus-foot-wrap { border-top: 1px solid var(--line); }
+.bonus-foot { width: 100%; background: none; border: 0; color: var(--muted); padding: .75rem; font: inherit; cursor: pointer; }
+.bonus-foot-wrap .table-wrap { padding: 0 1rem 1rem; }
