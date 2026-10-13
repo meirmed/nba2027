@@ -606,5 +606,6 @@
   "bq.scopeDivision": "Division",
   "bq.scopeConference": "Conference",
   "err.bqScope": "Choose the division / conference for this question.",
-  "rules.bonus.scope": "Division and conference questions: choose one team from the list of that division or conference. A correct pick earns the question's points."
+  "rules.bonus.scope": "Division and conference questions: choose one team from the list of that division or conference. A correct pick earns the question's points.",
+  "bq.cat.ranking": "🏆 Ranking"
 }

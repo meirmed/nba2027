@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EAST_TEAMS, WEST_TEAMS, scopeTeams, rankingMisses, scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
+import { EAST_TEAMS, WEST_TEAMS, scopeTeams, isYesNo, bonusOrderRank, rankingMisses, scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
 
 const opts = [{ id: 'a', he: 'א', en: 'A', pts: 10 }, { id: 'b', he: 'ב', en: 'B', pts: 25 }, { id: 'c', he: 'ג', en: 'C', pts: 4 }];
 
@@ -277,5 +277,22 @@ describe('division / conference team questions', () => {
     expect(bonusClosedReason(div('atlantic', { deadlineMs: 10 }), 0)).toBeNull();
     const r = bonusStats(div('atlantic'), { u1: { answer: ['BOS'] }, u2: { answer: ['BOS'] }, u3: { answer: ['NYK'] } });
     expect(r.buckets.map((b) => [b.value, b.pct])).toEqual([['BOS', 67], ['NYK', 33]]);
+  });
+});
+
+describe('display order of bonus questions', () => {
+  const opts = (a, b) => [{ id: 'a', en: a, he: a }, { id: 'b', en: b, he: b }];
+  const choice = (a, b) => ({ type: 'choice', options: opts(a, b) });
+  it('recognises yes/no questions (English or Hebrew, either order)', () => {
+    expect(isYesNo(choice('Yes', 'No'))).toBe(true);
+    expect(isYesNo(choice('no', 'YES'))).toBe(true);
+    expect(isYesNo({ type: 'choice', options: [{ id: 'a', en: 'x', he: 'כן' }, { id: 'b', en: 'y', he: 'לא' }] })).toBe(true);
+    expect(isYesNo(choice('Lakers', 'Celtics'))).toBe(false);
+    expect(isYesNo({ type: 'choice', options: [...opts('Yes', 'No'), { id: 'c', en: 'Maybe', he: 'אולי' }] })).toBe(false);
+    expect(isYesNo({ type: 'team' })).toBe(false);
+  });
+  it('other questions first, yes/no after them, the ranking question last (and the sort keeps the original order inside each kind)', () => {
+    const list = [{ id: 1, ...choice('Yes', 'No') }, { id: 2, type: 'ranking' }, { id: 3, type: 'numeric' }, { id: 4, ...choice('כן', 'לא') }, { id: 5, type: 'team' }];
+    expect([...list].sort((a, b) => bonusOrderRank(a) - bonusOrderRank(b)).map((q) => q.id)).toEqual([3, 5, 1, 4, 2]);
   });
 });

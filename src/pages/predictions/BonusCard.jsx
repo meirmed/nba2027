@@ -3,7 +3,6 @@ import { useTeams } from '../../contexts/TeamsContext.jsx';
 import PlayerPicker from '../../components/PlayerPicker.jsx';
 import TeamPicker from '../../components/TeamPicker.jsx';
 import RankingInput from '../../components/RankingInput.jsx';
-import { DIVISIONS } from '@shared/teams.js';
 import RankingTable from '../../components/RankingTable.jsx';
 import { formatCountdown } from '../../utils/dates.js';
 import { isOptionType, scopeTeams, scoreBonus } from '@shared/bonus.js';
@@ -51,8 +50,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
     if (q.multi) return t('bq.ptsPerPickInfo', { n: q.pts });
     return t('bq.ptsInfo', { n: q.pts });
   })();
-  // "Division: Atlantic" / "Conference: East" for the two scope types
-  const scopeTitle = q.type === 'division_team' ? `${t('bq.scopeDivision')}: ${DIVISIONS[q.scope]?.[lang] || ''}` : q.type === 'conference_team' ? `${t('bq.scopeConference')}: ${t(q.scope === 'E' ? 'rk.east' : 'rk.west')}` : '';
+
 
   const toggle = (id) => {
     const has = value.includes(id);
@@ -90,7 +88,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
         <strong>{q.question?.[lang] || q.question?.en}</strong>
       </div>
       <div className="muted small">
-        {scopeTitle && <strong dir="auto">{scopeTitle} · </strong>}{info}
+        {info}
         {multi && Number.isFinite(maxPicks) ? ` · ${t('bq.pickUpTo', { n: maxPicks })}` : ''}
         {!hideLock && ' · '}
         {!hideLock && (closed ? `🔒 ${t('pred.locked')}` : t('bq.locksIn', { time: formatCountdown(q.deadlineMs - nowMs) }))}

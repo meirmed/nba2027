@@ -6,7 +6,7 @@ import { useBonus } from '../../contexts/BonusContext.jsx';
 import { useMyPredictions } from '../../contexts/MyPredictionsContext.jsx';
 import { usePlayers } from '../../hooks/usePlayers.js';
 import { useNow } from '../../hooks/useNow.js';
-import { bonusClosedReason, cleanAnswer } from '@shared/bonus.js';
+import { bonusClosedReason, bonusOrderRank, cleanAnswer } from '@shared/bonus.js';
 import BonusCard from './BonusCard.jsx';
 
 const AUTOSAVE_MS = 800;
@@ -82,17 +82,20 @@ export default function BonusTab() {
 
   const groups = useMemo(() => {
     const m = new Map();
-    visible.forEach((q) => {
+    visible.filter((q) => q.type !== 'ranking').forEach((q) => {
       const k = q.category === 'month' ? q.month : q.category;
       if (!m.has(k)) m.set(k, []);
       m.get(k).push(q);
     });
     const order = (k) => (k === 'general' ? '0' : k === 'season' ? '1' : `2-${k}`);
-    return [...m.entries()].sort((a, b) => order(a[0]).localeCompare(order(b[0])));
+    // inside each group: the other questions first, the yes/no questions after them (stable: deadline order is kept)
+    const out = [...m.entries()].sort((a, b) => order(a[0]).localeCompare(order(b[0]))).map(([k, list]) => [k, [...list].sort((a, b) => bonusOrderRank(a) - bonusOrderRank(b))]);
+    const ranking = visible.filter((q) => q.type === 'ranking');
+    return ranking.length ? [...out, ['ranking', ranking]] : out; // the ranking question is always the last thing on the page
   }, [visible]);
 
   const title = (k) => {
-    if (k === 'general' || k === 'season') return t(`bq.cat.${k}`);
+    if (k === 'general' || k === 'season' || k === 'ranking') return t(`bq.cat.${k}`);
     return new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { month: 'long', year: 'numeric' }).format(new Date(`${k}-01T12:00:00Z`));
   };
 

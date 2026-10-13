@@ -239,3 +239,15 @@ export function bonusStats(q, picks) {
     .sort((a, b) => (b.count - a.count) || String(a.value).localeCompare(String(b.value)));
   return { n, buckets, numeric: null };
 }
+
+/** A yes/no question = a choice question whose two options are Yes and No (English "yes"/"no" or Hebrew "כן"/"לא"). */
+export function isYesNo(q) {
+  if (q?.type !== 'choice' || (q.options || []).length !== 2) return false;
+  const norm = (x) => String(x || '').trim().toLowerCase();
+  const labels = (o) => [norm(o.en), norm(o.he)];
+  const has = (l, set) => l.some((x) => set.includes(x));
+  const [a, b] = q.options.map(labels);
+  return (has(a, ['yes', 'כן']) && has(b, ['no', 'לא'])) || (has(a, ['no', 'לא']) && has(b, ['yes', 'כן']));
+}
+/** Display order inside a list: 0 = all other questions, 1 = yes/no questions, 2 = the ranking question (always last). */
+export const bonusOrderRank = (q) => (q?.type === 'ranking' ? 2 : isYesNo(q) ? 1 : 0);
