@@ -3,6 +3,7 @@ import { computeAllPoints } from '../shared/standings.js';
 import { computeBonusPoints } from '../shared/bonus.js';
 import { DEFAULT_SETTINGS } from '../shared/constants.js';
 import { adminUidSet } from './admins.js';
+import { starOfNight } from '../shared/night.js';
 
 /** Reads RAW data only: games + predictions (+ stored points for bonus/names) + settings. */
 export async function loadState(db) {
@@ -32,6 +33,12 @@ export async function recalcAllPoints(db) {
   const res = computeAllPoints(st);
   const bon = computeBonusPoints({ questions: st.questions, predictions: st.predictions, uids: st.uids });
   const writes = [];
+  // ⭐ star of the night (public, tiny): the top scorers of the latest complete game night
+  const star = starOfNight({ games: st.games, results: res, countedRounds: st.countedRounds, timezone: st.timezone });
+  writes.push({ ref: db.doc('stats/starOfNight'), opts: undefined, data: {
+    night: star?.night ?? null, games: star?.games ?? 0, updatedAt: FieldValue.serverTimestamp(),
+    top: (star?.top ?? []).map((r) => ({ ...r, name: st.stored[r.uid]?.name || '', photoURL: st.stored[r.uid]?.photoURL ?? null })),
+  } });
   // flag the admin accounts so every table (leaderboard, H2H, ...) can leave them out; nothing else is written for them
   st.admins.forEach((uid) => writes.push({ ref: db.doc(`points/${uid}`), data: { isAdmin: true }, opts: { mergeFields: ['isAdmin'] } }));
   st.uids.forEach((uid) => {

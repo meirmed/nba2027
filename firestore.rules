@@ -68,6 +68,9 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Public, function-written summaries (e.g. the star of the night).
+    match /stats/{id} { allow read: if signedIn(); allow write: if false; }
+
     // Poller heartbeat (written by pollLiveScores only)
     match /system/{id} { allow read: if isAdmin(); allow write: if false; }
 

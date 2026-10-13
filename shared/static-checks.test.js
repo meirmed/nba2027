@@ -41,7 +41,7 @@ describe('i18n', () => {
     const families = {
       'status.': GAME_STATUSES, 'round.': GAME_ROUNDS, 'bq.type.': BONUS_TYPES, 'bq.cat.': ['general', 'season', 'month'],
       'lb.tab.': ['total', 'games', 'bonus', 'stats'], 'h2h.tab.': ['league', 'knockout', 'fun'], 'tabs.': ['games', 'week', 'bonus'],
-      'ah.tab.': ['tournament', 'fun'], 'al.view.': ['actions', 'errors'], 'results.tab.': ['live', 'finished', 'bonus'], 'mp.tab.': ['games', 'bonus'], 'bq.tab.': ['questions', 'players'], 'ah.status.': ['league', 'knockout', 'finished'],
+      'ah.tab.': ['tournament', 'fun'], 'al.view.': ['actions', 'errors'], 'results.tab.': ['live', 'finished', 'bonus'], 'home.hi.': ['morning', 'afternoon', 'evening', 'night'], 'mp.tab.': ['games', 'bonus'], 'bq.tab.': ['questions', 'players'], 'ah.status.': ['league', 'knockout', 'finished'],
       'ah.tb.': ['exactHits', 'uniqueHits', 'seed'], 'tb.': ['total', 'exactHits', 'uniqueHits', 'bonus'],
       'pred.err.': ['locked', 'closed', 'not-found', 'not-counted', 'teams-tbd', 'invalid-score', 'tie', 'joker-limit', 'joker-needs-pick'],
       'bq.err.': ['locked', 'answered', 'not-found', 'not-supported', 'invalid-answer', 'too-many'],
