@@ -128,7 +128,6 @@ export default function HomePage() {
             <div className="muted small">{t('home.nextLockLabel')}</div>
             <div className="countdown" dir="ltr">{formatCountdown(tip(next) - nowMs)}</div>
             <div className="vs-names"><TeamBadge abbr={next.t1} /> <span className="muted">–</span> <TeamBadge abbr={next.t2} /> <span className="muted small" dir="ltr">{formatTime(next.tipoff, lang, tz)}</span></div>
-            {!isAdmin && <div className="actions"><Link className="chip-link" to="/predictions">{t('home.openPredictions')} ▸</Link></div>}
           </>
         ) : <span className="muted">{t('home.noNext')}</span>}
       </div>

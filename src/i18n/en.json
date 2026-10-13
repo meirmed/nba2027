@@ -580,7 +580,6 @@
   "adm.noPlay": "You're an admin. Admin accounts don't take part in the competition, so they can't submit predictions or bonus answers and don't appear in the tables. Players see this page with the input fields.",
   "home.seeAll": "Full table",
   "home.nextLockLabel": "Next game locks in",
-  "home.openPredictions": "Predict",
   "home.hi.morning": "Good morning, {name}",
   "home.hi.afternoon": "Good afternoon, {name}",
   "home.hi.evening": "Good evening, {name}",

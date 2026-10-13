@@ -282,9 +282,8 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .todo-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-top: .55rem; }
 
 .next-card { text-align: center; }
-.countdown { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .02em; margin-block: .1rem .3rem; }
+.countdown { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .02em; margin-block: 0 .15rem; line-height: 1.2; }
 .next-card .vs-names { justify-content: center; }
-.next-card .actions { justify-content: center; margin-top: .5rem; }
 
 .star-card { border-color: #f5c84a66; background: radial-gradient(100% 140% at 0% 0%, rgba(245, 200, 74, .18), transparent 60%), var(--surface); }
 .star-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
@@ -306,3 +305,13 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .lb-bar { height: .3rem; border-radius: 999px; background: color-mix(in srgb, var(--muted) 20%, transparent); overflow: hidden; display: flex; }
 .lb-bar > span { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #f5c84a); }
 .lb-gap { text-align: center; color: var(--muted); line-height: .6; }
+
+/* compact home boxes */
+.next-card { padding: .55rem .8rem; }
+.next-card .vs-names { font-size: .95rem; gap: .35rem; }
+.todo { padding: .5rem .8rem; }
+.todo-title { font-size: .9rem; margin-bottom: 0; }
+.todo-row { margin-top: .3rem; gap: .6rem; }
+.todo-row strong { font-size: .85rem; font-weight: 700; }
+.todo .small { font-size: .75rem; }
+.todo .chip-link { padding: .12rem .55rem; font-size: .75rem; }
