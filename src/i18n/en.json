@@ -600,5 +600,11 @@
   "home.starGames": "{n} games",
   "home.youStar": "You're the star of the night!",
   "home.pts": "pts",
-  "home.exact": "{n} exact"
+  "home.exact": "{n} exact",
+  "bq.type.division_team": "Division teams",
+  "bq.type.conference_team": "Conference teams",
+  "bq.scopeDivision": "Division",
+  "bq.scopeConference": "Conference",
+  "err.bqScope": "Choose the division / conference for this question.",
+  "rules.bonus.scope": "Division and conference questions: choose one team from the list of that division or conference. A correct pick earns the question's points."
 }

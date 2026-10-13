@@ -3,9 +3,10 @@ import { useTeams } from '../../contexts/TeamsContext.jsx';
 import PlayerPicker from '../../components/PlayerPicker.jsx';
 import TeamPicker from '../../components/TeamPicker.jsx';
 import RankingInput from '../../components/RankingInput.jsx';
+import { DIVISIONS } from '@shared/teams.js';
 import RankingTable from '../../components/RankingTable.jsx';
 import { formatCountdown } from '../../utils/dates.js';
-import { isOptionType, scoreBonus } from '@shared/bonus.js';
+import { isOptionType, scopeTeams, scoreBonus } from '@shared/bonus.js';
 
 /** Human-readable answer (option / team / player names). Used for my answer and the correct answer. */
 export function answerLabel(q, list, { lang, teams, playersById }) {
@@ -15,7 +16,7 @@ export function answerLabel(q, list, { lang, teams, playersById }) {
   }
   return (list || []).map((v) => {
     if (isOptionType(q.type)) { const o = (q.options || []).find((x) => x.id === v); return o ? o[lang] || o.en : v; }
-    if (q.type === 'team') return teams[v] ? teams[v][lang] || teams[v].en : v;
+    if (q.type === 'team' || q.type === 'division_team' || q.type === 'conference_team') return teams[v] ? teams[v][lang] || teams[v].en : v;
     if (q.type === 'player') return playersById[v]?.name || '…';
     return v;
   }).join(', ');
@@ -50,6 +51,8 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
     if (q.multi) return t('bq.ptsPerPickInfo', { n: q.pts });
     return t('bq.ptsInfo', { n: q.pts });
   })();
+  // "Division: Atlantic" / "Conference: East" for the two scope types
+  const scopeTitle = q.type === 'division_team' ? `${t('bq.scopeDivision')}: ${DIVISIONS[q.scope]?.[lang] || ''}` : q.type === 'conference_team' ? `${t('bq.scopeConference')}: ${t(q.scope === 'E' ? 'rk.east' : 'rk.west')}` : '';
 
   const toggle = (id) => {
     const has = value.includes(id);
@@ -60,6 +63,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
 
   const input = (() => {
     if (q.type === 'ranking') return <RankingInput value={value} onChange={onChange} />;
+    if (q.type === 'division_team' || q.type === 'conference_team') return <TeamPicker value={value} onChange={onChange} max={1} only={scopeTeams(q)} />;
     if (q.type === 'numeric' || q.type === 'closest') return <input className="input num wide" dir="ltr" type="number" inputMode="decimal" value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
     if (q.type === 'text') return <input className="input" dir="auto" maxLength={200} value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
     if (q.type === 'player') return <PlayerPicker players={players} value={value} onChange={onChange} max={maxPicks} />;
@@ -86,7 +90,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
         <strong>{q.question?.[lang] || q.question?.en}</strong>
       </div>
       <div className="muted small">
-        {info}
+        {scopeTitle && <strong dir="auto">{scopeTitle} · </strong>}{info}
         {multi && Number.isFinite(maxPicks) ? ` · ${t('bq.pickUpTo', { n: maxPicks })}` : ''}
         {!hideLock && ' · '}
         {!hideLock && (closed ? `🔒 ${t('pred.locked')}` : t('bq.locksIn', { time: formatCountdown(q.deadlineMs - nowMs) }))}

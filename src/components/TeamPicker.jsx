@@ -5,13 +5,14 @@ import { useTeams } from '../contexts/TeamsContext.jsx';
 /**
  * Pick one or several teams with a DROP-DOWN. max = 1: the drop-down shows the chosen team.
  * max > 1: each choice becomes a removable chip (up to max). value = array of team codes.
+ * only = optional list of team codes: the drop-down offers just those (a division or a conference).
  */
-export default function TeamPicker({ value, onChange, max = 1, disabled = false }) {
+export default function TeamPicker({ value, onChange, max = 1, disabled = false, only = null }) {
   const { t, lang } = useLang();
   const { teams } = useTeams();
   const single = max === 1;
   const nameOf = (id) => (teams[id] ? teams[id][lang] || teams[id].en : id);
-  const list = useMemo(() => Object.values(teams).sort((a, b) => (a[lang] || a.en).localeCompare(b[lang] || b.en, lang)), [teams, lang]);
+  const list = useMemo(() => Object.values(teams).filter((tm) => !only || only.includes(tm.abbr)).sort((a, b) => (a[lang] || a.en).localeCompare(b[lang] || b.en, lang)), [teams, lang, only]);
   const options = single ? list : list.filter((tm) => !value.includes(tm.abbr));
   const pick = (id) => { if (id) onChange(single ? [id] : [...value, id].slice(0, max)); };
   const full = !single && value.length >= max;

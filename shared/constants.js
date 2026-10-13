@@ -8,7 +8,7 @@ export const PREV_ROUND = { R1: null, R2: 'R1', CF: 'R2', F: 'CF' };
 
 // Bonus questions: category = general | season | month (+ month 'YYYY-MM'). 'ranking' = rank the 15 East + 15 West teams (final standings).
 export const BONUS_CATEGORIES = ['general', 'season', 'month'];
-export const BONUS_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text', 'ranking'];
+export const BONUS_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text', 'ranking', 'division_team', 'conference_team'];
 
 // Owner-approved values (risk.pts is still a PLACEHOLDER - owner has not given it yet). Live values: appSettings/main.scoring.
 export const DEFAULT_SCORING = {

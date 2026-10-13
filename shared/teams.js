@@ -32,3 +32,13 @@ export const TEAMS = [
   { abbr: 'UTA', en: 'Utah Jazz', he: 'יוטה ג׳אז', conf: 'W', color: '#F9A01B', shortEn: 'Utah', shortHe: 'יוטה' },
 ];
 export const TEAMS_BY_ABBR = Object.fromEntries(TEAMS.map((t) => [t.abbr, t]));
+
+/** The 6 NBA divisions (5 teams each). conf = E/W. Used by the "division teams" bonus questions. */
+export const DIVISIONS = {
+  atlantic: { en: 'Atlantic', he: 'אטלנטיק', conf: 'E', teams: ['BOS', 'BKN', 'NYK', 'PHI', 'TOR'] },
+  central: { en: 'Central', he: 'סנטרל', conf: 'E', teams: ['CHI', 'CLE', 'DET', 'IND', 'MIL'] },
+  southeast: { en: 'Southeast', he: 'סאות׳איסט', conf: 'E', teams: ['ATL', 'CHA', 'MIA', 'ORL', 'WAS'] },
+  northwest: { en: 'Northwest', he: 'נורת׳ווסט', conf: 'W', teams: ['DEN', 'MIN', 'OKC', 'POR', 'UTA'] },
+  pacific: { en: 'Pacific', he: 'פסיפיק', conf: 'W', teams: ['GSW', 'LAC', 'LAL', 'PHX', 'SAC'] },
+  southwest: { en: 'Southwest', he: 'סאות׳ווסט', conf: 'W', teams: ['DAL', 'HOU', 'MEM', 'NOP', 'SAS'] },
+};

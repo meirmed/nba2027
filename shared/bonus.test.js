@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EAST_TEAMS, WEST_TEAMS, rankingMisses, scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
+import { EAST_TEAMS, WEST_TEAMS, scopeTeams, rankingMisses, scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
 
 const opts = [{ id: 'a', he: 'א', en: 'A', pts: 10 }, { id: 'b', he: 'ב', en: 'B', pts: 25 }, { id: 'c', he: 'ג', en: 'C', pts: 4 }];
 
@@ -218,5 +218,64 @@ describe('ranking questions (East + West, option D: pool split per conference, 0
   it('closing logic works for ranking and its stats are not a chart', () => {
     expect(bonusClosedReason({ type: 'ranking', deadlineMs: 10, answer: [] }, 0)).toBeNull();
     expect(bonusStats(q, { u1: { answer: FINAL } }).ranking).toBe(true);
+  });
+});
+
+describe('division / conference team questions', () => {
+  const base = { question: { he: 'ש', en: 'Q' }, category: 'season', deadlineMs: 5, pts: 8, answer: [] };
+  const div = (scope, over = {}) => ({ ...base, type: 'division_team', scope, ...over });
+  const conf = (scope, over = {}) => ({ ...base, type: 'conference_team', scope, ...over });
+
+  it('the 6 divisions are a clean partition of the 30 teams, inside the right conference', async () => {
+    const { DIVISIONS, TEAMS } = await import('./teams.js');
+    const all = Object.values(DIVISIONS).flatMap((d) => d.teams);
+    expect(all).toHaveLength(30);
+    expect(new Set(all).size).toBe(30);
+    Object.values(DIVISIONS).forEach((d) => {
+      expect(d.teams).toHaveLength(5);
+      d.teams.forEach((a) => expect(TEAMS.find((t) => t.abbr === a)?.conf).toBe(d.conf));
+    });
+  });
+  it('the drop-down offers only the teams of the chosen division / conference', () => {
+    expect(scopeTeams(div('pacific'))).toEqual(['GSW', 'LAC', 'LAL', 'PHX', 'SAC']);
+    expect(scopeTeams(conf('E'))).toEqual(EAST_TEAMS);
+    expect(scopeTeams(conf('W'))).toEqual(WEST_TEAMS);
+    expect(scopeTeams(div('nope'))).toBeNull();
+    expect(scopeTeams(conf('X'))).toBeNull();
+    expect(scopeTeams({ type: 'choice' })).toBeNull();
+  });
+  it('an answer must be ONE team from that group', () => {
+    expect(cleanAnswer(div('pacific'), ['LAL'])).toEqual({ value: ['LAL'] });
+    expect(cleanAnswer(div('pacific'), ['BOS']).error).toBe('invalid-answer'); // a team from another division
+    expect(cleanAnswer(div('pacific'), ['LAL', 'GSW']).error).toBe('too-many');
+    expect(cleanAnswer(conf('E'), ['BOS'])).toEqual({ value: ['BOS'] });
+    expect(cleanAnswer(conf('E'), ['LAL']).error).toBe('invalid-answer'); // a West team in an East question
+    expect(cleanAnswer(conf('E'), []).error).toBe('invalid-answer');
+    expect(cleanAnswer({ ...conf('E'), scope: undefined }, ['BOS']).error).toBe('invalid-answer');
+  });
+  it('a correct pick earns the question points, anything else 0; the max is the question points', () => {
+    const q = div('pacific', { answer: ['GSW'] });
+    expect(scoreBonus(q, ['GSW'])).toEqual({ pts: 8, correct: true });
+    expect(scoreBonus(q, ['LAL'])).toEqual({ pts: 0, correct: false });
+    expect(scoreBonus(div('pacific'), ['GSW']).correct).toBeNull(); // no final answer yet
+    expect(maxBonusPoints(q)).toBe(8);
+  });
+  it('a tie can be accepted by the admin (two correct teams)', () => {
+    const q = conf('W', { answer: ['DEN', 'OKC'] });
+    expect(validateQuestion(q)).toEqual([]);
+    expect(scoreBonus(q, ['OKC']).pts).toBe(8);
+    expect(scoreBonus(q, ['DEN']).pts).toBe(8);
+  });
+  it('question settings: the division / conference must be chosen, the correct answer must belong to it', () => {
+    expect(validateQuestion(div('atlantic'))).toEqual([]);
+    expect(validateQuestion(div(''))).toContain('err.bqScope');
+    expect(validateQuestion(conf(undefined))).toContain('err.bqScope');
+    expect(validateQuestion(div('atlantic', { answer: ['LAL'] }))).toContain('err.bqAnswer');
+    expect(validateQuestion(conf('E', { answer: ['BOS'] }))).toEqual([]);
+  });
+  it('open / closed logic works and the answers are charted like a normal choice', () => {
+    expect(bonusClosedReason(div('atlantic', { deadlineMs: 10 }), 0)).toBeNull();
+    const r = bonusStats(div('atlantic'), { u1: { answer: ['BOS'] }, u2: { answer: ['BOS'] }, u3: { answer: ['NYK'] } });
+    expect(r.buckets.map((b) => [b.value, b.pct])).toEqual([['BOS', 67], ['NYK', 33]]);
   });
 });

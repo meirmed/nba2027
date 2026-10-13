@@ -62,6 +62,7 @@ export default function RulesPage() {
           <p>{t('rules.rank.body')}</p>
           <p>{t('rules.rank.example')}</p>
         </Note>
+        <Note tone="green">{t('rules.bonus.scope')}</Note>
         <Note tone="green">{t('rules.bonus.multi')}</Note>
         <Note tone="green">{t('rules.bonus.odds')}</Note>
         <Note tone="amber">{t('rules.bonus.lock')}</Note>

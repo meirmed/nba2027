@@ -1,8 +1,10 @@
 // Bonus questions: validation + scoring. Pure, unit-tested; used by the Cloud Functions (authoritative) and the UI (display).
-import { TEAMS, TEAMS_BY_ABBR } from './teams.js';
+import { DIVISIONS, TEAMS, TEAMS_BY_ABBR } from './teams.js';
 import { normalizeName } from './names.js';
 
-export const SCORABLE_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text', 'ranking'];
+export const SCORABLE_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'dynamic_score', 'text', 'ranking', 'division_team', 'conference_team'];
+/** Types whose answer is ONE team chosen from a fixed group (a division or a conference) set by the admin in q.scope. */
+export const SCOPE_TYPES = ['division_team', 'conference_team'];
 /** Conference teams, alphabetical by code. A ranking answer = 30 team codes: the 15 EAST teams in predicted order, then the 15 WEST teams. */
 export const EAST_TEAMS = TEAMS.filter((t) => t.conf === 'E').map((t) => t.abbr);
 export const WEST_TEAMS = TEAMS.filter((t) => t.conf === 'W').map((t) => t.abbr);
@@ -13,6 +15,12 @@ export function rankingMisses(finalOrder, given) {
   const east = part(finalOrder.slice(0, 15), given.slice(0, 15));
   const west = part(finalOrder.slice(15), given.slice(15));
   return { east, west, total: east + west };
+}
+/** The teams a division/conference question offers: division_team + scope 'atlantic'.. | conference_team + scope 'E'|'W'. null = not a scope question or invalid scope. */
+export function scopeTeams(q) {
+  if (q?.type === 'division_team') return DIVISIONS[q.scope]?.teams ?? null;
+  if (q?.type === 'conference_team') return q.scope === 'E' ? EAST_TEAMS : q.scope === 'W' ? WEST_TEAMS : null;
+  return null;
 }
 const OPTION_TYPES = ['choice', 'dynamic_score'];
 const MULTI_TYPES = ['choice', 'team', 'player', 'dynamic_score'];
@@ -59,6 +67,14 @@ export function cleanAnswer(q, raw) {
       if (picks.length > limitOf(q)) return { error: 'too-many' };
       return { value: picks };
     }
+    case 'division_team':
+    case 'conference_team': {
+      const allowed = scopeTeams(q);
+      const picks = [...new Set(list)];
+      if (!allowed || picks.length === 0 || picks.some((p) => !allowed.includes(p))) return bad;
+      if (picks.length > limitOf(q)) return { error: 'too-many' }; // players pick ONE team; the admin may accept several (a tie)
+      return { value: picks };
+    }
     case 'ranking': {
       const east = new Set(EAST_TEAMS);
       const west = new Set(WEST_TEAMS);
@@ -103,6 +119,8 @@ export function scoreBonus(q, answer) {
     }
     case 'choice':
     case 'team':
+    case 'division_team':
+    case 'conference_team':
     case 'player': {
       const hits = [...new Set(given)].filter((g) => correct.includes(g)).length;
       return { pts: hits * q.pts, correct: hits > 0 };
@@ -155,6 +173,7 @@ export function validateQuestion(q) {
   if (!Number.isFinite(q.pts) || q.pts < 0) e.push('err.bqPts');
   if (!Number.isFinite(q.deadlineMs)) e.push('err.bqDeadline');
   if (!['general', 'season', 'month'].includes(q.category)) e.push('err.bqType');
+  if (SCOPE_TYPES.includes(q.type) && !scopeTeams(q)) e.push('err.bqScope');
   if (q.category === 'month' && !/^\d{4}-(0[1-9]|1[0-2])$/.test(q.month || '')) e.push('err.bqMonth');
   if (isOptionType(q.type)) {
     const o = q.options || [];
