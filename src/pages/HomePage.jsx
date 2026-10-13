@@ -14,7 +14,6 @@ import { useNow } from '../hooks/useNow.js';
 import { useProfile } from '../hooks/useProfile.js';
 import { useStarOfNight } from '../hooks/useStarOfNight.js';
 import { dayKey, formatCountdown, formatDay, formatTime } from '../utils/dates.js';
-import { addDaysToKey } from '@shared/daykeys.js';
 import { countsForStandings } from '@shared/games.js';
 import { rankRows } from '@shared/standings.js';
 import { bonusClosedReason } from '@shared/bonus.js';
@@ -53,13 +52,6 @@ export default function HomePage() {
   // what is still missing in the next 3 days (admins don't play)
   const missingGames = isAdmin ? [] : open.filter((g) => tip(g) - nowMs < WINDOW_DAYS * DAY && !mine.games[g.id]);
   const bonusPending = isAdmin ? 0 : questions.filter((q) => !bonusClosedReason(q, nowMs) && !mine.bonus[q.id]?.answer?.length).length;
-  const dayLabel = (g) => {
-    const k = dayKey(g.tipoff, tz);
-    if (k === todayKey) return t('home.dToday');
-    if (k === addDaysToKey(todayKey, 1)) return t('home.dTomorrow');
-    return new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: tz }).format(g.tipoff.toDate());
-  };
-  const breakdown = [...missingGames.reduce((m, g) => m.set(dayLabel(g), (m.get(dayLabel(g)) || 0) + 1), new Map())].map(([d, n]) => `${d} ${n}`).join(' · ');
 
   const ranked = useMemo(() => rankRows(rows, tiebreakers), [rows, tiebreakers]);
   const me = ranked.find((r) => r.uid === user?.uid);
@@ -107,7 +99,7 @@ export default function HomePage() {
               <div className="todo-title">⚠️ {t('home.todoTitle')}</div>
               {missingGames.length > 0 && (
                 <div className="todo-row">
-                  <div><strong>🏀 {plural(missingGames.length, 'home.gamesOne', 'home.gamesMany')}</strong><div className="muted small">{breakdown}</div></div>
+                  <strong>🏀 {plural(missingGames.length, 'home.gamesOne', 'home.gamesMany')}</strong>
                   <Link className="chip-link" to="/predictions?tab=week">{t('home.fill')} ▸</Link>
                 </div>
               )}
