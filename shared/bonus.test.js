@@ -291,11 +291,11 @@ describe('display order of bonus questions', () => {
     expect(isYesNo({ type: 'choice', options: [...opts('Yes', 'No'), { id: 'c', en: 'Maybe', he: 'אולי' }] })).toBe(false);
     expect(isYesNo({ type: 'team' })).toBe(false);
   });
-  it('sorted by type: team, player, multiple choice, yes/no, other kinds, division, conference, ranking (stable inside a type)', () => {
+  it('sorted by type: team, player, division, conference, multiple choice, yes/no, other kinds, ranking (stable inside a type)', () => {
     const list = [
       { id: 1, type: 'ranking' }, { id: 2, type: 'conference_team' }, { id: 3, type: 'division_team' }, { id: 4, ...choice('Yes', 'No') },
       { id: 5, ...choice('Lakers', 'Celtics') }, { id: 6, type: 'player' }, { id: 7, type: 'team' }, { id: 8, type: 'numeric' }, { id: 9, type: 'team' },
     ];
-    expect([...list].sort((a, b) => bonusOrderRank(a) - bonusOrderRank(b)).map((q) => q.id)).toEqual([7, 9, 6, 5, 4, 8, 3, 2, 1]);
+    expect([...list].sort((a, b) => bonusOrderRank(a) - bonusOrderRank(b)).map((q) => q.id)).toEqual([7, 9, 6, 3, 2, 5, 4, 8, 1]);
   });
 });

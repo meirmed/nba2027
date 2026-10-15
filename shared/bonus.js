@@ -250,10 +250,11 @@ export function isYesNo(q) {
   return (has(a, ['yes', 'כן']) && has(b, ['no', 'לא'])) || (has(a, ['no', 'לא']) && has(b, ['yes', 'כן']));
 }
 /**
- * Display order of the bonus questions BY TYPE (owner's order): team, player, multiple choice (yes/no right after it), then the other
- * kinds (number, closest, odds-based, free text), division teams, conference teams, and the ranking question last.
+ * Display order of the bonus questions BY TYPE (owner's order): team, player, division teams, conference teams, multiple choice
+ * (yes/no right after the other multiple-choice ones), and the ranking question last. Kinds not in the owner's list (number, closest,
+ * odds-based, free text) sit after the yes/no questions, before the ranking.
  */
-export const BONUS_DISPLAY_ORDER = ['team', 'player', 'choice', 'yesno', 'numeric', 'closest', 'dynamic_score', 'text', 'division_team', 'conference_team', 'ranking'];
+export const BONUS_DISPLAY_ORDER = ['team', 'player', 'division_team', 'conference_team', 'choice', 'yesno', 'numeric', 'closest', 'dynamic_score', 'text', 'ranking'];
 export const bonusOrderRank = (q) => {
   const i = BONUS_DISPLAY_ORDER.indexOf(isYesNo(q) ? 'yesno' : q?.type);
   return i === -1 ? BONUS_DISPLAY_ORDER.length : i;
