@@ -7,13 +7,19 @@ describe('prepared candidate lists', () => {
   it('fills exactly the nine standard lists with the sizes of the owner\'s lists', () => {
     expect(CANDIDATE_LISTS.map((l) => l.listId).sort()).toEqual(DEFAULT_PLAYER_LISTS.map((l) => l.id).sort());
     const size = Object.fromEntries(CANDIDATE_LISTS.map((l) => [l.listId, l.entries.length]));
-    expect(size).toEqual({ mvp: 10, coaches: 13, roy: 11, defense: 10, scoring: 10, rebounds: 9, assists: 10, steals: 13, blocks: 9 });
+    expect(size).toEqual({ mvp: 10, coaches: 31, roy: 11, defense: 10, scoring: 10, rebounds: 9, assists: 10, steals: 13, blocks: 9 });
   });
   it('every team code is a real team and no list has the same person twice', () => {
     CANDIDATE_LISTS.forEach((l) => {
       l.entries.forEach((e) => { if (e.team) expect(TEAMS_BY_ABBR[e.team], `${e.name} ${e.team}`).toBeTruthy(); });
       expect(new Set(l.entries.map((e) => e.name)).size).toBe(l.entries.length);
     });
+  });
+  it('the coaches list has exactly one head coach for every one of the 30 teams (+ Other)', () => {
+    const coaches = CANDIDATE_LISTS.find((l) => l.listId === 'coaches').entries.filter((e) => e.team);
+    expect(coaches).toHaveLength(30);
+    expect(new Set(coaches.map((e) => e.team)).size).toBe(30);
+    expect(new Set(coaches.map((e) => e.name)).size).toBe(30);
   });
   it('a person in several lists is created ONCE with all his lists', () => {
     const { creates, updates } = planBulkImport([], CANDIDATE_LISTS);
