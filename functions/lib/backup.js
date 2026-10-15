@@ -110,17 +110,17 @@ async function deleteAll(db, name) {
 
 /**
  * New season: deletes games, picks, bonus questions, adjustments and Head to Head; empties every player's predictions;
- * zeroes every points doc (keeps name / photo / team / blocked). Keeps users, participants, teams, players, settings and the audit log.
+ * zeroes every points doc (keeps name / photo / team / blocked). Keeps users, participants, teams, players list, settings and the audit log.
  */
 export async function resetSeason(db, FieldValue) {
-  for (const c of ['games', 'picks', 'bonusPicks', 'bonus', 'pointsDetail', 'adjustments', 'h2h', 'h2hTournament']) await deleteAll(db, c);
+  for (const c of ['games', 'picks', 'bonusPicks', 'bonus', 'pointsDetail', 'adjustments', 'h2h', 'h2hTournament', 'stats']) await deleteAll(db, c); // 'stats' = the star of the night (test data must not stay on the Home page)
   const preds = await db.collection('predictions').get();
   await commitInChunks(db, preds.docs.map((d) => (b) => b.set(d.ref, { games: {}, bonus: {}, jokers: {}, updatedAt: FieldValue.serverTimestamp() })));
   const pts = await db.collection('points').get();
   await commitInChunks(db, pts.docs.map((d) => (b) => {
     const x = d.data();
     b.set(d.ref, {
-      name: x.name || '', photoURL: x.photoURL ?? null, team: x.team ?? null, blocked: !!x.blocked,
+      name: x.name || '', photoURL: x.photoURL ?? null, team: x.team ?? null, blocked: !!x.blocked, ...(x.isAdmin ? { isAdmin: true } : {}), // keep the admin flag: admins stay out of the tables
       ...emptyStats(), total: 0, bonus: 0, adjust: 0, bonusByCategory: {}, byDay: {}, updatedAt: FieldValue.serverTimestamp(),
     });
   }));
