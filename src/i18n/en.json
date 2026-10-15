@@ -630,5 +630,11 @@
   "pls.addHint": "Name, or Name, TEAM (e.g. Nikola Jokic, DEN). A person who is already in another list is not duplicated: he just joins this list.",
   "pls.added": "{n} new, {m} added to the list",
   "bq.playerList": "List of players",
-  "bq.allPlayers": "(all players)"
+  "bq.allPlayers": "(all players)",
+  "pls.prepared": "Prepared candidate lists (2026-27)",
+  "pls.preparedNote": "Fills all {lists} lists (MVP, coach, rookie, defense, scoring, rebounds, assists, steals, blocks) with your names: {people} people are created, each once however many lists he is in. People who already exist are not duplicated. Safe to press again.",
+  "pls.loadPrepared": "Load the prepared lists",
+  "pls.confirmLoad": "Create the lists that are missing and {people} new people?",
+  "pls.preparedLoaded": "The prepared lists are loaded.",
+  "pls.loaded": "Done: {n} new people, {m} existing people added to lists."
 }

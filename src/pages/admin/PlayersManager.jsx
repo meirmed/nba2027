@@ -10,6 +10,7 @@ import { addAudit } from '../../utils/audit.js';
 import { normalizeName } from '@shared/names.js';
 import { TEAMS_BY_ABBR } from '@shared/teams.js';
 import { DEFAULT_PLAYER_LISTS, planListAdd, playersOfList } from '@shared/lists.js';
+import { CANDIDATE_LISTS, planBulkImport } from '@shared/candidates.js';
 
 /** "Name" or "Name, TEAM" per line. Team must be a valid code (BOS, LAL...), otherwise the whole line is the name. */
 function parseLine(line) {
@@ -42,7 +43,28 @@ export default function PlayersManager() {
     return inList.filter((p) => !s || (p.name || '').toLowerCase().includes(s)).slice(0, 150);
   }, [inList, filter]);
 
+  // the prepared candidate lists (owner's names): what is still missing in the database
+  const prepared = useMemo(() => planBulkImport(players, CANDIDATE_LISTS), [players]);
+  const missingLists = DEFAULT_PLAYER_LISTS.filter((l) => !lists.some((x) => x.id === l.id));
+  const preparedPending = prepared.creates.length + prepared.updates.length + missingLists.length > 0;
+
   const run = async (fn) => { setMsg(''); try { await fn(); } catch (e) { console.error(e); setMsg(t('common.error')); } };
+
+  const loadPrepared = () => run(async () => {
+    if (!window.confirm(t('pls.confirmLoad', { lists: CANDIDATE_LISTS.length, people: prepared.creates.length }))) return;
+    const ops = [
+      ...missingLists.map((l) => (b) => b.set(doc(db, 'playerLists', l.id), { he: l.he, en: l.en, order: DEFAULT_PLAYER_LISTS.findIndex((x) => x.id === l.id) + 1, createdAt: serverTimestamp() }, { merge: true })),
+      ...prepared.creates.map((p) => (b) => b.set(doc(collection(db, 'players')), { name: p.name, team: p.team, normalizedName: normalizeName(p.name), listIds: p.listIds, createdAt: serverTimestamp() })),
+      ...prepared.updates.map((u) => (b) => b.update(doc(db, 'players', u.id), { listIds: arrayUnion(...u.add) })),
+    ];
+    for (let i = 0; i < ops.length; i += 400) {
+      const batch = writeBatch(db);
+      ops.slice(i, i + 400).forEach((fn) => fn(batch));
+      addAudit(batch, user.uid, { action: 'players.loadPrepared', target: 'players', after: { created: prepared.creates.length, addedToLists: prepared.updates.length, listsCreated: missingLists.length } });
+      await batch.commit();
+    }
+    setMsg(t('pls.loaded', { n: prepared.creates.length, m: prepared.updates.length }));
+  });
 
   const createDefaults = () => run(async () => {
     const batch = writeBatch(db);
@@ -117,6 +139,16 @@ export default function PlayersManager() {
 
   return (
     <div>
+      <div className="card">
+        <strong>{t('pls.prepared')}</strong>
+        {preparedPending ? (
+          <>
+            <p className="muted small">{t('pls.preparedNote', { lists: CANDIDATE_LISTS.length, people: prepared.creates.length })}</p>
+            <div className="actions"><button className="btn" onClick={loadPrepared}>{t('pls.loadPrepared')}</button><span className="muted">{msg}</span></div>
+          </>
+        ) : <p className="save-ok">✓ {t('pls.preparedLoaded')}</p>}
+      </div>
+
       {lists.length === 0 && (
         <div className="card">
           <p>{t('pls.none')}</p>
