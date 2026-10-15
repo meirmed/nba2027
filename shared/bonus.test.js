@@ -291,8 +291,11 @@ describe('display order of bonus questions', () => {
     expect(isYesNo({ type: 'choice', options: [...opts('Yes', 'No'), { id: 'c', en: 'Maybe', he: 'אולי' }] })).toBe(false);
     expect(isYesNo({ type: 'team' })).toBe(false);
   });
-  it('other questions first, yes/no after them, the ranking question last (and the sort keeps the original order inside each kind)', () => {
-    const list = [{ id: 1, ...choice('Yes', 'No') }, { id: 2, type: 'ranking' }, { id: 3, type: 'numeric' }, { id: 4, ...choice('כן', 'לא') }, { id: 5, type: 'team' }];
-    expect([...list].sort((a, b) => bonusOrderRank(a) - bonusOrderRank(b)).map((q) => q.id)).toEqual([3, 5, 1, 4, 2]);
+  it('sorted by type: team, player, multiple choice, yes/no, other kinds, division, conference, ranking (stable inside a type)', () => {
+    const list = [
+      { id: 1, type: 'ranking' }, { id: 2, type: 'conference_team' }, { id: 3, type: 'division_team' }, { id: 4, ...choice('Yes', 'No') },
+      { id: 5, ...choice('Lakers', 'Celtics') }, { id: 6, type: 'player' }, { id: 7, type: 'team' }, { id: 8, type: 'numeric' }, { id: 9, type: 'team' },
+    ];
+    expect([...list].sort((a, b) => bonusOrderRank(a) - bonusOrderRank(b)).map((q) => q.id)).toEqual([7, 9, 6, 5, 4, 8, 3, 2, 1]);
   });
 });

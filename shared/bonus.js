@@ -249,5 +249,12 @@ export function isYesNo(q) {
   const [a, b] = q.options.map(labels);
   return (has(a, ['yes', 'כן']) && has(b, ['no', 'לא'])) || (has(a, ['no', 'לא']) && has(b, ['yes', 'כן']));
 }
-/** Display order inside a list: 0 = all other questions, 1 = yes/no questions, 2 = the ranking question (always last). */
-export const bonusOrderRank = (q) => (q?.type === 'ranking' ? 2 : isYesNo(q) ? 1 : 0);
+/**
+ * Display order of the bonus questions BY TYPE (owner's order): team, player, multiple choice (yes/no right after it), then the other
+ * kinds (number, closest, odds-based, free text), division teams, conference teams, and the ranking question last.
+ */
+export const BONUS_DISPLAY_ORDER = ['team', 'player', 'choice', 'yesno', 'numeric', 'closest', 'dynamic_score', 'text', 'division_team', 'conference_team', 'ranking'];
+export const bonusOrderRank = (q) => {
+  const i = BONUS_DISPLAY_ORDER.indexOf(isYesNo(q) ? 'yesno' : q?.type);
+  return i === -1 ? BONUS_DISPLAY_ORDER.length : i;
+};
