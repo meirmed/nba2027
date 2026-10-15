@@ -412,7 +412,7 @@ export const saveBonusAnswers = onCall(async (request) => {
     if (c.error) { rejected.push({ id, reason: c.error }); continue; }
     if (q.type === 'player') {
       const ps = await db.getAll(...c.value.map((pid) => db.doc(`players/${pid}`)));
-      if (ps.some((p) => !p.exists)) { rejected.push({ id, reason: 'invalid-answer' }); continue; }
+      if (ps.some((p) => !p.exists || (q.playerList && !(p.data().listIds || []).includes(q.playerList)))) { rejected.push({ id, reason: 'invalid-answer' }); continue; } // must be in the question's list
     }
     saved[id] = c.value;
   }
@@ -607,7 +607,7 @@ export const adminEditPredictions = onCall({ timeoutSeconds: 120 }, async (reque
     if (c.error) { rejected.push({ id, reason: c.error }); continue; }
     if (q.type === 'player') {
       const ps = await db.getAll(...c.value.map((pid) => db.doc(`players/${pid}`)));
-      if (ps.some((x) => !x.exists)) { rejected.push({ id, reason: 'invalid-answer' }); continue; }
+      if (ps.some((x) => !x.exists || (q.playerList && !(x.data().listIds || []).includes(q.playerList)))) { rejected.push({ id, reason: 'invalid-answer' }); continue; } // must be in the question's list
     }
     bm[id] = { answer: c.value, updatedAt: FieldValue.serverTimestamp() };
   }

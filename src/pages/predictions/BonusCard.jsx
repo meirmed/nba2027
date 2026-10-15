@@ -3,6 +3,7 @@ import { useTeams } from '../../contexts/TeamsContext.jsx';
 import PlayerPicker from '../../components/PlayerPicker.jsx';
 import TeamPicker from '../../components/TeamPicker.jsx';
 import RankingInput from '../../components/RankingInput.jsx';
+import { playersOfList } from '@shared/lists.js';
 import RankingTable from '../../components/RankingTable.jsx';
 import { formatCountdown } from '../../utils/dates.js';
 import { isOptionType, scopeTeams, scoreBonus } from '@shared/bonus.js';
@@ -64,7 +65,7 @@ export default function BonusCard({ q, nowMs, closedReason, value, onChange, sta
     if (q.type === 'division_team' || q.type === 'conference_team') return <TeamPicker value={value} onChange={onChange} max={1} only={scopeTeams(q)} />;
     if (q.type === 'numeric' || q.type === 'closest') return <input className="input num wide" dir="ltr" type="number" inputMode="decimal" value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
     if (q.type === 'text') return <input className="input" dir="auto" maxLength={200} value={value[0] ?? ''} onChange={(e) => onChange([e.target.value])} />;
-    if (q.type === 'player') return <PlayerPicker players={players} value={value} onChange={onChange} max={maxPicks} />;
+    if (q.type === 'player') return <PlayerPicker players={playersOfList(players, q.playerList)} value={value} onChange={onChange} max={maxPicks} />;
     if (q.type === 'team') return <TeamPicker value={value} onChange={onChange} max={maxPicks} />;
     const list = (q.options || []).map((o) => ({ id: o.id, label: `${o[lang] || o.en}${q.type === 'dynamic_score' ? ` (+${o.pts})` : ''}` }));
     return (

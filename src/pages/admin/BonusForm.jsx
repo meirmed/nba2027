@@ -8,6 +8,8 @@ import RankingInput from '../../components/RankingInput.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { usePlayers } from '../../hooks/usePlayers.js';
+import { usePlayerLists } from '../../hooks/usePlayerLists.js';
+import { playersOfList } from '@shared/lists.js';
 import { addAudit } from '../../utils/audit.js';
 import { toLocalInput } from '../../utils/dates.js';
 import { BONUS_TYPES } from '@shared/constants.js';
@@ -21,10 +23,10 @@ const newOpt = (i) => ({ id: `o${Date.now().toString(36)}${i}`, he: '', en: '', 
 
 const init = (q) => (q ? {
   qHe: q.question?.he || '', qEn: q.question?.en || '', type: q.type, category: q.category || 'season', month: q.month || '',
-  deadlineLocal: toLocalInput(q.deadline), pts: str(q.pts), penalty: str(q.penalty ?? 1), multi: !!q.multi, maxPicks: str(q.maxPicks), scope: q.scope || '',
+  deadlineLocal: toLocalInput(q.deadline), pts: str(q.pts), penalty: str(q.penalty ?? 1), multi: !!q.multi, maxPicks: str(q.maxPicks), scope: q.scope || '', playerList: q.playerList || '',
   options: (q.options || []).map((o) => ({ id: o.id, he: o.he, en: o.en, pts: str(o.pts) })), answer: q.answer || [],
 } : {
-  qHe: '', qEn: '', type: 'numeric', category: 'season', month: '', deadlineLocal: '', pts: '', penalty: '1', multi: false, maxPicks: '', scope: '',
+  qHe: '', qEn: '', type: 'numeric', category: 'season', month: '', deadlineLocal: '', pts: '', penalty: '1', multi: false, maxPicks: '', scope: '', playerList: '',
   options: [newOpt(1), newOpt(2)], answer: [],
 });
 
@@ -62,6 +64,7 @@ export default function BonusForm({ question, onDone }) {
   const { t, lang } = useLang();
   const { user } = useAuth();
   const { players } = usePlayers(true);
+  const playerLists = usePlayerLists(true);
   const [f, setF] = useState(() => init(question));
   const [errs, setErrs] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -76,6 +79,7 @@ export default function BonusForm({ question, onDone }) {
     options: isOptionType(v.type) ? v.options.map((o) => ({ id: o.id, he: o.he.trim(), en: o.en.trim(), ...(v.type === 'dynamic_score' ? { pts: n(o.pts) } : {}) })) : [],
     answer: v.answer,
     scope: SCOPE_TYPES.includes(v.type) ? v.scope : null,
+    playerList: v.type === 'player' && v.playerList ? v.playerList : null,
   });
 
   /** One language is enough: fill the missing Hebrew/English (question and options) with Google Translate. */
@@ -108,7 +112,7 @@ export default function BonusForm({ question, onDone }) {
       const ref = question ? doc(db, 'bonus', question.id) : doc(collection(db, 'bonus'));
       const data = {
         question: q.question, type: q.type, category: q.category, month: q.month, deadline: Timestamp.fromDate(new Date(q.deadlineMs)),
-        pts: q.pts, penalty: q.type === 'closest' || q.type === 'ranking' ? q.penalty : null, multi: q.multi, maxPicks: q.maxPicks, options: q.options, answer: q.answer, scope: q.scope ?? null,
+        pts: q.pts, penalty: q.type === 'closest' || q.type === 'ranking' ? q.penalty : null, multi: q.multi, maxPicks: q.maxPicks, options: q.options, answer: q.answer, scope: q.scope ?? null, playerList: q.playerList ?? null,
         updatedAt: serverTimestamp(),
       };
       const batch = writeBatch(db);
@@ -125,7 +129,7 @@ export default function BonusForm({ question, onDone }) {
     if (optionTypes) return <div className="bq-options">{f.options.map((o) => <label key={o.id} className="check"><input type="checkbox" checked={f.answer.includes(o.id)} onChange={() => toggleAnswer(o.id)} /> {o[lang] || o.en || o.he || '…'}</label>)}</div>;
     if (f.type === 'team') return <TeamPicker value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} />;
     if (SCOPE_TYPES.includes(f.type)) return <TeamPicker value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} only={scopeTeams(f)} />;
-    if (f.type === 'player') return <PlayerPicker players={players} value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} />;
+    if (f.type === 'player') return <PlayerPicker players={playersOfList(players, f.playerList)} value={f.answer} onChange={(v) => set('answer', v)} max={Infinity} />;
     if (f.type === 'ranking') return <><p className="muted small">{t('bq.rankHint')}</p><RankingInput value={f.answer} onChange={(v) => set('answer', v)} /></>;
     if (f.type === 'text') return question ? <TextAnswers qid={question.id} value={f.answer} onChange={(v) => set('answer', v)} /> : <p className="muted small">{t('bq.textAfterSave')}</p>;
     return null;
@@ -153,6 +157,13 @@ export default function BonusForm({ question, onDone }) {
         {(f.type === 'closest' || f.type === 'ranking') && <label className="field">{f.type === 'ranking' ? t('bq.penaltyRank') : t('bq.penalty')}<input className="input num wide" dir="ltr" inputMode="decimal" value={f.penalty} onChange={(e) => set('penalty', e.target.value)} /></label>}
       </div>
 
+      {f.type === 'player' && (
+        <label className="field">{t('bq.playerList')}
+          <select className="input" dir="auto" value={f.playerList} onChange={(e) => setF((x) => ({ ...x, playerList: e.target.value, answer: [] }))}>
+            <option value="">{t('bq.allPlayers')}</option>
+            {playerLists.map((l) => <option key={l.id} value={l.id}>{l[lang] || l.en}</option>)}
+          </select></label>
+      )}
       {f.type === 'division_team' && (
         <label className="field">{t('bq.scopeDivision')}
           <select className="input" dir="auto" value={f.scope} onChange={(e) => setF((x) => ({ ...x, scope: e.target.value, answer: [] }))}>

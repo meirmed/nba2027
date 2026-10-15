@@ -36,6 +36,9 @@ service cloud.firestore {
     // Everyone's bonus answers, published when a question closes (deadline passed or correct answer set). Written by functions only.
     match /bonusPicks/{id} { allow read: if signedIn(); allow write: if false; }
 
+    // Named lists of players / coaches for the "player" bonus questions (admin only; players only need players/{id}.listIds).
+    match /playerLists/{id} { allow read, write: if isAdmin(); }
+
     // Public snapshot of picks, written by function at tip-off.
     match /picks/{gameId} { allow read: if signedIn(); allow write: if false; }
 

@@ -614,5 +614,21 @@
   "bq.order.reset": "Back to automatic order",
   "bq.order.confirmReset": "Go back to the automatic order (by question type)? Your manual order will be cleared.",
   "bq.order.up": "Move up",
-  "bq.order.down": "Move down"
+  "bq.order.down": "Move down",
+  "pls.all": "All players",
+  "pls.none": "No player lists yet. Create the standard ones (scoring, rebounds, assists, blocks, steals leaders, head coaches, defensive players, rookie of the year, MVP) - you can add your own too.",
+  "pls.createDefaults": "Create the standard lists",
+  "pls.new": "New list",
+  "pls.rename": "Rename",
+  "pls.deleteList": "Delete list",
+  "pls.promptHe": "Name of the list in Hebrew:",
+  "pls.promptEn": "Name of the list in English:",
+  "pls.inUse": "This list is used by {n} question(s). Change those questions first.",
+  "pls.confirmDeleteList": "Delete the list \"{name}\"? The people stay in \"All players\".",
+  "pls.removeFromList": "Remove from list",
+  "pls.addTo": "Add to \"{name}\" (one per line)",
+  "pls.addHint": "Name, or Name, TEAM (e.g. Nikola Jokic, DEN). A person who is already in another list is not duplicated: he just joins this list.",
+  "pls.added": "{n} new, {m} added to the list",
+  "bq.playerList": "List of players",
+  "bq.allPlayers": "(all players)"
 }

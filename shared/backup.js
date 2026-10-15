@@ -1,9 +1,9 @@
 // Backup / restore helpers (pure, unit-tested). The Firestore-specific parts live in functions/lib/backup.js.
 
 /** Everything a backup contains. */
-export const BACKUP_COLLECTIONS = ['users', 'participants', 'teams', 'games', 'predictions', 'picks', 'bonusPicks', 'points', 'pointsDetail', 'bonus', 'players', 'appSettings', 'h2hTournament', 'h2h', 'adjustments', 'auditLog'];
+export const BACKUP_COLLECTIONS = ['users', 'participants', 'teams', 'games', 'predictions', 'picks', 'bonusPicks', 'points', 'pointsDetail', 'bonus', 'players', 'playerLists', 'appSettings', 'h2hTournament', 'h2h', 'adjustments', 'auditLog'];
 /** Collections a restore may touch by default. users/participants/auditLog are never restored: they are tied to login accounts / history. */
-export const RESTORE_DEFAULT = ['games', 'predictions', 'picks', 'bonusPicks', 'bonus', 'players', 'appSettings', 'h2hTournament', 'h2h', 'adjustments', 'teams'];
+export const RESTORE_DEFAULT = ['games', 'predictions', 'picks', 'bonusPicks', 'bonus', 'players', 'playerLists', 'appSettings', 'h2hTournament', 'h2h', 'adjustments', 'teams'];
 export const RESTORE_ALLOWED = [...RESTORE_DEFAULT, 'points', 'pointsDetail'];
 
 /** JSON with sorted keys, so equal documents always compare equal. */
