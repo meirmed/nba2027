@@ -10,6 +10,8 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSettings } from '../../contexts/SettingsContext.jsx';
 import { useTeams } from '../../contexts/TeamsContext.jsx';
 import { useGames } from '../../hooks/useGames.js';
+import { useNow } from '../../hooks/useNow.js';
+import { MANAGER_STATUSES, managerCanChangeGame } from '@shared/gamesAccess.js';
 import { addAudit } from '../../utils/audit.js';
 import AdminScheduleImport from './AdminScheduleImport.jsx';
 import PollerHealth from './PollerHealth.jsx';
@@ -24,7 +26,9 @@ const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v)
 // The ONLY editor of games (create / edit / score-status-OT override / cancel / delete) and the teams seeder.
 export default function AdminGamesPanel() {
   const { t, lang, dir } = useLang();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const restricted = !isAdmin; // the games manager: no scores / results, only games that have not started
+  const nowMs = useNow(15000);
   const { timezone } = useSettings();
   const { teams, seeded } = useTeams();
   const { games, loading } = useGames();
@@ -72,11 +76,11 @@ export default function AdminGamesPanel() {
     const ref = doc(db, 'games', id);
     try {
       if (!editing && (await getDoc(ref)).exists()) { setErrs(['err.exists']); return; }
-      const changedResult = editing && (editing.status !== data.status || (editing.s1 ?? null) !== data.s1 || (editing.s2 ?? null) !== data.s2 || (editing.ot || 0) !== data.ot);
+      const changedResult = !restricted && editing && (editing.status !== data.status || (editing.s1 ?? null) !== data.s1 || (editing.s2 ?? null) !== data.s2 || (editing.ot || 0) !== data.ot);
       const out = {
         ...data, seriesId: isRS ? 'RS' : seriesIdOf(data.round, data.seriesKey),
         winner: data.status === 'finished' ? (data.s1 > data.s2 ? data.t1 : data.t2) : null,
-        overridden: form.lockApi || !!changedResult, // manual result edits are never overwritten by the poller
+        overridden: restricted ? !!editing?.overridden : form.lockApi || !!changedResult, // manual result edits are never overwritten by the poller
         apiGameId: editing?.apiGameId ?? null, updatedAt: serverTimestamp(),
       };
       const batch = writeBatch(db);
@@ -97,6 +101,7 @@ export default function AdminGamesPanel() {
   };
 
   const remove = async (g) => {
+    if (restricted && !managerCanChangeGame({ ...g, tipoffMs: g.tipoff?.toMillis?.() ?? 0 }, nowMs)) return;
     if (!window.confirm(t('common.confirmDelete'))) return;
     try {
       const batch = writeBatch(db);
@@ -136,24 +141,24 @@ export default function AdminGamesPanel() {
               <input className="input" dir="ltr" type="datetime-local" value={form.tipoffLocal} onChange={(e) => set('tipoffLocal', e.target.value)} /></label>
             <label className="field">{t('ag.status')}
               <select className="input" value={form.status} onChange={(e) => set('status', e.target.value)}>
-                {GAME_STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
+                {(restricted ? MANAGER_STATUSES : GAME_STATUSES).map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
               </select></label>
-            <label className="field">{t('ag.score')}
+            {!restricted && <label className="field">{t('ag.score')}
               <span className="inline" dir={dir}>
                 <input className="input num" dir="ltr" type="number" min="0" value={form.s1} onChange={(e) => set('s1', e.target.value)} />
                 <span>–</span>
                 <input className="input num" dir="ltr" type="number" min="0" value={form.s2} onChange={(e) => set('s2', e.target.value)} />
-              </span></label>
-            <label className="field">{t('ag.ot')}
-              <input className="input num" dir="ltr" type="number" min="0" max="6" value={form.ot} onChange={(e) => set('ot', e.target.value)} /></label>
+              </span></label>}
+            {!restricted && <label className="field">{t('ag.ot')}
+              <input className="input num" dir="ltr" type="number" min="0" max="6" value={form.ot} onChange={(e) => set('ot', e.target.value)} /></label>}
           </div>
-          <label className="check"><input type="checkbox" checked={form.lockApi} onChange={(e) => set('lockApi', e.target.checked)} /> {t('ag.lockApi')}</label>
-          <p className="muted small">{t('ag.scoreNote')}</p>
+          {!restricted && <label className="check"><input type="checkbox" checked={form.lockApi} onChange={(e) => set('lockApi', e.target.checked)} /> {t('ag.lockApi')}</label>}
+          <p className="muted small">{restricted ? t('ag.managerFormNote') : t('ag.scoreNote')}</p>
           {errs.map((e) => <p key={e} className="error" role="alert">{t(e)}</p>)}
           <div className="actions">
             <button className="btn" onClick={save}>{t('common.save')}</button>
             <button className="btn ghost" onClick={() => { setForm(null); setEditing(null); setErrs([]); }}>{t('common.cancel')}</button>
-            {editing?.apiGameId != null && <button className="btn ghost" onClick={resync}>{t('ag.resync')}</button>}
+            {!restricted && editing?.apiGameId != null && <button className="btn ghost" onClick={resync}>{t('ag.resync')}</button>}
           </div>
         </div>
       </PageShell>
@@ -162,11 +167,11 @@ export default function AdminGamesPanel() {
 
   return (
     <PageShell titleKey="admin.games">
-      <PollerHealth />
+      {restricted ? <p className="muted small">{t('ag.managerNote')}</p> : <PollerHealth />}
       <div className="actions">
         <button className="btn" onClick={() => setView('import')}>{t('ai.title')}</button>
         <button className="btn ghost" onClick={openNew}>{t('ag.new')}</button>
-        {!seeded && <button className="btn ghost" onClick={seedTeams}>{t('ag.seedTeams')}</button>}
+        {!restricted && !seeded && <button className="btn ghost" onClick={seedTeams}>{t('ag.seedTeams')}</button>}
         <span className="muted">{msg}</span>
       </div>
       {loading && <p className="muted">{t('common.loading')}</p>}
@@ -179,8 +184,15 @@ export default function AdminGamesPanel() {
             {g.round !== 'RS' && <div className="muted small">{t(`round.${g.round}`)} · {g.seriesKey} · {t('ag.gameNum')} {g.gameNum}</div>}
             <div className="muted small">{formatDateTime(g.tipoff, lang, timezone)} · <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span></div>
           </div>
-          <button className="btn ghost" onClick={() => openEdit(g)}>{t('common.edit')}</button>
-          <button className="btn ghost" onClick={() => remove(g)}>{t('common.delete')}</button>
+          {(() => {
+            const open = !restricted || managerCanChangeGame({ ...g, tipoffMs: g.tipoff?.toMillis?.() ?? 0 }, nowMs); // a started / live / finished game is read-only for the manager
+            return (
+              <>
+                <button className="btn ghost" disabled={!open} title={open ? '' : t('ag.managerLocked')} onClick={() => openEdit(g)}>{t('common.edit')}</button>
+                <button className="btn ghost" disabled={!open} title={open ? '' : t('ag.managerLocked')} onClick={() => remove(g)}>{t('common.delete')}</button>
+              </>
+            );
+          })()}
         </div>
       ))}
     </PageShell>

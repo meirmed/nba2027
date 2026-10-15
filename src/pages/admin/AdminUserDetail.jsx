@@ -27,6 +27,13 @@ export default function AdminUserDetail({ participant, onBack }) {
   const [busy, setBusy] = useState(false);
   const p = byUid[uid] || {};
   const blocked = !!u?.blocked;
+  const isManager = !!u?.gameManager;
+  const toggleManager = async () => {
+    if (!window.confirm(t(isManager ? 'au.gm.confirmOff' : 'au.gm.confirmOn', { name: participant.displayName }))) return;
+    setBusy(true); setMsg('');
+    try { await httpsCallable(functions, 'setGameManager')({ uid, enabled: !isManager }); setMsg(t(isManager ? 'au.gm.doneOff' : 'au.gm.doneOn')); } catch (e) { console.error(e); setMsg(String(e.code).includes('failed-precondition') ? t('au.cannotBlockAdmin') : t('common.error')); }
+    setBusy(false);
+  };
   const toggleBlock = async () => {
     if (!window.confirm(t(blocked ? 'au.confirmUnblock' : 'au.confirmBlock', { name: participant.displayName }))) return;
     setBusy(true); setMsg('');
@@ -57,7 +64,9 @@ export default function AdminUserDetail({ participant, onBack }) {
           <div><span className="muted small">{t('pf.phone')}</span><div dir="ltr">{u?.phone || '–'}</div></div>
           <div><span className="muted small">{t('pf.language')}</span><div>{u?.lang === 'en' ? 'English' : u?.lang === 'he' ? 'עברית' : '–'}</div></div>
         </div>
-        <div className="actions"><button className="btn ghost" disabled={busy} onClick={toggleBlock}>{t(blocked ? 'au.unblock' : 'au.block')}</button><span className="error small">{msg}</span></div>
+        <div className="actions"><button className="btn ghost" disabled={busy} onClick={toggleBlock}>{t(blocked ? 'au.unblock' : 'au.block')}</button>
+          <button className="btn ghost" disabled={busy} onClick={toggleManager}>{t(isManager ? 'au.gm.off' : 'au.gm.on')}</button><span className="error small">{msg}</span></div>
+        {isManager && <p className="muted small">🎮 {t('au.gm.badge')}</p>}
         <div className="stat-grid">
           {stats.map(([k, v]) => <div key={k}><span className="muted small">{t(k)}</span><div><strong>{v ?? 0}</strong></div></div>)}
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLang } from '../../contexts/LangContext.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import ErrorBoundary from '../../components/ErrorBoundary.jsx';
 import AdminGamesPanel from './AdminGamesPanel.jsx';
 import AdminScoringPanel from './AdminScoringPanel.jsx';
@@ -24,12 +25,14 @@ const PANELS = {
 
 export default function AdminPage() {
   const { t } = useLang();
+  const { isAdmin } = useAuth();
   const [active, setActive] = useState('games');
-  const Panel = PANELS[active][1]; // map keyed by stable key, not array find()
+  const panels = isAdmin ? PANELS : { games: PANELS.games }; // the games manager (not an admin) gets the Games tab only
+  const Panel = (panels[active] || panels.games)[1]; // map keyed by stable key, not array find()
   return (
     <section>
       <div className="tabs scroll" role="tablist">
-        {Object.entries(PANELS).map(([k, [label]]) => (
+        {Object.entries(panels).map(([k, [label]]) => (
           <button key={k} role="tab" aria-selected={active === k} className={`tab ${active === k ? 'active' : ''}`} onClick={() => setActive(k)}>
             {t(label)}
           </button>

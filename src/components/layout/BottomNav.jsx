@@ -6,9 +6,9 @@ import { BOTTOM, MENU, MORE_KEYS } from './menu.js';
 
 export default function BottomNav() {
   const { t } = useLang();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isGameManager } = useAuth();
   const [open, setOpen] = useState(false);
-  const more = MENU.filter((m) => MORE_KEYS.includes(m.key) && (!m.adminOnly || isAdmin) && !(m.playerOnly && isAdmin));
+  const more = MENU.filter((m) => MORE_KEYS.includes(m.key) && (!m.adminOnly || isAdmin || (m.key === 'admin' && isGameManager)) && !(m.playerOnly && isAdmin));
 
   return (
     <>

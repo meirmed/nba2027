@@ -642,5 +642,15 @@
   "lb.exactHits": "Exact",
   "lb.uniqueHits": "Unique",
   "lb.noScore": "No score",
-  "bk.keepBonus": "Keep the bonus questions (only their correct answers and everyone's answers are cleared; edit the deadlines afterwards)"
+  "bk.keepBonus": "Keep the bonus questions (only their correct answers and everyone's answers are cleared; edit the deadlines afterwards)",
+  "ag.managerNote": "You are the games manager: add or import games, and change, cancel or delete games that have NOT started. Scores, results and finished or live games are managed by the admin.",
+  "ag.managerFormNote": "You can set a game to scheduled or cancelled. Scores and results are set by the admin.",
+  "ag.managerLocked": "This game has started: only the admin can change it.",
+  "au.gm.on": "Make games manager",
+  "au.gm.off": "Remove games manager",
+  "au.gm.badge": "Games manager: can add games and change / cancel / delete games that have not started.",
+  "au.gm.confirmOn": "Make {name} the games manager? He stays a normal player and gets the Games tab in Admin. He must sign out and in again.",
+  "au.gm.confirmOff": "Remove {name} as games manager?",
+  "au.gm.doneOn": "Done. He must sign out and in again to see the Games tab.",
+  "au.gm.doneOff": "Removed. It takes effect when he signs in again (up to an hour at most)."
 }

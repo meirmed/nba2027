@@ -18,12 +18,13 @@ const AdminPage = lazy(() => import('./pages/admin/AdminPage.jsx')); // players 
 
 const page = (name, el) => <ErrorBoundary name={name}>{el}</ErrorBoundary>; // every page gets a boundary
 
-function Guard({ admin, children }) {
-  const { user, isAdmin, loading } = useAuth();
+function Guard({ admin, staff, children }) {
+  const { user, isAdmin, isGameManager, loading } = useAuth();
   const { t } = useLang();
   if (loading) return <p className="muted center">{t('common.loading')}</p>;
   if (!user) return <LoginPage />;
   if (admin && !isAdmin) return <Navigate to="/" replace />;
+  if (staff && !(isAdmin || isGameManager)) return <Navigate to="/" replace />; // admin OR games manager (he only gets the Games tab)
   return children;
 }
 
@@ -41,7 +42,7 @@ export default function App() {
           <Route path="rules" element={page('rules', <RulesPage />)} />
           <Route path="profile" element={page('profile', <ProfilePage />)} />
           <Route path="player/:uid" element={page('player', <PlayerPage />)} />
-          <Route path="admin" element={<Guard admin><Suspense fallback={<p className="muted center">…</p>}>{page('admin', <AdminPage />)}</Suspense></Guard>} />
+          <Route path="admin" element={<Guard staff><Suspense fallback={<p className="muted center">…</p>}>{page('admin', <AdminPage />)}</Suspense></Guard>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

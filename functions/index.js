@@ -20,6 +20,7 @@ import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { makeAutoPick } from './shared/autofill.js';
 import { normalizePhone } from './shared/phone.js';
+import { managerCanAddGame } from './shared/gamesAccess.js';
 import { adminUidSet } from './lib/admins.js';
 import { RESTORE_ALLOWED, validBackupName } from './shared/backup.js';
 import { saveBackup, pruneAutoBackups, loadBackup, removeBackup, restoreDiff, applyRestore, resetSeason, stamp, safeLabel, de } from './lib/backup.js';
@@ -141,13 +142,19 @@ export const ensureProfile = onCall(async (request) => {
 
 // ---------------------------------------------------------------- schedule import (admin only)
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** The admin OR the games manager (custom claim gameManager). Used ONLY for listing / importing the schedule. */
+const isGamesStaff = (request) => !!request.auth && (request.auth.token.admin === true || request.auth.token.gameManager === true);
+const requireGamesStaff = (request) => {
+  if (!isGamesStaff(request)) throw new HttpsError('permission-denied', 'not-games-staff');
+};
+
 const requireAdmin = (request) => {
   if (request.auth?.token?.admin !== true) throw new HttpsError('permission-denied', 'admin-only');
 };
 
 /** Admin: games from balldontlie for a date range (<=14 days), flagged if already in our DB. Key never leaves the server. */
 export const listScheduleGames = onCall({ secrets: [NBA_API_KEY] }, async (request) => {
-  requireAdmin(request);
+  requireGamesStaff(request);
   const { startDate, endDate } = request.data || {};
   if (!DATE_RE.test(startDate || '') || !DATE_RE.test(endDate || '')) throw new HttpsError('invalid-argument', 'dates');
   const days = (Date.parse(endDate) - Date.parse(startDate)) / 86400000;
@@ -159,16 +166,19 @@ export const listScheduleGames = onCall({ secrets: [NBA_API_KEY] }, async (reque
   const existing = new Set(snaps.filter((s) => s.exists).map((s) => s.id));
   const games = rows
     .map((r) => ({ ...r, exists: !!r.id && existing.has(r.id) }))
+    .filter((r) => request.auth.token.admin === true || managerCanAddGame(Date.parse(r.tipoff), Date.now())) // the games manager sees only games that have not started
     .sort((a, b) => String(a.tipoff).localeCompare(String(b.tipoff)));
   return { games };
 });
 
 /** Admin: create the selected games as regular-season games (skips ones that already exist). Audited. */
 export const importScheduleGames = onCall(async (request) => {
-  requireAdmin(request);
+  requireGamesStaff(request);
+  const isAdminCaller = request.auth.token.admin === true;
   const raw = request.data?.games;
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 200) throw new HttpsError('invalid-argument', 'games');
-  const items = [...new Map(raw.map(validateImportItem).filter(Boolean).map((i) => [i.id, i])).values()];
+  const items = [...new Map(raw.map(validateImportItem).filter(Boolean).map((i) => [i.id, i])).values()]
+    .filter((i) => isAdminCaller || managerCanAddGame(Date.parse(i.tipoff), Date.now())); // the games manager can only add games that have not started
   if (items.length === 0) throw new HttpsError('invalid-argument', 'no-valid-games');
 
   const refs = items.map((i) => db.doc(`games/${i.id}`));
@@ -187,7 +197,7 @@ export const importScheduleGames = onCall(async (request) => {
   });
   if (created.length) {
     batch.set(db.collection('auditLog').doc(), {
-      action: 'games.import', by: request.auth.uid, ts: FieldValue.serverTimestamp(), target: 'games',
+      action: 'games.import', by: request.auth.uid, role: isAdminCaller ? 'admin' : 'gamesManager', ts: FieldValue.serverTimestamp(), target: 'games',
       before: null, after: { count: created.length, ids: created },
     });
     await batch.commit();
@@ -805,4 +815,25 @@ export const recoverUsers = onCall({ timeoutSeconds: 300, memory: '1GiB' }, asyn
   await recalcAllPoints(db);
   await writeAudit(request.auth.uid, 'users.recover', `backups/${name}`, null, { results });
   return { dryRun: false, results };
+});
+
+/**
+ * Admin: appoint / remove the GAMES MANAGER (custom claim gameManager). He stays a normal player; he gets only the Games tab in Admin, and the
+ * database rules let him add games and change / cancel / delete games that have NOT started - never a score or result. The claim shows up
+ * after he signs out and in again. Admins cannot be made managers (they already can do everything). Audited.
+ */
+export const setGameManager = onCall(async (request) => {
+  requireAdmin(request);
+  const { uid, enabled } = request.data || {};
+  if (!okId(uid) || typeof enabled !== 'boolean') throw new HttpsError('invalid-argument', 'input');
+  const auth = getAuth();
+  const record = await auth.getUser(uid).catch(() => null);
+  if (!record) throw new HttpsError('not-found', 'user');
+  if (record.customClaims?.admin === true) throw new HttpsError('failed-precondition', 'is-admin');
+  const claims = { ...(record.customClaims || {}) };
+  if (enabled) claims.gameManager = true; else delete claims.gameManager;
+  await auth.setCustomUserClaims(uid, claims);
+  await db.doc(`users/${uid}`).set({ gameManager: enabled, updatedAt: FieldValue.serverTimestamp() }, { merge: true }); // display only
+  await writeAudit(request.auth.uid, enabled ? 'user.gameManagerOn' : 'user.gameManagerOff', `users/${uid}`, null, { email: record.email ?? null });
+  return { ok: true };
 });

@@ -11,6 +11,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false); // from custom claim ONLY, never from users.isAdmin
+  const [isGameManager, setIsGameManager] = useState(false); // custom claim: a player who may also choose the games
   const [loading, setLoading] = useState(true);
 
   useEffect(() => onAuthStateChanged(auth, async (u) => {
@@ -23,9 +24,11 @@ export function AuthProvider({ children }) {
           try { await httpsCallable(functions, 'ensureProfile')(); claims = (await u.getIdTokenResult(true)).claims; } catch { /* not an admin email */ }
         }
         setIsAdmin(claims.admin === true);
-      } catch { setIsAdmin(false); }
+        setIsGameManager(claims.gameManager === true);
+      } catch { setIsAdmin(false); setIsGameManager(false); }
     } else {
       setIsAdmin(false);
+      setIsGameManager(false);
     }
     setLoading(false);
   }), []);
@@ -35,7 +38,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => signOut(auth), []);
   const resetPassword = useCallback((email) => sendPasswordResetEmail(auth, email), []);
 
-  const value = useMemo(() => ({ user, isAdmin, loading, login, loginGoogle, logout, resetPassword }), [user, isAdmin, loading, login, loginGoogle, logout, resetPassword]);
+  const value = useMemo(() => ({ user, isAdmin, isGameManager, loading, login, loginGoogle, logout, resetPassword }), [user, isAdmin, isGameManager, loading, login, loginGoogle, logout, resetPassword]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

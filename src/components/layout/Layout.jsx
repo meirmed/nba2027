@@ -7,13 +7,13 @@ import { MENU } from './menu.js';
 
 export default function Layout() {
   const { t, lang, setLang } = useLang();
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, isGameManager, logout } = useAuth();
   return (
     <div className="app">
       <header className="topbar">
         <strong>🏀 {t('app.name')}</strong>
         <nav className="topnav" aria-label="desktop">
-          {MENU.filter((m) => (!m.adminOnly || isAdmin) && !(m.playerOnly && isAdmin)).map((m) => (
+          {MENU.filter((m) => (!m.adminOnly || isAdmin || (m.key === 'admin' && isGameManager)) && !(m.playerOnly && isAdmin)).map((m) => (
             <NavLink key={m.key} to={m.to} end={m.to === '/'} className="topnav-link">{t(m.label)}</NavLink>
           ))}
         </nav>

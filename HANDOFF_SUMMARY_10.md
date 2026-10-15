@@ -94,3 +94,10 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 - `onBonusUpdated` also fixes a related gap: a question REOPENED by moving its deadline into the future (no correct answer) has its published `bonusPicks` deleted and `answersLockedAt` cleared, so the answers are published again at the new deadline and are not visible in the meantime.
 - Phone header (<= 700px): slimmer top bar and smaller English / logout buttons.
 - Deploy: `firebase deploy --only functions` + push the app.
+
+## Update: GAMES MANAGER (limited role; also a normal player)
+- Custom claim `gameManager` (set by the admin: Admin -> Users -> Details -> "Make games manager", callable `setGameManager`; display flag `users.gameManager`; the person must sign out and in again; admins can't be managers). He is NOT excluded from the competition (only the `admin` claim is), so he plays normally.
+- He sees the **Admin menu with the Games tab only** (`AdminPage` filters the panels; route guard `staff` = admin or manager). Games tab = same screen as the admin's, minus: poller health, seed teams, scores / OT / "lock API" / re-sync, and the statuses live/finished. Edit / Delete buttons are disabled for games that started.
+- **Enforced by the database rules** (`firestore.rules`, `isGameManager()`): CREATE a game only if scheduled, tip-off in the future, no score / ot / winner / overridden; UPDATE only a game that has not started (scheduled or cancelled), to scheduled or cancelled, tip-off in the future, changing only t1, t2, tipoff, venue, status, round, seriesKey, seriesId, gameNum, updatedAt; DELETE only a game that has not started. He can write only his own `game.*` audit entries. Server: `listScheduleGames` / `importScheduleGames` allow the manager but show / import only games that have not started (`managerCanAddGame`, `shared/gamesAccess.js`, +2 tests, 182 total); `games.import` audit entries record the role. Same schedule range limit as the admin (14 days per load).
+- The rules could NOT be exercised with the emulator here: test them after deploying (checklist in the chat).
+- Deploy: `firebase deploy --only firestore:rules,functions` + push the app.

@@ -5,6 +5,9 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     // Admin = custom claim only. users.isAdmin is display-only and never trusted.
     function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    // Games manager: a normal player who may also choose the games (claim set by the admin). Limited to games that have NOT started.
+    function isGameManager() { return signedIn() && request.auth.token.gameManager == true; }
+    function gameNotStarted() { return resource.data.status in ['scheduled', 'cancelled'] && resource.data.tipoff > request.time; }
     function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
 
     // Profile: owner may edit ONLY these fields. paid / blocked / isAdmin / email are admin-or-function only.
@@ -27,7 +30,20 @@ service cloud.firestore {
 
     // Reference / config data: signed-in read, admin write.
     match /teams/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /games/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /games/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+      // GAMES MANAGER: add a future game (scheduled, no score), change / cancel / delete a game that has not started. Never a score, a result or the API link.
+      allow create: if isGameManager()
+        && request.resource.data.status == 'scheduled' && request.resource.data.tipoff > request.time
+        && request.resource.data.get('s1', null) == null && request.resource.data.get('s2', null) == null
+        && request.resource.data.get('ot', 0) == 0 && request.resource.data.get('winner', null) == null
+        && request.resource.data.get('overridden', false) == false;
+      allow update: if isGameManager() && gameNotStarted()
+        && request.resource.data.status in ['scheduled', 'cancelled'] && request.resource.data.tipoff > request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['t1', 't2', 'tipoff', 'venue', 'status', 'round', 'seriesKey', 'seriesId', 'gameNum', 'updatedAt']);
+      allow delete: if isGameManager() && gameNotStarted();
+    }
     match /bonus/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
     match /appSettings/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
     match /h2hTournament/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
@@ -77,7 +93,12 @@ service cloud.firestore {
     // Poller heartbeat (written by pollLiveScores only)
     match /system/{id} { allow read: if isAdmin(); allow write: if false; }
 
-    match /auditLog/{id} { allow read: if isAdmin(); allow create: if isAdmin(); allow update, delete: if false; }
+    // The games manager may write ONLY his own game.* entries (his actions are logged under his name).
+    match /auditLog/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() || (isGameManager() && request.resource.data.by == request.auth.uid && request.resource.data.action.matches('game\\..*'));
+      allow update, delete: if false;
+    }
     match /backups/{id}  { allow read, write: if isAdmin(); }
 
     match /{document=**} { allow read, write: if false; }
