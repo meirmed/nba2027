@@ -26,6 +26,7 @@ export default function AdminBackupPanel() {
   const [diff, setDiff] = useState(null);
   const [confirm, setConfirm] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
+  const [keepBonus, setKeepBonus] = useState(true);
   const [recoverFile, setRecoverFile] = useState(null);
   const [missing, setMissing] = useState(null);
   const [pick, setPick] = useState(new Set());
@@ -75,7 +76,7 @@ export default function AdminBackupPanel() {
     setRecovered(r.results); setMissing(null);
     setMsg(t('bk.recoverDone', { n: r.results.filter((x) => x.ok).length, total: r.results.length }));
   });
-  const reset = () => run(async () => { const r = await call('seasonReset', { confirm: resetConfirm }); setResetConfirm(''); setMsg(t('bk.resetDone', { name: r.safetyBackup })); await load(); });
+  const reset = () => run(async () => { const r = await call('seasonReset', { confirm: resetConfirm, keepBonus }); setResetConfirm(''); setMsg(t('bk.resetDone', { name: r.safetyBackup })); await load(); });
 
   return (
     <PageShell titleKey="admin.backup">
@@ -149,6 +150,7 @@ export default function AdminBackupPanel() {
       <div className="card error-card">
         <p className="small">{t('bk.resetWarn')}</p>
         {!SEASON_RESET_ENABLED && <p className="error small"><strong>{t('bk.resetDisabled')}</strong></p>}
+        <label className="check"><input type="checkbox" checked={keepBonus} disabled={!SEASON_RESET_ENABLED} onChange={(e) => setKeepBonus(e.target.checked)} /> {t('bk.keepBonus')}</label>
         <input className="input" dir="ltr" disabled={!SEASON_RESET_ENABLED} placeholder={t('bk.typeReset')} value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)} />
         <div className="actions"><button className="btn" disabled={!SEASON_RESET_ENABLED || busy || resetConfirm !== 'RESET'} onClick={reset}>{t('bk.resetNow')}</button></div>
       </div>

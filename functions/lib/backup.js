@@ -112,8 +112,9 @@ async function deleteAll(db, name) {
  * New season: deletes games, picks, bonus questions, adjustments and Head to Head; empties every player's predictions;
  * zeroes every points doc (keeps name / photo / team / blocked). Keeps users, participants, teams, players list, settings and the audit log.
  */
-export async function resetSeason(db, FieldValue) {
-  for (const c of ['games', 'picks', 'bonusPicks', 'bonus', 'pointsDetail', 'adjustments', 'h2h', 'h2hTournament', 'stats']) await deleteAll(db, c); // 'stats' = the star of the night (test data must not stay on the Home page)
+export async function resetSeason(db, FieldValue, { keepBonus = false } = {}) {
+  const wipe = ['games', 'picks', 'bonusPicks', ...(keepBonus ? [] : ['bonus']), 'pointsDetail', 'adjustments', 'h2h', 'h2hTournament', 'stats'];
+  for (const c of wipe) await deleteAll(db, c); // 'stats' = the star of the night (test data must not stay on the Home page)
   const preds = await db.collection('predictions').get();
   await commitInChunks(db, preds.docs.map((d) => (b) => b.set(d.ref, { games: {}, bonus: {}, jokers: {}, updatedAt: FieldValue.serverTimestamp() })));
   const pts = await db.collection('points').get();
@@ -125,4 +126,8 @@ export async function resetSeason(db, FieldValue) {
     });
   }));
   await db.doc('appSettings/main').set({ seasonStarted: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  if (keepBonus) { // LAST: the questions stay (text, type, points, options, order, player list...), only the correct answers are cleared
+    const qs = await db.collection('bonus').get();
+    await commitInChunks(db, qs.docs.map((d) => (b) => b.update(d.ref, { answer: [], answersLockedAt: FieldValue.delete() })));
+  }
 }

@@ -346,6 +346,7 @@ export const onGameUpdated = onDocumentWritten({ document: 'games/{gameId}', tim
   const key = (g) => (g ? [g.status, g.s1, g.s2, g.round, g.t1, g.t2].join('|') : 'none');
   if (key(b) === key(a)) return;
   if (b?.status !== 'finished' && a?.status !== 'finished') return;
+  if (await resetInProgress()) return;
   await recalcAllPoints(db);
 });
 
@@ -431,8 +432,14 @@ export const saveBonusAnswers = onCall(async (request) => {
 export const onBonusUpdated = onDocumentWritten({ document: 'bonus/{id}', timeoutSeconds: 120 }, async (event) => {
   const before = event.data?.before?.data();
   const after = event.data?.after?.data();
+  if (await resetInProgress()) return;
   const key = (q) => (q ? JSON.stringify([q.type, q.pts, q.penalty ?? null, !!q.multi, q.category, q.month ?? null, q.answer ?? [], (q.options || []).map((o) => [o.id, o.pts ?? null])]) : 'none');
   if (!after) await db.doc(`bonusPicks/${event.params.id}`).delete().catch(() => {}); // question deleted
+  // REOPENED (deadline moved to the future, no correct answer): the published answers must not stay visible
+  else if (after.answersLockedAt && !(after.answer?.length > 0) && (after.deadline?.toMillis?.() ?? 0) > Date.now()) {
+    await db.doc(`bonusPicks/${event.params.id}`).delete().catch(() => {});
+    await event.data.after.ref.update({ answersLockedAt: FieldValue.delete() });
+  }
   // closed (correct answer set, or deadline passed) and not published yet -> publish everyone's answers
   else if (!after.answersLockedAt && ((after.answer?.length || 0) > 0 || (after.deadline?.toMillis?.() ?? Infinity) <= Date.now())) await publishBonusPicks([event.params.id]);
   if (key(before) === key(after)) return;
@@ -714,13 +721,27 @@ export const restoreBackup = onCall({ timeoutSeconds: 540, memory: '1GiB' }, asy
 });
 
 /** Admin: start a new season. Needs confirm='RESET'; saves a "pre-reset" backup first. Keeps accounts, participants, teams, players, settings, audit log. */
+/** True while a season reset runs: the Firestore triggers must not rescore / republish halfway (system/maintenance, set by seasonReset). */
+async function resetInProgress() {
+  const d = (await db.doc('system/maintenance').get()).data();
+  return !!d?.resetInProgress && Date.now() - (d.at?.toMillis?.() ?? 0) < 30 * 60000;
+}
+
 export const seasonReset = onCall({ timeoutSeconds: 540, memory: '1GiB' }, async (request) => {
   requireAdmin(request);
   if (!SEASON_RESET_ENABLED.value()) throw new HttpsError('failed-precondition', 'disabled');
   if (request.data?.confirm !== 'RESET') throw new HttpsError('failed-precondition', 'confirm');
+  const keepBonus = request.data?.keepBonus === true;
   const safety = await saveBackup(db, `pre-reset-${stamp()}`);
-  await resetSeason(db, FieldValue);
-  await writeAudit(request.auth.uid, 'season.reset', 'season', { safetyBackup: safety.name }, null);
+  await db.doc('system/maintenance').set({ resetInProgress: true, at: FieldValue.serverTimestamp() });
+  try {
+    await resetSeason(db, FieldValue, { keepBonus });
+    await new Promise((resolve) => setTimeout(resolve, 20000)); // let the triggers caused by the deletions drain (they are skipped while the flag is on)
+  } finally {
+    await db.doc('system/maintenance').set({ resetInProgress: false, at: FieldValue.serverTimestamp() });
+  }
+  await recalcAllPoints(db); // one authoritative pass: everything zero, admin flags kept, star of the night cleared
+  await writeAudit(request.auth.uid, 'season.reset', 'season', { safetyBackup: safety.name }, { keepBonus });
   return { ok: true, safetyBackup: safety.name };
 });
 

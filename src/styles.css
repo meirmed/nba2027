@@ -333,3 +333,17 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 /* games tab columns (World Cup colours) */
 .pts-hit { color: #22c55e; } .pts-exact { color: #f59e0b; } .pts-unique { color: #a78bfa; } .pts-miss { color: var(--muted); }
 .lb th { white-space: nowrap; }
+
+/* next game: the label and the countdown on ONE line */
+.next-line { display: flex; align-items: baseline; justify-content: center; gap: .5rem; flex-wrap: wrap; }
+
+/* phones: a slimmer top bar (English / logout buttons) and slimmer home boxes */
+@media (max-width: 700px) {
+  .topbar { padding: .15rem .6rem; padding-top: calc(.15rem + env(safe-area-inset-top, 0px)); gap: .3rem; font-size: .9rem; }
+  .topbar button.btn { padding: .08rem .5rem; font-size: .7rem; min-height: 0; height: auto; line-height: 1.15; border-radius: 8px; }
+  .next-card { padding: .25rem .6rem; }
+  .next-card .vs-names { font-size: .85rem; }
+  .countdown { font-size: 1.1rem; }
+  .todo { padding: .3rem .6rem; }
+  .hero { padding: .55rem .7rem; }
+}

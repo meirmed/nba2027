@@ -453,7 +453,7 @@
   "bk.restored": "Restored. A safety backup was saved: {name}",
   "bk.errStorage": "Couldn't read the backups. Check that Storage is set up and the rules are deployed.",
   "bk.resetTitle": "Season reset",
-  "bk.resetWarn": "Starts a NEW season: deletes all games, picks, bonus questions, point adjustments and Head to Head, empties every player's predictions and zeroes all points. Keeps accounts, participants, teams, players, settings and the audit log. A backup is saved first.",
+  "bk.resetWarn": "Starts a NEW season: deletes all games, picks, point adjustments and Head to Head, empties every player's predictions and bonus answers and zeroes all points. The bonus questions are deleted too unless you tick the option below. Keeps accounts, participants, teams, players list, settings and the audit log. A backup is saved first.",
   "bk.typeReset": "Type RESET to confirm",
   "bk.resetNow": "Reset the season",
   "bk.resetDone": "Season reset. A backup was saved: {name}",
@@ -641,5 +641,6 @@
   "lb.winnerDir": "Correct winner",
   "lb.exactHits": "Exact",
   "lb.uniqueHits": "Unique",
-  "lb.noScore": "No score"
+  "lb.noScore": "No score",
+  "bk.keepBonus": "Keep the bonus questions (only their correct answers and everyone's answers are cleared; edit the deadlines afterwards)"
 }

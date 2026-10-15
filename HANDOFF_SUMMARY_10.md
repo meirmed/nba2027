@@ -87,3 +87,10 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 - Games tab columns: **נק׳ משחקים** (gamePts, blue) / **כיוון נכון** (= `winnerCorrect`, number of correct winners, green) / **מדויקות** (`exactHits`, orange) / **ייחודיות** (`uniqueHits`, purple) / **ללא ניקוד** (new `noScore`, grey). Ranking of the tab unchanged (game points, then exact, then unique).
 - New stat `noScore` in `points/{uid}`: every FINISHED counted game minus the games that earned points, so a game with no pick at all also counts as "no score" (with auto-fill on, every game has a pick). Added to `emptyStats`, `computeAllPoints` and the reconciliation fields (+2 tests, 180 total).
 - Deploy: `firebase deploy --only functions` + push the app, then **Recalculate all points once** (older documents don't have `noScore` yet: the column shows 0 until then; the reconciliation also flags it until then).
+
+## Update: season reset can KEEP the bonus questions; slimmer phone header
+- `seasonReset({confirm:'RESET', keepBonus})`: with `keepBonus` the questions stay (text, type, points, options, scope, player list, order) and only their correct answers (`answer: []`) and `answersLockedAt` are cleared; everyone's answers (predictions + bonusPicks) are deleted as before. The checkbox is ticked by default in Admin -> Backup. The reset is still OFF until both switches are turned on (functions/.env + AdminBackupPanel.jsx).
+- Safety: `system/maintenance.resetInProgress` makes `onGameUpdated` / `onBonusUpdated` skip while the reset runs (otherwise the many deletions would trigger many half-way rescorings); after the reset the function waits 20 s, clears the flag and runs ONE authoritative `recalcAllPoints`.
+- `onBonusUpdated` also fixes a related gap: a question REOPENED by moving its deadline into the future (no correct answer) has its published `bonusPicks` deleted and `answersLockedAt` cleared, so the answers are published again at the new deadline and are not visible in the meantime.
+- Phone header (<= 700px): slimmer top bar and smaller English / logout buttons.
+- Deploy: `firebase deploy --only functions` + push the app.
