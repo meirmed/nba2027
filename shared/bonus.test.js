@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EAST_TEAMS, WEST_TEAMS, scopeTeams, isYesNo, bonusOrderRank, rankingMisses, scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
+import { EAST_TEAMS, WEST_TEAMS, scopeTeams, isYesNo, bonusOrderRank, groupBonusQuestions, hasCustomOrder, reorderQuestions, rankingMisses, scoreBonus, cleanAnswer, bonusClosedReason, computeBonusPoints, validateQuestion, maxBonusPoints, bonusStats } from './bonus.js';
 
 const opts = [{ id: 'a', he: 'א', en: 'A', pts: 10 }, { id: 'b', he: 'ב', en: 'B', pts: 25 }, { id: 'c', he: 'ג', en: 'C', pts: 4 }];
 
@@ -297,5 +297,44 @@ describe('display order of bonus questions', () => {
       { id: 5, ...choice('Lakers', 'Celtics') }, { id: 6, type: 'player' }, { id: 7, type: 'team' }, { id: 8, type: 'numeric' }, { id: 9, type: 'team' },
     ];
     expect([...list].sort((a, b) => bonusOrderRank(a) - bonusOrderRank(b)).map((q) => q.id)).toEqual([7, 9, 6, 3, 2, 5, 4, 8, 1]);
+  });
+});
+
+describe('admin order of the bonus questions (overrides the automatic order by type)', () => {
+  const Q = (id, type, extra = {}) => ({ id, type, category: 'season', deadlineMs: Number(id.slice(1)), ...extra });
+  const base = [Q('a1', 'ranking'), Q('a2', 'numeric'), Q('a3', 'team'), Q('a4', 'player'), Q('a5', 'team', { category: 'general' })];
+  const ids = (groups) => groups.map(([k, l]) => [k, l.map((q) => q.id)]);
+
+  it('automatic mode: sections General/Season, by type inside, ranking in its own final section', () => {
+    expect(ids(groupBonusQuestions(base))).toEqual([['general', ['a5']], ['season', ['a3', 'a4', 'a2']], ['ranking', ['a1']]]);
+    expect(hasCustomOrder(base)).toBe(false);
+  });
+  it('moving a question makes the order explicit for ALL questions (the ranking joins its section)', () => {
+    const orders = reorderQuestions(base, 'a4', -1); // player up, above the team
+    expect(orders).not.toBeNull();
+    expect(Object.keys(orders)).toHaveLength(5);
+    const custom = base.map((q) => ({ ...q, order: orders[q.id] }));
+    expect(ids(groupBonusQuestions(custom))).toEqual([['general', ['a5']], ['season', ['a4', 'a3', 'a2', 'a1']]]);
+  });
+  it('explicit order wins over the type order, including for the ranking question', () => {
+    const custom = base.map((q, i) => ({ ...q, order: [1, 9, 8, 7, 6][i] })); // a1 (ranking) first in Season
+    expect(ids(groupBonusQuestions(custom))).toEqual([['general', ['a5']], ['season', ['a1', 'a4', 'a3', 'a2']]]);
+  });
+  it('a question without an order (created later) goes after the ordered ones of its section', () => {
+    const custom = [{ ...Q('b1', 'numeric'), order: 2 }, { ...Q('b2', 'team'), order: 1 }, Q('b3', 'team'), Q('b4', 'ranking', { order: 3 })];
+    expect(ids(groupBonusQuestions(custom))).toEqual([['season', ['b2', 'b1', 'b4', 'b3']]]);
+  });
+  it("can't move past the ends of a section, and unknown ids do nothing", () => {
+    expect(reorderQuestions(base, 'a3', -1)).toBeNull(); // already first in Season
+    expect(reorderQuestions(base, 'a5', 1)).toBeNull(); // the only General question
+    expect(reorderQuestions(base, 'zzz', 1)).toBeNull();
+  });
+  it('moving down then up returns to the same order', () => {
+    const down = reorderQuestions(base, 'a3', 1);
+    const afterDown = base.map((q) => ({ ...q, order: down[q.id] }));
+    expect(ids(groupBonusQuestions(afterDown))[1][1]).toEqual(['a4', 'a3', 'a2', 'a1']);
+    const up = reorderQuestions(afterDown, 'a3', -1);
+    const afterUp = base.map((q) => ({ ...q, order: up[q.id] }));
+    expect(ids(groupBonusQuestions(afterUp))[1][1]).toEqual(['a3', 'a4', 'a2', 'a1']);
   });
 });

@@ -259,3 +259,55 @@ export const bonusOrderRank = (q) => {
   const i = BONUS_DISPLAY_ORDER.indexOf(isYesNo(q) ? 'yesno' : q?.type);
   return i === -1 ? BONUS_DISPLAY_ORDER.length : i;
 };
+
+// ---------------------------------------------------------------- display order: automatic (by type) or set by the admin
+/**
+ * The admin can put the questions in his own order (`order` = 1..N on each question). Explicit order WINS over the automatic order by type;
+ * questions without `order` (e.g. created later) come after the ordered ones of their section, in the automatic order.
+ */
+export function compareBonusDisplay(a, b) {
+  const ao = Number.isFinite(a.order);
+  const bo = Number.isFinite(b.order);
+  if (ao && bo) return (a.order - b.order) || ((a.deadlineMs ?? 0) - (b.deadlineMs ?? 0));
+  if (ao) return -1;
+  if (bo) return 1;
+  return (bonusOrderRank(a) - bonusOrderRank(b)) || ((a.deadlineMs ?? 0) - (b.deadlineMs ?? 0));
+}
+export const hasCustomOrder = (questions) => questions.some((q) => Number.isFinite(q.order));
+
+/**
+ * The sections shown to players: General, Season, then one per month. -> [[key, questions[]], ...]
+ * Automatic mode: sorted by type inside each section and the ranking question(s) in a final 'ranking' section.
+ * Custom mode (any question has `order`): sorted by `order`, the ranking question stays where the admin put it.
+ */
+export function groupBonusQuestions(questions, { forceCustom = false } = {}) {
+  const custom = forceCustom || hasCustomOrder(questions);
+  const body = custom ? questions : questions.filter((q) => q.type !== 'ranking');
+  const m = new Map();
+  body.forEach((q) => {
+    const k = q.category === 'month' ? q.month : q.category;
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(q);
+  });
+  const rank = (k) => (k === 'general' ? '0' : k === 'season' ? '1' : `2-${k}`);
+  const out = [...m.entries()].sort((a, b) => rank(a[0]).localeCompare(rank(b[0]))).map(([k, list]) => [k, [...list].sort(compareBonusDisplay)]);
+  const ranking = custom ? [] : questions.filter((q) => q.type === 'ranking');
+  if (ranking.length) out.push(['ranking', ranking]);
+  return out;
+}
+
+/** Move one question up (delta -1) or down (+1) inside its section. -> {questionId: order} for EVERY question (a full explicit order 1..N), or null if it can't move. */
+export function reorderQuestions(questions, id, delta) {
+  const sections = groupBonusQuestions(questions, { forceCustom: true }).map(([k, list]) => [k, [...list]]);
+  const hit = sections.find(([, list]) => list.some((q) => q.id === id));
+  if (!hit) return null;
+  const list = hit[1];
+  const i = list.findIndex((q) => q.id === id);
+  const j = i + delta;
+  if (j < 0 || j >= list.length) return null;
+  [list[i], list[j]] = [list[j], list[i]];
+  const orders = {};
+  let n = 0;
+  sections.forEach(([, l]) => l.forEach((q) => { n += 1; orders[q.id] = n; }));
+  return orders;
+}

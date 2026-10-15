@@ -607,5 +607,12 @@
   "bq.scopeConference": "Conference",
   "err.bqScope": "Choose the division / conference for this question.",
   "rules.bonus.scope": "Division and conference questions: choose one team from the list of that division or conference. A correct pick earns the question's points.",
-  "bq.cat.ranking": "🏆 Ranking"
+  "bq.cat.ranking": "🏆 Ranking",
+  "bq.order.auto": "Order: automatic, by question type.",
+  "bq.order.custom": "Order: set by you.",
+  "bq.order.how": "Use ▲▼ to move a question inside its section; players see your order instead of the automatic one.",
+  "bq.order.reset": "Back to automatic order",
+  "bq.order.confirmReset": "Go back to the automatic order (by question type)? Your manual order will be cleared.",
+  "bq.order.up": "Move up",
+  "bq.order.down": "Move down"
 }
