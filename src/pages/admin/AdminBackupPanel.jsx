@@ -9,7 +9,7 @@ import { formatDateTime } from '../../utils/dates.js';
 import { RESTORE_ALLOWED, RESTORE_DEFAULT } from '@shared/backup.js';
 
 // Season reset is switched OFF for now (too powerful). Flip to true AND set SEASON_RESET_ENABLED=true in functions/.env (then redeploy) to enable.
-const SEASON_RESET_ENABLED = true;
+const SEASON_RESET_ENABLED = false;
 const fmtSize = (n) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
 const call = (name, data) => httpsCallable(functions, name, { timeout: 540000 })(data).then((r) => r.data);
 
