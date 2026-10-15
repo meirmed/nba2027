@@ -97,6 +97,25 @@ describe('players only: a user left out of `uids` (an admin) has no influence', 
   });
 });
 
+describe('noScore = games with no points (wrong winner or no pick)', () => {
+  it('counts every finished counted game the player earned nothing on', () => {
+    const games = [game('g1', 1, 110, 100), game('g2', 2, 100, 90), game('g3', 3, 100, 90)];
+    const preds = {
+      A: { games: { g1: P(110, 100), g2: P(80, 99), g3: P(100, 90) } }, // exact, wrong winner, exact -> 1 game without points
+      B: { games: { g1: P(90, 100) } }, // wrong winner on g1, nothing predicted on g2 and g3 -> 3 games without points
+    };
+    const r = computeAllPoints({ games, predictions: preds, uids: ['A', 'B'], scoring: sc, countedRounds: ['RS'] });
+    expect(r.A.noScore).toBe(1);
+    expect(r.B.noScore).toBe(3);
+    expect(r.A.winnerCorrect + r.A.noScore).toBe(3);
+  });
+  it('a game that is not finished does not count as "no score"', () => {
+    const live = { ...game('g2', 2, 0, 0), status: 'live' };
+    const r = computeAllPoints({ games: [game('g1', 1, 110, 100), live], predictions: { A: { games: { g1: P(110, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'] });
+    expect(r.A.noScore).toBe(0);
+  });
+});
+
 describe('rankRows', () => {
   it('uses tiebreakers and gives tied rows the same rank', () => {
     const rows = [{ id: 'a', total: 10, exactHits: 1 }, { id: 'b', total: 10, exactHits: 3 }, { id: 'c', total: 12 }, { id: 'd', total: 10, exactHits: 1 }];

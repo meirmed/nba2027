@@ -329,3 +329,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .chips-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-block: .5rem; }
 button.chip { font: inherit; font-size: .85rem; padding: .3rem .75rem; border: 1px solid var(--line); cursor: pointer; color: var(--text); background: var(--surface); }
 button.chip.chip-on { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
+
+/* games tab columns (World Cup colours) */
+.pts-hit { color: #22c55e; } .pts-exact { color: #f59e0b; } .pts-unique { color: #a78bfa; } .pts-miss { color: var(--muted); }
+.lb th { white-space: nowrap; }

@@ -8,7 +8,7 @@ const sideOf = (a, b) => (a > b ? 1 : a < b ? 2 : 0);
 const validPick = (p) => p && Number.isInteger(p.s1) && Number.isInteger(p.s2) && p.s1 !== p.s2;
 
 export const emptyStats = () => ({
-  gamePts: 0, gamePtsByRound: {}, gameHits: 0, exactHits: 0, winnerCorrect: 0, uniqueHits: 0, riskHits: 0,
+  gamePts: 0, gamePtsByRound: {}, gameHits: 0, exactHits: 0, winnerCorrect: 0, uniqueHits: 0, riskHits: 0, noScore: 0,
   gamesPlayed: 0, bestStreak: 0, curStreak: 0, bestMiss: 0, curMiss: 0,
 });
 
@@ -80,7 +80,9 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
     seq[uid].forEach((hit) => {
       if (hit) { cur += 1; miss = 0; best = Math.max(best, cur); } else { miss += 1; cur = 0; bestMiss = Math.max(bestMiss, miss); }
     });
-    Object.assign(out[uid], { bestStreak: best, curStreak: cur, bestMiss, curMiss: miss });
+    // games where the player scored NOTHING (wrong winner, or no pick at all): every finished counted game minus the games that earned points
+    const scored = Object.values(out[uid].byGame).filter((x) => x.pts > 0).length;
+    Object.assign(out[uid], { bestStreak: best, curStreak: cur, bestMiss, curMiss: miss, noScore: finished.length - scored });
   });
   return out;
 }

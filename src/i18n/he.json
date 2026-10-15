@@ -636,5 +636,10 @@
   "pls.loadPrepared": "טען את הרשימות המוכנות",
   "pls.confirmLoad": "ליצור את הרשימות החסרות ו-{people} אנשים חדשים?",
   "pls.preparedLoaded": "הרשימות המוכנות נטענו.",
-  "pls.loaded": "בוצע: {n} אנשים חדשים, {m} אנשים קיימים נוספו לרשימות."
+  "pls.loaded": "בוצע: {n} אנשים חדשים, {m} אנשים קיימים נוספו לרשימות.",
+  "lb.gamePtsCol": "נק׳ משחקים",
+  "lb.winnerDir": "כיוון נכון",
+  "lb.exactHits": "מדויקות",
+  "lb.uniqueHits": "ייחודיות",
+  "lb.noScore": "ללא ניקוד"
 }

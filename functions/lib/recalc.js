@@ -56,7 +56,7 @@ export async function recalcAllPoints(db) {
   return { users: st.uids.length, games: st.games.length };
 }
 
-const FIELDS = ['gamePts', 'gameHits', 'exactHits', 'winnerCorrect', 'uniqueHits', 'riskHits', 'gamesPlayed', 'bestStreak', 'curStreak', 'bestMiss', 'curMiss'];
+const FIELDS = ['gamePts', 'gameHits', 'exactHits', 'winnerCorrect', 'uniqueHits', 'riskHits', 'noScore', 'gamesPlayed', 'bestStreak', 'curStreak', 'bestMiss', 'curMiss'];
 const sortedJson = (o) => JSON.stringify(Object.fromEntries(Object.entries(o || {}).sort(([a], [b]) => a.localeCompare(b))));
 
 /** Stored points/{uid} vs a fresh recompute from raw data. Expected: 0 mismatches. */

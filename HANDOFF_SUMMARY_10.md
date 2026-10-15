@@ -82,3 +82,8 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 ## Update: jokers are never lost when a game is deleted or cancelled
 - A joker only counts as "used" while its game EXISTS and still COUNTS (not cancelled, a counted round): `isActiveJokerGame` / `countActiveJokers` (shared/predictions.js). Used by `planSave` / `savePredictions` (the server also reads the games of the player's existing jokers), by `adminEditPredictions`, and by the player's screen (`PredictionEditor` "jokers left"). The orphan joker entry stays in `predictions/{uid}.jokers` but no longer blocks anything; a cancelled game that is scheduled again counts its joker again; a re-imported deleted game (same deterministic id) too. +4 tests (178 total).
 - Deploy: `firebase deploy --only functions` + push the app.
+
+## Update: leaderboard "Game points" tab columns (World Cup layout)
+- Games tab columns: **נק׳ משחקים** (gamePts, blue) / **כיוון נכון** (= `winnerCorrect`, number of correct winners, green) / **מדויקות** (`exactHits`, orange) / **ייחודיות** (`uniqueHits`, purple) / **ללא ניקוד** (new `noScore`, grey). Ranking of the tab unchanged (game points, then exact, then unique).
+- New stat `noScore` in `points/{uid}`: every FINISHED counted game minus the games that earned points, so a game with no pick at all also counts as "no score" (with auto-fill on, every game has a pick). Added to `emptyStats`, `computeAllPoints` and the reconciliation fields (+2 tests, 180 total).
+- Deploy: `firebase deploy --only functions` + push the app, then **Recalculate all points once** (older documents don't have `noScore` yet: the column shows 0 until then; the reconciliation also flags it until then).

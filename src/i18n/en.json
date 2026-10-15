@@ -636,5 +636,10 @@
   "pls.loadPrepared": "Load the prepared lists",
   "pls.confirmLoad": "Create the lists that are missing and {people} new people?",
   "pls.preparedLoaded": "The prepared lists are loaded.",
-  "pls.loaded": "Done: {n} new people, {m} existing people added to lists."
+  "pls.loaded": "Done: {n} new people, {m} existing people added to lists.",
+  "lb.gamePtsCol": "Game pts",
+  "lb.winnerDir": "Correct winner",
+  "lb.exactHits": "Exact",
+  "lb.uniqueHits": "Unique",
+  "lb.noScore": "No score"
 }

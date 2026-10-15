@@ -13,7 +13,8 @@ const TABS = ['total', 'games', 'bonus', 'stats'];
 // [header key, field, css class] per tab. Total tab = Total (green) / Games (blue) / Bonus (orange), like the World Cup app.
 const COLS = {
   total: [['lb.totalCol', 'total', 'pts-total'], ['lb.games', 'gamePts', 'pts-games'], ['lb.bonus', 'bonus', 'pts-bonus']],
-  games: [['lb.games', 'gamePts', 'pts-games']],
+  // Games tab (like the World Cup): game points / correct winner / exact / unique / no score
+  games: [['lb.gamePtsCol', 'gamePts', 'pts-games'], ['lb.winnerDir', 'winnerCorrect', 'pts-hit'], ['lb.exactHits', 'exactHits', 'pts-exact'], ['lb.uniqueHits', 'uniqueHits', 'pts-unique'], ['lb.noScore', 'noScore', 'pts-miss']],
   bonus: [['lb.bonus', 'bonus', 'pts-bonus']],
 };
 // Current streak (like the World Cup app): 🔥 = 3+ correct winners in a row, ❄️ = 3+ misses in a row, otherwise a dash.
