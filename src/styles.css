@@ -339,8 +339,8 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 
 /* phones: a slimmer top bar (English / logout buttons) and slimmer home boxes */
 @media (max-width: 700px) {
-  .topbar { padding: .15rem .6rem; padding-top: calc(.15rem + env(safe-area-inset-top, 0px)); gap: .3rem; font-size: .9rem; }
-  .topbar button.btn { padding: .08rem .5rem; font-size: .7rem; min-height: 0; height: auto; line-height: 1.15; border-radius: 8px; }
+  .topbar { padding: .25rem .7rem; padding-top: calc(.25rem + env(safe-area-inset-top, 0px)); gap: .4rem; font-size: .95rem; }
+  .topbar button.btn { padding: .3rem .75rem; font-size: .82rem; min-height: 0; height: auto; line-height: 1.2; border-radius: 9px; }
   .next-card { padding: .25rem .6rem; }
   .next-card .vs-names { font-size: .85rem; }
   .countdown { font-size: 1.1rem; }
