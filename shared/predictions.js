@@ -22,8 +22,16 @@ export function pickIssue(p) {
 export const countJokers = (jokers) => Object.values(jokers || {}).filter(Boolean).length;
 
 /**
+ * A joker is only "used" while its game EXISTS and still COUNTS (not cancelled, a counted round). A joker left on a deleted or cancelled game
+ * is free again, so the player never loses one. games: {id: {round, status}} of the games that exist (a missing id = a deleted game).
+ */
+export const isActiveJokerGame = (game, countedRounds = ['RS']) => !!game && game.status !== 'cancelled' && countedRounds.includes(game.round);
+export const countActiveJokers = (jokers, games, countedRounds = ['RS']) => Object.entries(jokers || {}).filter(([id, on]) => on && isActiveJokerGame(games?.[id], countedRounds)).length;
+
+/**
  * Decide what to write. Never throws; bad items are returned in `rejected` with a reason key.
- * existing: { games:{id:{s1,s2}}, jokers:{id:true} }   games: { id: {round,status,t1,t2,tipoffMs} | undefined }
+ * existing: { games:{id:{s1,s2}}, jokers:{id:true} }   games: { id: {round,status,t1,t2,tipoffMs} | undefined } - the requested games AND the games
+ * of the player's existing jokers (so jokers on deleted / cancelled games are not counted against the limit)
  * picks: { id:{s1,s2} }   jokers: { id: true|false } (desired state)
  */
 export function planSave({ existing, games, picks, jokers, nowMs, maxJokers, countedRounds }) {
@@ -54,7 +62,7 @@ export function planSave({ existing, games, picks, jokers, nowMs, maxJokers, cou
     const why = gameOpenReason(games[id], nowMs, countedRounds);
     if (why) rejected.push({ id, reason: why });
     else if (!accepted[id] && !have[id]) rejected.push({ id, reason: 'joker-needs-pick' });
-    else if (countJokers(live) >= maxJokers) rejected.push({ id, reason: 'joker-limit' });
+    else if (countActiveJokers(live, games, countedRounds) >= maxJokers) rejected.push({ id, reason: 'joker-limit' });
     else { live[id] = true; jokersOn.push(id); }
   });
 

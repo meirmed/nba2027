@@ -11,7 +11,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { v2 as translateV2 } from '@google-cloud/translate';
 import { addProfileDocs, adminEmails, normEmail } from './lib/profile.js';
 import { mapScheduleGame, validateImportItem } from './shared/schedule.js';
-import { planSave, pickIssue, countJokers } from './shared/predictions.js';
+import { planSave, pickIssue, countActiveJokers } from './shared/predictions.js';
 import { normalizeName } from './shared/names.js';
 import { recalcAllPoints, reconcileAll } from './lib/recalc.js';
 import { fetchGamesRange, fetchGamesByDates, apiDatesFor } from './lib/balldontlie.js';
@@ -225,11 +225,15 @@ export const savePredictions = onCall(async (request) => {
     const [predSnap, settingsSnap, ...gameSnaps] = await tx.getAll(ref, db.doc('appSettings/main'), ...ids.map((id) => db.doc(`games/${id}`)));
     const settings = settingsSnap.data() || {};
     const games = {};
-    gameSnaps.forEach((s) => {
-      if (!s.exists) return;
+    const addGame = (s) => {
+      if (!s.exists) return; // a deleted game stays out of the map
       const g = s.data();
       games[s.id] = { round: g.round, status: g.status, t1: g.t1, t2: g.t2, tipoffMs: g.tipoff?.toMillis?.() ?? 0 };
-    });
+    };
+    gameSnaps.forEach(addGame);
+    // the games of the player's existing jokers: a joker on a deleted / cancelled game must not count against the limit
+    const extraIds = Object.keys(predSnap.data()?.jokers || {}).filter((id) => !ids.includes(id) && id.length <= 80 && !id.includes('/'));
+    if (extraIds.length) (await tx.getAll(...extraIds.map((id) => db.doc(`games/${id}`)))).forEach(addGame);
     const plan = planSave({
       existing: predSnap.data() || {}, games, picks, jokers, nowMs,
       maxJokers: mergeScoring(settings.scoring).jokersPerSeason,
@@ -596,7 +600,10 @@ export const adminEditPredictions = onCall({ timeoutSeconds: 120 }, async (reque
     } else { delete finalJokers[id]; jm[id] = FieldValue.delete(); }
     touched.add(id);
   });
-  if (countJokers(finalJokers) > maxJokers) throw new HttpsError('failed-precondition', 'joker-limit');
+  const jokerGames = {};
+  const jokerIds = Object.keys(finalJokers);
+  if (jokerIds.length) (await db.getAll(...jokerIds.map((id) => db.doc(`games/${id}`)))).forEach((s) => { if (s.exists) jokerGames[s.id] = { round: s.data().round, status: s.data().status }; });
+  if (countActiveJokers(finalJokers, jokerGames, settingsSnap.data()?.countedRounds || DEFAULT_SETTINGS.countedRounds) > maxJokers) throw new HttpsError('failed-precondition', 'joker-limit');
 
   for (let i = 0; i < qIds.length; i += 1) {
     const id = qIds[i];

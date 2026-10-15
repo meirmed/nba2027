@@ -2,9 +2,10 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../firebase.js';
 import { useLang } from '../../contexts/LangContext.jsx';
-import { useScoring } from '../../contexts/SettingsContext.jsx';
+import { useScoring, useSettings } from '../../contexts/SettingsContext.jsx';
+import { useGames } from '../../hooks/useGames.js';
 import { useMyPredictions } from '../../contexts/MyPredictionsContext.jsx';
-import { pickIssue } from '@shared/predictions.js';
+import { isActiveJokerGame, pickIssue } from '@shared/predictions.js';
 
 const isNum = (v) => v !== '' && v !== undefined && Number.isInteger(Number(v));
 const omit = (obj, ids) => Object.fromEntries(Object.entries(obj).filter(([k]) => !ids.includes(k)));
@@ -19,6 +20,8 @@ const Ctx = createContext(null);
 export function PredictionEditorProvider({ children }) {
   const { t } = useLang();
   const scoring = useScoring();
+  const settings = useSettings();
+  const { games } = useGames();
   const mine = useMyPredictions();
 
   const [draft, setDraft] = useState({}); // id -> {s1,s2} strings being typed
@@ -41,8 +44,11 @@ export function PredictionEditorProvider({ children }) {
   const usedJokers = useMemo(() => {
     const s = new Set(Object.keys(mine.jokers).filter((k) => mine.jokers[k]));
     [opt.jokers, jokerDraft].forEach((o) => Object.entries(o).forEach(([id, v]) => { if (v) s.add(id); else s.delete(id); }));
-    return s.size;
-  }, [mine.jokers, opt.jokers, jokerDraft]);
+    if (games.length === 0) return s.size; // games not loaded yet
+    // only jokers on games that still exist and count: a joker on a deleted / cancelled game is free again
+    const byId = Object.fromEntries(games.map((g) => [g.id, g]));
+    return [...s].filter((id) => isActiveJokerGame(byId[id], settings.countedRounds)).length;
+  }, [mine.jokers, opt.jokers, jokerDraft, games, settings.countedRounds]);
   const jokersLeft = scoring.jokersPerSeason - usedJokers;
 
   const changedPicks = Object.keys(draft).map((id) => [id, draftNums(id)])

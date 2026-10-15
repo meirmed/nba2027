@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planSave, gameOpenReason, countJokers, pickIssue } from './predictions.js';
+import { planSave, gameOpenReason, countJokers, pickIssue, countActiveJokers, isActiveJokerGame } from './predictions.js';
 
 const NOW = 1_000_000;
 const open = { round: 'RS', status: 'scheduled', t1: 'BOS', t2: 'NYK', tipoffMs: NOW + 60_000 };
@@ -73,4 +73,35 @@ describe('planSave jokers', () => {
     expect(r.rejected.map((x) => x.reason)).toEqual(['locked', 'locked']);
   });
   it('countJokers ignores falsy entries', () => expect(countJokers({ a: true, b: false, c: true })).toBe(2));
+});
+
+describe('jokers on deleted or cancelled games are free again', () => {
+  const NOW = 1_000_000;
+  const open = (id) => ({ round: 'RS', status: 'scheduled', t1: 'BOS', t2: 'NYK', tipoffMs: NOW + 3_600_000, id });
+  const plan = (existingJokers, games, jokers) => planSave({
+    existing: { games: { g5: { s1: 100, s2: 90 } }, jokers: existingJokers }, games, picks: {}, jokers, nowMs: NOW, maxJokers: 3, countedRounds: ['RS'],
+  });
+
+  it('only jokers on games that exist and count are used', () => {
+    const games = { ok1: { round: 'RS', status: 'finished' }, cancelled1: { round: 'RS', status: 'cancelled' }, po1: { round: 'R1', status: 'scheduled' } };
+    expect(countActiveJokers({ ok1: true, cancelled1: true, deleted1: true, po1: true }, games, ['RS'])).toBe(1);
+    expect(countActiveJokers({ ok1: true, off: false }, { ok1: games.ok1, off: games.ok1 }, ['RS'])).toBe(1); // false = not a joker
+    expect(isActiveJokerGame(undefined)).toBe(false);
+  });
+  it('a joker left on a deleted game and one on a cancelled game do not block a new joker', () => {
+    // 3 jokers recorded: one on a DELETED game (missing from `games`), one on a CANCELLED game, one on a normal game
+    const games = { g5: open('g5'), cancelled1: { round: 'RS', status: 'cancelled' }, live1: { round: 'RS', status: 'finished' } };
+    const r = plan({ deleted1: true, cancelled1: true, live1: true }, games, { g5: true });
+    expect(r.rejected).toEqual([]);
+    expect(r.jokersOn).toEqual(['g5']);
+  });
+  it('the limit still applies to jokers on games that count', () => {
+    const games = { g5: open('g5'), a: { round: 'RS', status: 'finished' }, b: { round: 'RS', status: 'finished' }, c: { round: 'RS', status: 'finished' } };
+    const r = plan({ a: true, b: true, c: true }, games, { g5: true });
+    expect(r.rejected).toEqual([{ id: 'g5', reason: 'joker-limit' }]);
+  });
+  it('a cancelled game that is scheduled again uses its joker again', () => {
+    const games = { g5: open('g5'), a: { round: 'RS', status: 'finished' }, b: { round: 'RS', status: 'finished' }, c: { round: 'RS', status: 'scheduled' } };
+    expect(plan({ a: true, b: true, c: true }, games, { g5: true }).rejected).toEqual([{ id: 'g5', reason: 'joker-limit' }]);
+  });
 });
