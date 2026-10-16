@@ -655,7 +655,7 @@
   "auth.lastName": "Last name",
   "auth.nameRules": "Your real first and last name (at least 2 letters each, any language). It shows in the tables, and only the admin can change it later.",
   "auth.errName": "Enter your first and last name (letters only, at least 2 letters each).",
-  "pay.waiting": "Your registration is complete. You can browse the app; you can submit predictions and bonus answers after the admin confirms your payment.",
+  "pay.waiting": "Your registration is complete. Waiting for admin approval.",
   "pay.waitingLong": "Your registration is complete, but you can't submit predictions or bonus answers yet. The admin will unlock this page after confirming your payment. Meanwhile you can browse the other pages.",
   "pay.pending": "waiting for payment"
 }
