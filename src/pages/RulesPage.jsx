@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import PageShell from '../components/PageShell.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useScoring } from '../contexts/SettingsContext.jsx';
@@ -20,8 +21,16 @@ const Rule = ({ title, sub, value, hl }) => (
 );
 const Note = ({ tone = 'green', children }) => <div className={`note ${tone}`}>{children}</div>;
 
+export const TAKANON_URL = '/takanon.pdf'; // the regulations PDF (Hebrew): put the file in the project's public folder under this name
+
 export default function RulesPage() {
   const { t } = useLang();
+  const [hasPdf, setHasPdf] = useState(false); // show the link only when the file really exists (a missing file would otherwise open the app itself)
+  useEffect(() => {
+    let on = true;
+    fetch(TAKANON_URL, { method: 'HEAD' }).then((r) => { if (on) setHasPdf(r.ok && (r.headers.get('content-type') || '').includes('pdf')); }).catch(() => {});
+    return () => { on = false; };
+  }, []);
   const s = useScoring();
   const tournament = useTournament();
   const base = s.winner + s.exact; // exact score = winner points + exact bonus
@@ -32,6 +41,11 @@ export default function RulesPage() {
 
   return (
     <PageShell titleKey="rules.pageTitle">
+      {hasPdf && (
+        <Note tone="blue">
+          📄 {t('rules.takanonIntro')} <a className="chip-link" href={TAKANON_URL} target="_blank" rel="noopener noreferrer">{t('rules.takanonOpen')} ▸</a>
+        </Note>
+      )}
       <Section title={t('rules.sec.games')} intro={t('rules.games.intro')}>
         <Rule hl title={t('rules.r.exact')} sub={t('rules.r.exactSub')} value={base} />
         <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub', { base, n: s.unique })} value={base + s.unique} />
