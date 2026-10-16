@@ -27,7 +27,7 @@ Tick every box in order. "(you)" = something only the owner can do in a console;
 - [ ] Admin → Games → **Import from schedule**: import the regular season in chunks of up to 14 days (Cup games included). Spot-check tip-off times against the NBA schedule.
 - [ ] Admin → Bonus: players list first, then the questions (deadlines before the first deadline-sensitive game).
 - [ ] Admin → Settings: announcement text; **auto-fill** switch ON; counted rounds = Regular season only.
-- [ ] Admin → Users & Participants: add every participant's name exactly as they will type it.
+- [ ] Registration: players register themselves with their first and last name (no list needed). The "Pre-add names" box in Admin → Users & Participants is optional. **A player can submit predictions only after you tick "שולם" (paid)** on their row; until then they can browse. Tick it for every player who should play, BEFORE the soft launch.
 
 ## 5. Remove all TEST data (before real registration)
 Test games, test users, test bonus questions and the test tournament must not be in the real season.

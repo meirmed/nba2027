@@ -12,7 +12,7 @@ import { v2 as translateV2 } from '@google-cloud/translate';
 import { addProfileDocs, adminEmails, normEmail } from './lib/profile.js';
 import { mapScheduleGame, validateImportItem } from './shared/schedule.js';
 import { planSave, pickIssue, countActiveJokers } from './shared/predictions.js';
-import { normalizeName } from './shared/names.js';
+import { normalizeName, parseFullName } from './shared/names.js';
 import { recalcAllPoints, reconcileAll } from './lib/recalc.js';
 import { fetchGamesRange, fetchGamesByDates, apiDatesFor } from './lib/balldontlie.js';
 import { runPoll, currentOf, toWrite } from './lib/poll.js';
@@ -20,6 +20,7 @@ import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { makeAutoPick } from './shared/autofill.js';
 import { normalizePhone } from './shared/phone.js';
+import { createHash } from 'node:crypto';
 import { managerCanAddGame } from './shared/gamesAccess.js';
 import { adminUidSet } from './lib/admins.js';
 import { RESTORE_ALLOWED, validBackupName } from './shared/backup.js';
@@ -48,7 +49,7 @@ export const beforeUserCreatedGate = beforeUserCreated(async (event) => {
   if (adminEmails(ADMIN_EMAILS.value()).includes(email) && user.emailVerified) return;
   const snap = await db.collection('participants').where('registeringEmail', '==', email).limit(1).get();
   if (!snap.empty && snap.docs[0].data().claimedBy == null) return;
-  throw new IdentityHttpsError('permission-denied', 'Not an approved participant. Ask the admin to add your name.');
+  throw new IdentityHttpsError('permission-denied', 'Please create your account with the registration form.');
 });
 
 /** Public (unauthenticated): is registration open? (No names are ever sent to the browser.) */
@@ -60,10 +61,10 @@ export const registrationStatus = onCall(async () => {
 /** Public: claim an approved name by TYPING it (must match the admin's list). Creates the Auth user (Admin SDK) + users/points/predictions docs. */
 export const registerParticipant = onCall(async (request) => {
   const { password } = request.data || {};
-  const rawName = typeof request.data?.name === 'string' ? request.data.name : '';
-  const normName = normalizeName(rawName);
+  const full = parseFullName(request.data?.firstName, request.data?.lastName); // first + last name, any language
+  if (!full) throw new HttpsError('invalid-argument', 'name');
+  const normName = full.normalized;
   const email = normEmail(request.data?.email);
-  if (!normName || rawName.length > 80) throw new HttpsError('invalid-argument', 'name');
   if (!EMAIL_RE.test(email)) throw new HttpsError('invalid-argument', 'email');
   const phone = normalizePhone(request.data?.phone); // mandatory
   if (!phone) throw new HttpsError('invalid-argument', 'phone');
@@ -72,23 +73,33 @@ export const registerParticipant = onCall(async (request) => {
   const settings = (await db.doc('appSettings/main').get()).data() || {};
   if (!settings.registrationOpen) throw new HttpsError('failed-precondition', 'registration-closed');
 
-  let found = await db.collection('participants').where('normalizedName', '==', normName).limit(1).get();
-  if (found.empty) found = await db.collection('participants').where('displayName', '==', rawName.trim()).limit(1).get();
-  if (found.empty) throw new HttpsError('not-found', 'name-not-found');
-  const ref = found.docs[0].ref;
+  // The name is the identity. A record with this name may already exist: pre-added by the admin (optional tool, unclaimed -> this person takes it,
+  // keeping the "paid" status the admin set) or already registered (-> name taken). Otherwise a NEW record is created; its id comes from the name,
+  // so two simultaneous sign-ups with the same name cannot both succeed.
+  const found = await db.collection('participants').where('normalizedName', '==', normName).limit(1).get();
+  const ref = found.empty ? db.doc(`participants/reg_${createHash('sha1').update(normName).digest('hex').slice(0, 24)}`) : found.docs[0].ref;
   const participantId = ref.id;
-  const participant = await db.runTransaction(async (tx) => {
+  const { participant, created } = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists) throw new HttpsError('not-found', 'name-not-found');
+    if (!snap.exists) {
+      const d = {
+        displayName: full.displayName, normalizedName: normName, firstName: full.firstName, lastName: full.lastName, claimedBy: null, claimedAt: null,
+        email: null, paid: false, selfRegistered: true, createdAt: FieldValue.serverTimestamp(), registeringEmail: email, registeringAt: Timestamp.now(),
+      };
+      tx.set(ref, d);
+      return { participant: { ...d, createdAt: null }, created: true };
+    }
     const d = snap.data();
     if (d.claimedBy) throw new HttpsError('permission-denied', 'already-claimed');
     const busy = d.registeringAt && Date.now() - d.registeringAt.toMillis() < 120000 && d.registeringEmail !== email;
     if (busy) throw new HttpsError('aborted', 'in-progress');
     tx.update(ref, { registeringEmail: email, registeringAt: Timestamp.now() });
-    return d;
+    return { participant: d, created: false };
   });
 
-  const clearReservation = () => ref.update({ registeringEmail: FieldValue.delete(), registeringAt: FieldValue.delete() }).catch(() => {});
+  const clearReservation = () => (created
+    ? ref.delete()
+    : ref.update({ registeringEmail: FieldValue.delete(), registeringAt: FieldValue.delete() })).catch(() => {}); // a record made just for this sign-up must not stay behind
 
   let record;
   try {
@@ -103,10 +114,10 @@ export const registerParticipant = onCall(async (request) => {
   try {
     const batch = db.batch();
     batch.update(ref, {
-      claimedBy: record.uid, claimedAt: FieldValue.serverTimestamp(), email,
+      claimedBy: record.uid, claimedAt: FieldValue.serverTimestamp(), email, firstName: full.firstName, lastName: full.lastName,
       registeringEmail: FieldValue.delete(), registeringAt: FieldValue.delete(),
     });
-    addProfileDocs({ db, batch, uid: record.uid, name: participant.displayName, email, phone, participantId });
+    addProfileDocs({ db, batch, uid: record.uid, name: participant.displayName, email, phone, participantId, firstName: full.firstName, lastName: full.lastName, paid: participant.paid === true });
     await batch.commit();
   } catch (e) {
     console.error('profile write failed, rolling back user', e);
@@ -212,6 +223,9 @@ async function assertCanPlay(request) {
   const p = await db.doc(`users/${request.auth.uid}`).get();
   if (!p.exists) throw new HttpsError('permission-denied', 'no-profile');
   if (p.data().blocked) throw new HttpsError('permission-denied', 'blocked');
+  // the admin must have ticked "paid" (participants.paid); until then the player can only look around
+  const part = p.data().participantId ? await db.doc(`participants/${p.data().participantId}`).get() : null;
+  if (!part?.exists || part.data().paid !== true) throw new HttpsError('permission-denied', 'not-paid');
 }
 
 /**
@@ -285,7 +299,8 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
   const todo = snap.docs.filter((d) => !d.data().picksLockedAt && d.data().status !== 'cancelled');
   if (todo.length === 0) return;
 
-  const [preds, points, settingsSnap, admins] = await Promise.all([db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get(), adminUidSet()]);
+  const [preds, points, settingsSnap, admins, partsSnap] = await Promise.all([db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get(), adminUidSet(), db.collection('participants').get()]);
+  const unpaid = new Set(partsSnap.docs.filter((d) => d.data().claimedBy && d.data().paid !== true).map((d) => d.data().claimedBy)); // not paid = not playing
   const settings = settingsSnap.data() || {};
   const autoFillOn = (settings.features?.autoFill ?? DEFAULT_SETTINGS.features.autoFill) !== false;
   const counted = settings.countedRounds || DEFAULT_SETTINGS.countedRounds;
@@ -298,7 +313,7 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
     const picks = {};
     const fills = [];
     preds.forEach((p) => {
-      if (admins.has(p.id)) return; // admins are not players: nothing published, nothing auto-filled
+      if (admins.has(p.id) || unpaid.has(p.id)) return; // admins and unpaid players are not playing: nothing published, nothing auto-filled
       const d = p.data();
       const pick = d.games?.[g.id];
       if (pick) {
@@ -836,4 +851,13 @@ export const setGameManager = onCall(async (request) => {
   await db.doc(`users/${uid}`).set({ gameManager: enabled, updatedAt: FieldValue.serverTimestamp() }, { merge: true }); // display only
   await writeAudit(request.auth.uid, enabled ? 'user.gameManagerOn' : 'user.gameManagerOff', `users/${uid}`, null, { email: record.email ?? null });
   return { ok: true };
+});
+
+/** The admin ticks / unticks "paid" (participants.paid): mirror it to users + points (flags) and rescore, so the player is unlocked / hidden at once. */
+export const onParticipantUpdated = onDocumentWritten('participants/{id}', async (event) => {
+  const b = event.data?.before?.data();
+  const a = event.data?.after?.data();
+  if (!a?.claimedBy || !b || !!b.paid === !!a.paid) return; // only a change of "paid" on a registered player (a new registration already writes the flags)
+  if (await resetInProgress()) return;
+  await recalcAllPoints(db);
 });

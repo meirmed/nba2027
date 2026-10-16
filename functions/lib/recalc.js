@@ -7,9 +7,11 @@ import { starOfNight } from '../shared/night.js';
 
 /** Reads RAW data only: games + predictions (+ stored points for bonus/names) + settings. */
 export async function loadState(db) {
-  const [g, p, pts, s, b, adj] = await Promise.all([
-    db.collection('games').get(), db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get(), db.collection('bonus').get(), db.collection('adjustments').get(),
+  const [g, p, pts, s, b, adj, parts] = await Promise.all([
+    db.collection('games').get(), db.collection('predictions').get(), db.collection('points').get(), db.doc('appSettings/main').get(), db.collection('bonus').get(), db.collection('adjustments').get(), db.collection('participants').get(),
   ]);
+  const paidByUid = {}; // registered players: has the admin ticked "paid"?
+  parts.forEach((d) => { const x = d.data(); if (x.claimedBy) paidByUid[x.claimedBy] = x.paid === true; });
   const games = g.docs.map((d) => {
     const x = d.data();
     return { id: d.id, round: x.round, status: x.status, t1: x.t1, t2: x.t2, s1: x.s1, s2: x.s2, tipoffMs: x.tipoff?.toMillis?.() ?? 0 };
@@ -20,11 +22,11 @@ export async function loadState(db) {
   pts.forEach((d) => { stored[d.id] = d.data(); });
   const settings = s.data() || {};
   const admins = await adminUidSet(); // admins never take part: their picks must not influence anyone's risk % / unique bonus
-  const uids = [...new Set([...Object.keys(predictions), ...Object.keys(stored)])].filter((u) => !admins.has(u));
+  const uids = [...new Set([...Object.keys(predictions), ...Object.keys(stored)])].filter((u) => !admins.has(u) && paidByUid[u] !== false); // admins and UNPAID players are not in the competition
   const questions = b.docs.map((d) => ({ id: d.id, ...d.data() }));
   const adjust = {};
   adj.forEach((d) => { const x = d.data(); adjust[x.uid] = (adjust[x.uid] || 0) + (x.pts || 0); }); // manual admin adjustments (with a reason each)
-  return { games, predictions, stored, uids, admins, questions, adjust, timezone: settings.timezone || 'Asia/Jerusalem', scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
+  return { games, predictions, stored, uids, admins, paidByUid, questions, adjust, timezone: settings.timezone || 'Asia/Jerusalem', scoring: settings.scoring, countedRounds: settings.countedRounds || DEFAULT_SETTINGS.countedRounds };
 }
 
 /** Full recompute of every user's points from raw data (idempotent): game points + bonus points. total = gamePts + bonus. */
@@ -39,6 +41,13 @@ export async function recalcAllPoints(db) {
     night: star?.night ?? null, games: star?.games ?? 0, updatedAt: FieldValue.serverTimestamp(),
     top: (star?.top ?? []).map((r) => ({ ...r, name: st.stored[r.uid]?.name || '', photoURL: st.stored[r.uid]?.photoURL ?? null })),
   } });
+  // keep the "paid" flag of every registered player in sync (points = public table filter, users = the player's own screen)
+  Object.entries(st.paidByUid).forEach(([uid, paid]) => {
+    if (st.stored[uid] && st.stored[uid].paid !== paid) {
+      writes.push({ ref: db.doc(`points/${uid}`), data: { paid }, opts: { mergeFields: ['paid'] } });
+      writes.push({ ref: db.doc(`users/${uid}`), data: { paid }, opts: { merge: true } });
+    }
+  });
   // flag the admin accounts so every table (leaderboard, H2H, ...) can leave them out; nothing else is written for them
   st.admins.forEach((uid) => writes.push({ ref: db.doc(`points/${uid}`), data: { isAdmin: true }, opts: { mergeFields: ['isAdmin'] } }));
   st.uids.forEach((uid) => {

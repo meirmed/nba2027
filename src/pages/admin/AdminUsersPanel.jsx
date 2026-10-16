@@ -92,7 +92,7 @@ export default function AdminUsersPanel() {
       {participants.map((p) => (
         <div key={p.id} className="row">
           <div className="grow">
-            <strong>{p.displayName}</strong>{p.claimedBy && byUid[p.claimedBy]?.blocked && <span className="badge"> 🚫 {t('au.blocked')}</span>}
+            <strong>{p.displayName}</strong>{p.claimedBy && !p.paid && <span className="badge"> ⏳ {t('pay.pending')}</span>}{p.claimedBy && byUid[p.claimedBy]?.blocked && <span className="badge"> 🚫 {t('au.blocked')}</span>}
             <div className="muted small" dir="ltr">{p.claimedBy ? p.email : t('ap.unclaimed')}</div>
           </div>
           <label className="check"><input type="checkbox" checked={!!p.paid} onChange={() => togglePaid(p)} /> {t('ap.paid')}</label>

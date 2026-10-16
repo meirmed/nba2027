@@ -14,8 +14,8 @@ export function PointsProvider({ children }) {
     return onSnapshot(collection(db, 'points'),
       (snap) => {
         const all = snap.docs.map((d) => ({ id: d.id, uid: d.id, ...d.data() }));
-        // rows = PLAYERS only (admins don't take part: not in the leaderboard, Head to Head or any table); allRows keeps names for e.g. the audit log
-        setState({ rows: all.filter((r) => !r.isAdmin), allRows: all, loading: false });
+        // rows = PAID PLAYERS only (admins and players the admin has not marked as paid don't take part: not in the leaderboard, Head to Head or any table); allRows keeps names for e.g. the audit log
+        setState({ rows: all.filter((r) => !r.isAdmin && r.paid !== false), allRows: all, loading: false }); // players who have not paid are not in the competition
       },
       () => setState({ rows: [], allRows: [], loading: false }));
   }, [user]);

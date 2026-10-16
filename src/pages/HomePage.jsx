@@ -50,8 +50,9 @@ export default function HomePage() {
   const shown = shownKey ? counted.filter((g) => dayKey(g.tipoff, tz) === shownKey) : [];
 
   // what is still missing in the next 3 days (admins don't play)
-  const missingGames = isAdmin ? [] : open.filter((g) => tip(g) - nowMs < WINDOW_DAYS * DAY && !mine.games[g.id]);
-  const bonusPending = isAdmin ? 0 : questions.filter((q) => !bonusClosedReason(q, nowMs) && !mine.bonus[q.id]?.answer?.length).length;
+  const unpaid = !isAdmin && profile?.paid === false; // registered, waiting for the admin to tick "paid"
+  const missingGames = isAdmin || unpaid ? [] : open.filter((g) => tip(g) - nowMs < WINDOW_DAYS * DAY && !mine.games[g.id]);
+  const bonusPending = isAdmin || unpaid ? 0 : questions.filter((q) => !bonusClosedReason(q, nowMs) && !mine.bonus[q.id]?.answer?.length).length;
 
   const ranked = useMemo(() => rankRows(rows, tiebreakers), [rows, tiebreakers]);
   const me = ranked.find((r) => r.uid === user?.uid);
@@ -90,7 +91,8 @@ export default function HomePage() {
         <div className="card announce"><span>📞 {t('home.needPhone')}</span> <Link className="chip-link" to="/profile">{t('home.goProfile')} ▸</Link></div>
       )}
 
-      {!isAdmin && (
+      {unpaid && <div className="card announce">⏳ {t('pay.waiting')}</div>}
+      {!isAdmin && !unpaid && (
         <div className={`card todo ${missingGames.length + bonusPending > 0 ? 'warn' : 'ok'}`}>
           {missingGames.length + bonusPending === 0 ? (
             <div className="todo-title">✅ {t('home.allSet')}</div>
@@ -117,8 +119,7 @@ export default function HomePage() {
       <div className="card next-card">
         {next ? (
           <>
-            <div className="muted small">{t('home.nextLockLabel')}</div>
-            <div className="countdown" dir="ltr">{formatCountdown(tip(next) - nowMs)}</div>
+            <div className="next-line"><span className="muted small">{t('home.nextLockLabel')}</span><span className="countdown" dir="ltr">{formatCountdown(tip(next) - nowMs)}</span></div>
             <div className="vs-names"><TeamBadge abbr={next.t1} /> <span className="muted">–</span> <TeamBadge abbr={next.t2} /> <span className="muted small" dir="ltr">{formatTime(next.tipoff, lang, tz)}</span></div>
           </>
         ) : <span className="muted">{t('home.noNext')}</span>}
