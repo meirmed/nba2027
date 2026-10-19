@@ -12,7 +12,7 @@ import { GAME_ROUNDS } from '@shared/constants.js';
 const TB = ['total', 'exactHits', 'uniqueHits', 'bonus'];
 const str = (n) => String(n ?? '');
 const toForm = (sc) => ({
-  winner: str(sc.winner), exact: str(sc.exact), unique: str(sc.unique), riskPct: str(sc.risk.maxPickPct), riskPts: str(sc.risk.pts),
+  winner: str(sc.winner), diffExact: str(sc.diffExact), exact: str(sc.exact), unique: str(sc.unique), riskPct: str(sc.risk.maxPickPct), riskPts: str(sc.risk.pts),
   jokers: str(sc.jokersPerSeason), jokerMult: str(sc.jokerMultiplier), autofill: str(sc.autoFillFactor),
   tiers: sc.diffBonus.map((d) => ({ maxErr: str(d.maxErr), pts: str(d.pts) })),
   rm: Object.fromEntries(GAME_ROUNDS.map((r) => [r, str(sc.roundMultipliers[r] ?? 1)])),
@@ -39,12 +39,12 @@ export default function AdminScoringPanel() {
 
   const build = () => {
     const sc = {
-      winner: n(f.winner), exact: n(f.exact), unique: n(f.unique), risk: { maxPickPct: n(f.riskPct), pts: n(f.riskPts) },
+      winner: n(f.winner), diffExact: n(f.diffExact), exact: n(f.exact), unique: n(f.unique), risk: { maxPickPct: n(f.riskPct), pts: n(f.riskPts) },
       jokersPerSeason: n(f.jokers), jokerMultiplier: n(f.jokerMult), autoFillFactor: n(f.autofill),
       diffBonus: f.tiers.map((x) => ({ maxErr: n(x.maxErr), pts: n(x.pts) })).sort((a, b) => a.maxErr - b.maxErr),
       roundMultipliers: Object.fromEntries(GAME_ROUNDS.map((r) => [r, n(f.rm[r])])), tiebreakers: f.tb,
     };
-    const nums = [sc.winner, sc.exact, sc.unique, sc.risk.maxPickPct, sc.risk.pts, sc.jokersPerSeason, sc.jokerMultiplier, sc.autoFillFactor,
+    const nums = [sc.winner, sc.diffExact, sc.exact, sc.unique, sc.risk.maxPickPct, sc.risk.pts, sc.jokersPerSeason, sc.jokerMultiplier, sc.autoFillFactor,
       ...sc.diffBonus.flatMap((d) => [d.maxErr, d.pts]), ...Object.values(sc.roundMultipliers)];
     const ok = nums.every((x) => Number.isFinite(x) && x >= 0) && sc.risk.maxPickPct <= 100 && sc.autoFillFactor <= 1
       && Number.isInteger(sc.jokersPerSeason) && sc.jokerMultiplier >= 1;
@@ -80,6 +80,7 @@ export default function AdminScoringPanel() {
       <div className="card">
         <div className="grid-form">
           <Num k="winner" label={t('sc.winner')} />
+          <Num k="diffExact" label={t('sc.diffExact')} />
           <Num k="exact" label={t('sc.exact')} />
           <Num k="unique" label={t('sc.unique')} />
           <Num k="riskPct" label={t('sc.riskPct')} />

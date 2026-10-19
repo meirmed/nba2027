@@ -33,7 +33,8 @@ export default function RulesPage() {
   }, []);
   const s = useScoring();
   const tournament = useTournament();
-  const base = s.winner + s.exact; // exact score = winner points + exact bonus
+  const marginExact = s.winner + s.diffExact; // right winner + exact margin
+  const base = marginExact + s.exact; // exact score = winner + exact margin + exact score
   const tiers = [...s.diffBonus].sort((a, b) => a.maxErr - b.maxErr);
   const numbered = (keys, ns) => keys.map((k, i) => `${i + 1}) ${t(`${ns}${k}`)}`).join(', ');
   const h2hTb = (tournament?.tiebreakers || DEFAULT_H2H_TIEBREAKERS).filter((k) => k !== 'seed'); // the page lists exact hits, then unique hits
@@ -47,9 +48,10 @@ export default function RulesPage() {
         </Note>
       )}
       <Section title={t('rules.sec.games')} intro={t('rules.games.intro')}>
-        <Rule hl title={t('rules.r.exact')} sub={t('rules.r.exactSub')} value={base} />
+        <Rule hl title={t('rules.r.exact')} sub={`${t('rules.r.exactSub')} (${t('rules.r.exactBreak', { w: s.winner, d: s.diffExact, e: s.exact })})`} value={base} />
         <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub', { base, n: s.unique })} value={base + s.unique} />
         <Rule title={t('rules.r.winner')} sub={t('rules.r.winnerSub')} value={s.winner} />
+        <Rule title={t('rules.r.margin0')} sub={t('rules.r.margin0Sub')} value={`${s.winner}+${s.diffExact}`} />
         {tiers.map((d) => <Rule key={d.maxErr} title={t('rules.diff', { err: d.maxErr })} sub={t('rules.r.diffSub', { err: d.maxErr })} value={`${s.winner}+${d.pts}`} />)}
         <Rule title={t('rules.r.miss')} sub={t('rules.r.missSub')} value={0} />
         <Note tone="teal">🎲 {t('rules.note.auto', { pct })}</Note>

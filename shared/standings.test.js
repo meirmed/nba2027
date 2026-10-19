@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeAllPoints, rankRows, scoreGamePicks } from './standings.js';
 
-const sc = { winner: 5, exact: 7, diffBonus: [{ maxErr: 1, pts: 4 }, { maxErr: 2, pts: 3 }, { maxErr: 3, pts: 2 }, { maxErr: 4, pts: 1 }],
+const sc = { winner: 5, diffExact: 6, exact: 6, diffBonus: [{ maxErr: 1, pts: 4 }, { maxErr: 2, pts: 3 }, { maxErr: 3, pts: 2 }, { maxErr: 4, pts: 1 }],
   risk: { maxPickPct: 10, pts: 2 }, unique: 5, roundMultipliers: { RS: 1 }, jokerMultiplier: 2, autoFillFactor: 0.5 };
 const game = (id, t, s1, s2, over = {}) => ({ id, round: 'RS', status: 'finished', t1: 'BOS', t2: 'NYK', s1, s2, tipoffMs: t, ...over });
 const run = (games, predictions) => computeAllPoints({ games, predictions, uids: Object.keys(predictions), scoring: sc, countedRounds: ['RS'] });
@@ -11,24 +11,24 @@ describe('computeAllPoints', () => {
   const g1 = game('g1', 1, 110, 100);
   it('exact+unique, margin tier, wrong winner', () => {
     const r = run([g1], { A: { games: { g1: P(110, 100) } }, B: { games: { g1: P(108, 100) } }, C: { games: { g1: P(90, 100) } } });
-    expect(r.A.gamePts).toBe(5 + 7 + 5); // winner + exact + unique, no margin bonus
+    expect(r.A.gamePts).toBe(5 + 6 + 6 + 5); // winner + exact margin + exact score + unique = 22
     expect(r.B.gamePts).toBe(5 + 3); // margin error 2
     expect(r.C.gamePts).toBe(0);
     expect(r.A).toMatchObject({ exactHits: 1, uniqueHits: 1, winnerCorrect: 1, gamesPlayed: 1 });
-    expect(r.A.byGame.g1).toMatchObject({ pts: 17, x: 1, u: 1, s1: 110, s2: 100, j: 0, a: 0 });
+    expect(r.A.byGame.g1).toMatchObject({ pts: 22, x: 1, u: 1, s1: 110, s2: 100, j: 0, a: 0 });
   });
   it('two exact picks -> nobody is unique', () => {
     const r = run([g1], { A: { games: { g1: P(110, 100) } }, B: { games: { g1: P(110, 100) } } });
-    expect(r.A.gamePts).toBe(12);
+    expect(r.A.gamePts).toBe(5 + 6 + 6); // 17, nobody is unique
     expect(r.A.uniqueHits).toBe(0);
   });
   it('joker doubles everything on that game', () => {
     const r = run([g1], { A: { games: { g1: P(110, 100) }, jokers: { g1: true } } });
-    expect(r.A.gamePts).toBe((5 + 7 + 5) * 2);
+    expect(r.A.gamePts).toBe((5 + 6 + 6 + 5) * 2); // 44: the joker doubles ALL the bonuses of that game
   });
   it('auto-filled exact: halved, no unique, and does not block a manual unique', () => {
     const r = run([g1], { A: { games: { g1: P(110, 100, { autoFilled: true }) } }, B: { games: { g1: P(110, 100) } } });
-    expect(r.A.gamePts).toBe(Math.floor((5 + 7) * 0.5));
+    expect(r.A.gamePts).toBe(Math.floor((5 + 6 + 6) * 0.5)); // 8
     expect(r.A.uniqueHits).toBe(0);
     expect(r.B.uniqueHits).toBe(1);
   });
@@ -38,7 +38,7 @@ describe('computeAllPoints', () => {
     for (let i = 0; i < 9; i += 1) predictions[`H${i}`] = { games: { g: P(110, 100) } }; // 9 of 10 picked home (wrong)
     const r = run([g], predictions);
     expect(r.X.riskHits).toBe(1);
-    expect(r.X.gamePts).toBe(5 + 7 + 5 + 2);
+    expect(r.X.gamePts).toBe(5 + 6 + 6 + 5 + 2); // winner + exact margin + exact + unique + risk = 24
     expect(r.H0.gamePts).toBe(0);
   });
   it('ignores live/scheduled games, uncounted rounds, cancelled and tied results', () => {
@@ -64,10 +64,10 @@ describe('scoreGamePicks (drives the "Everyone\'s picks" badges)', () => {
       { uid: 'A', p: P(110, 100) }, { uid: 'B', p: P(108, 100) }, { uid: 'C', p: P(90, 100) }, { uid: 'D', p: P(110, 100, { autoFilled: true }) },
     ];
     const r = scoreGamePicks({ game: { round: 'RS', s1: 110, s2: 100 }, picks, scoring: sc });
-    expect(r.A).toMatchObject({ pts: 17, exact: true, uniquePts: 5, diffPts: 0, winnerCorrect: true });
+    expect(r.A).toMatchObject({ pts: 22, exact: true, uniquePts: 5, diffPts: 6, winnerCorrect: true });
     expect(r.B).toMatchObject({ pts: 8, exact: false, diffPts: 3 });
     expect(r.C).toMatchObject({ pts: 0, winnerCorrect: false });
-    expect(r.D).toMatchObject({ pts: 6, exact: true, uniquePts: 0 });
+    expect(r.D).toMatchObject({ pts: 8, exact: true, uniquePts: 0 }); // floor(17 * 0.5)
   });
   it('returns nothing when there are no valid picks', () => {
     expect(scoreGamePicks({ game: { round: 'RS', s1: 1, s2: 0 }, picks: [], scoring: sc })).toEqual({});
@@ -80,8 +80,8 @@ describe('byDay (feeds Head to Head)', () => {
     const d2 = Date.parse('2026-10-30T23:30:00Z'); // 01:30 next day in Israel
     const games = [game('g1', d1, 110, 100), game('g2', d2, 110, 100)];
     const r = computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'Asia/Jerusalem' });
-    expect(r.A.byDay).toEqual({ '2026-10-30': [17, 1, 1], '2026-10-31': [8, 0, 0] });
-    expect(computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'UTC' }).A.byDay).toEqual({ '2026-10-30': [25, 1, 1] });
+    expect(r.A.byDay).toEqual({ '2026-10-30': [22, 1, 1], '2026-10-31': [8, 0, 0] });
+    expect(computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'UTC' }).A.byDay).toEqual({ '2026-10-30': [30, 1, 1] }); // 22 + 8
   });
 });
 

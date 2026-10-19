@@ -13,8 +13,11 @@ export const BONUS_TYPES = ['numeric', 'closest', 'choice', 'team', 'player', 'd
 // Owner-approved values (risk.pts is still a PLACEHOLDER - owner has not given it yet). Live values: appSettings/main.scoring.
 export const DEFAULT_SCORING = {
   winner: 5, // correct winner
-  exact: 7, // exact score: ADDED to winner points; an exact score does NOT also get the margin bonus
-  // margin closeness: only when the winner is right and the score is not exact. error = |predicted margin - actual margin|
+  // The margin (difference between the teams) pays when the winner is right: diffExact if it is EXACT, else the tier of the error below.
+  // An exact SCORE (both teams) = winner 5 + exact margin 6 + exact 6 = 17 (it also has the exact margin).
+  diffExact: 6, // exact margin (error 0)
+  exact: 6, // exact score of both teams: ADDED on top of the winner and the exact margin
+  // margin tiers for an error of 1 or more: error = |predicted margin - actual margin|
   diffBonus: [
     { maxErr: 1, pts: 4 },
     { maxErr: 2, pts: 3 },

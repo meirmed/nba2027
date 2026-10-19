@@ -40,11 +40,10 @@ export function scoreGame(pred, result, ctx = {}) {
 
   if (winnerCorrect) {
     base += sc.winner;
-    if (!exact) { // an exact score earns the exact bonus INSTEAD of the margin bonus
-      const err = Math.abs(predMargin - realMargin);
-      const tier = [...sc.diffBonus].sort((a, b) => a.maxErr - b.maxErr).find((t) => err <= t.maxErr);
-      if (tier) { diffPts = tier.pts; base += diffPts; }
-    }
+    const err = Math.abs(predMargin - realMargin); // the margin pays for EVERY right winner, an exact score has an exact margin too
+    if (err === 0) diffPts = sc.diffExact;
+    else { const tier = [...sc.diffBonus].sort((a, b) => a.maxErr - b.maxErr).find((t) => err <= t.maxErr); if (tier) diffPts = tier.pts; }
+    base += diffPts;
     if (isNum(ctx.pickPct) && ctx.pickPct <= sc.risk.maxPickPct) { riskPts = sc.risk.pts; base += riskPts; }
   }
   if (exact) {

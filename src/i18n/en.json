@@ -184,7 +184,7 @@
   "mp.rank": "Rank {r} of {n}",
   "rules.ot": "The final score including overtime is what counts.",
   "sc.winner": "Correct winner",
-  "sc.exact": "Exact score bonus (added to winner points)",
+  "sc.exact": "Exact score bonus (added on top of the winner and the exact margin)",
   "sc.unique": "Unique exact-score bonus",
   "sc.riskPct": "Risk bonus: max % of picks on this winner",
   "sc.riskPts": "Risk bonus points",
@@ -192,7 +192,7 @@
   "sc.jokerMult": "Joker multiplier",
   "sc.autofill": "Auto-fill factor (0–1)",
   "sc.jokersLocked": "Jokers per season is locked: the season has started.",
-  "sc.diffTitle": "Margin closeness (winner correct, not an exact score)",
+  "sc.diffTitle": "Margin tiers for an error of 1 or more (right winner)",
   "sc.diffErr": "Within (points)",
   "sc.diffPts": "Bonus",
   "sc.addTier": "Add tier",
@@ -659,5 +659,9 @@
   "pay.waitingLong": "Your registration is complete, but you can't submit predictions or bonus answers yet. The admin will unlock this page after confirming your payment. Meanwhile you can browse the other pages.",
   "pay.pending": "waiting for payment",
   "rules.takanonIntro": "The full regulations of the game (PDF, in Hebrew):",
-  "rules.takanonOpen": "Open the regulations"
+  "rules.takanonOpen": "Open the regulations",
+  "sc.diffExact": "Exact margin bonus (right winner and the exact difference between the teams)",
+  "rules.r.margin0": "Exact margin",
+  "rules.r.margin0Sub": "Right winner, and the difference between the teams is exact (the scores themselves are not)",
+  "rules.r.exactBreak": "winner {w} + exact margin {d} + exact score {e}"
 }
