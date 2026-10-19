@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import PageShell from '../components/PageShell.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useScoring } from '../contexts/SettingsContext.jsx';
+import { useBonus } from '../contexts/BonusContext.jsx';
 import { useTournament } from '../hooks/useH2H.js';
 import { scoreGame } from '@shared/scoring.js';
 import { DEFAULT_H2H_TIEBREAKERS } from '@shared/h2h.js';
@@ -34,6 +35,12 @@ export default function RulesPage() {
   }, []);
   const s = useScoring();
   const tournament = useTournament();
+  const { questions } = useBonus();
+  // the ranking question's OWN points and penalty (set by the admin on the question); no ranking question = no ranking box
+  const rankQ = questions.find((q) => q.type === 'ranking');
+  const fmt = (n) => String(Math.round(n * 100) / 100);
+  const pen = rankQ ? (rankQ.penalty ?? 0.5) : 0;
+  const rank = rankQ ? { pool: fmt(rankQ.pts), half: fmt(rankQ.pts / 2), pen: fmt(pen), loss: fmt(2 * pen) } : null;
   const sum = (...parts) => parts.join(' + '); // the cards show the DETAILED sum, e.g. 5 + 6 + 6
   const tiers = [...s.diffBonus].sort((a, b) => a.maxErr - b.maxErr);
   const numbered = (keys, ns) => keys.map((k, i) => `${i + 1}) ${t(`${ns}${k}`)}`).join(', ');
@@ -93,20 +100,13 @@ export default function RulesPage() {
       <Section title={t('rules.sec.bonus')} intro={t('rules.bonus.intro')}>
         <Rule hl title={t('rules.bonus.right')} sub={t('rules.bonus.rightSub')} value="X" />
         <Rule title={t('rules.bonus.wrong')} sub={t('rules.bonus.wrongSub')} value={0} />
-        <Note tone="blue">
-          <strong>{t('rules.closest.title')}</strong>
-          <p>{t('rules.closest.body')}</p>
-          <p>{t('rules.closest.example')}</p>
-          <p className="muted">{t('rules.closest.min')}</p>
-        </Note>
-        <Note tone="blue">
-          <strong>{t('rules.rank.title')}</strong>
-          <p>{t('rules.rank.body')}</p>
-          <p>{t('rules.rank.example')}</p>
-        </Note>
-        <Note tone="green">{t('rules.bonus.scope')}</Note>
-        <Note tone="green">{t('rules.bonus.multi')}</Note>
-        <Note tone="green">{t('rules.bonus.odds')}</Note>
+        {rank && (
+          <Note tone="blue">
+            <strong>{t('rules.rank.title')}</strong>
+            <p>{t('rules.rank.body', rank)}</p>
+            <p>{t('rules.rank.example', rank)}</p>
+          </Note>
+        )}
         <Note tone="amber">{t('rules.bonus.lock')}</Note>
       </Section>
 
