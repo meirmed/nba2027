@@ -668,13 +668,13 @@
   "rules.r.margin0uSub": "Additional {n} bonus on top of right winner and exact margin, for being the only player with the exact difference between the teams (without the exact score)",
   "rules.ex.title": "Worked example: the game ended 110–102 (a margin of 8)",
   "rules.ex.case": "Case",
-  "rules.ex.guess": "Your guess",
+  "rules.ex.guess": "Guess",
   "rules.ex.pts": "Points",
   "rules.ex.wrong": "Wrong winner",
-  "rules.ex.winnerOnly": "Right winner, the margin is off by more than {n}",
-  "rules.ex.tier": "Right winner, the margin is off by {err}",
-  "rules.ex.margin0": "Right winner + exact margin (not the exact score)",
-  "rules.ex.margin0u": "Right winner + unique exact margin (you are the only one, not the exact score)",
+  "rules.ex.winnerOnly": "Right winner, off by more than {n}",
+  "rules.ex.tier": "Right winner, off by {err}",
+  "rules.ex.margin0": "Right winner + exact margin",
+  "rules.ex.margin0u": "Right winner + unique exact margin",
   "rules.ex.exact": "Exact score of both teams",
-  "rules.ex.exactU": "Exact score of both teams, and you are the only one"
+  "rules.ex.exactU": "Unique exact score"
 }

@@ -347,3 +347,8 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
   .todo { padding: .3rem .6rem; }
   .hero { padding: .55rem .7rem; }
 }
+
+/* Rules: the worked example keeps every row on ONE line (also on phones): fixed columns, no wrapping, long text is cut with an ellipsis */
+.rules-ex { table-layout: fixed; width: 100%; font-size: .76rem; }
+.rules-ex th, .rules-ex td { padding: .35rem .4rem; white-space: nowrap; }
+.rules-ex th:first-child, .rules-ex td:first-child { overflow: hidden; text-overflow: ellipsis; }

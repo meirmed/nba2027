@@ -72,7 +72,8 @@ export default function RulesPage() {
         <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub', { n: s.unique })} value={sum(s.winner, s.diffExact, s.exact, s.unique)} />
         <h4 className="bq-title">{t('rules.ex.title')}</h4>
         <div className="table-wrap">
-          <table className="table">
+          <table className="table rules-ex">
+            <colgroup><col /><col style={{ width: '4.4rem' }} /><col style={{ width: '2.6rem' }} /></colgroup>
             <thead><tr className="muted small"><th>{t('rules.ex.case')}</th><th>{t('rules.ex.guess')}</th><th>{t('rules.ex.pts')}</th></tr></thead>
             <tbody>
               {exampleRows.map((r, i) => <tr key={i}><td dir="auto">{r.label}</td><td dir="ltr">{r.guess}</td><td dir="ltr"><strong className="save-ok">{r.pts}</strong></td></tr>)}
