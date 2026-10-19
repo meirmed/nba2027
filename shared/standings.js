@@ -87,11 +87,12 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
   return out;
 }
 
-/** Sorts by tiebreakers and assigns competition ranks (ties share a rank: 1,2,2,4). */
+/**
+ * Sorts by the tiebreakers and numbers the rows 1..N: every player gets his OWN number, even when two players are equal on every tiebreaker.
+ * Players still tied after all the tiebreakers are ordered by name (then uid), so the order is stable and never jumps around on refresh.
+ */
 export function rankRows(rows, tiebreakers) {
-  const sorted = [...rows].sort((a, b) => compareRows(a, b, tiebreakers));
-  return sorted.map((r, i) => {
-    const same = i > 0 && compareRows(sorted[i - 1], r, tiebreakers) === 0;
-    return { ...r, rank: same ? null : i + 1 };
-  }).reduce((acc, r, i) => { acc.push({ ...r, rank: r.rank ?? acc[i - 1].rank }); return acc; }, []);
+  const byName = (r) => String(r.name || '');
+  const sorted = [...rows].sort((a, b) => compareRows(a, b, tiebreakers) || byName(a).localeCompare(byName(b), 'he') || String(a.uid || '').localeCompare(String(b.uid || '')));
+  return sorted.map((r, i) => ({ ...r, rank: i + 1 }));
 }

@@ -110,3 +110,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update: regulations PDF (תקנון)
 - The Hebrew PDF lives at `public/takanon.pdf` (served at `/takanon.pdf`; Vercel serves files before the SPA rewrite). The **Rules page** shows a link "📄 התקנון המלא של המשחק (קובץ PDF): פתח את התקנון" at the top, opening in a new tab; it appears only when the file exists (a HEAD request checks that the response is a PDF). No link at registration, no checkbox. To replace the file: overwrite `public/takanon.pdf` and push. App-only change.
+
+## Update: unique ranking numbers in the tables
+- `rankRows` (shared/standings.js) now numbers every player 1..N (it used to give tied players the same number, so a table where everyone is at 0 showed "1" for all). The tiebreakers are unchanged (total > exact > unique > bonus on the Total tab; the Games and Bonus tabs use their own); players still tied after ALL tiebreakers are ordered by name (Hebrew collation), then uid, so the order is stable. Used by the leaderboard (all tabs), Home (rank tile, medals, top 5) and the player pages. Head to Head has its own ranking (`rankGroup`), unchanged. App-only change; tests updated (186).

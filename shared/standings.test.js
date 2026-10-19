@@ -116,11 +116,20 @@ describe('noScore = games with no points (wrong winner or no pick)', () => {
   });
 });
 
-describe('rankRows', () => {
-  it('uses tiebreakers and gives tied rows the same rank', () => {
-    const rows = [{ id: 'a', total: 10, exactHits: 1 }, { id: 'b', total: 10, exactHits: 3 }, { id: 'c', total: 12 }, { id: 'd', total: 10, exactHits: 1 }];
+describe('rankRows: every player gets a unique number 1..N', () => {
+  it('the tiebreakers still decide the order; players equal on all of them are ordered by name and still numbered 1,2,3,4', () => {
+    const rows = [{ id: 'a', name: 'Dan', total: 10, exactHits: 1 }, { id: 'b', name: 'Ben', total: 10, exactHits: 3 }, { id: 'c', name: 'Cy', total: 12 }, { id: 'd', name: 'Al', total: 10, exactHits: 1 }];
     const r = rankRows(rows, ['total', 'exactHits']);
-    expect(r.map((x) => x.id)).toEqual(['c', 'b', 'a', 'd']);
-    expect(r.map((x) => x.rank)).toEqual([1, 2, 3, 3]);
+    expect(r.map((x) => x.id)).toEqual(['c', 'b', 'd', 'a']); // 12 first, then exact hits 3, then the tie Al / Dan by name
+    expect(r.map((x) => x.rank)).toEqual([1, 2, 3, 4]);
+  });
+  it('a table where EVERYONE is tied (the start of the season) still shows 1..N, alphabetical, and never changes with the input order', () => {
+    const names = ['עומר ורדי', 'אלעד כהן', 'Yosi Medler', 'Arik Safran', 'דור כהני'];
+    const rows = names.map((name, i) => ({ id: `u${i}`, uid: `u${i}`, name, total: 0, bonus: 0, exactHits: 0, uniqueHits: 0 }));
+    const a = rankRows(rows, ['total', 'exactHits', 'uniqueHits', 'bonus']);
+    const b = rankRows([...rows].reverse(), ['total', 'exactHits', 'uniqueHits', 'bonus']);
+    expect(a.map((x) => x.rank)).toEqual([1, 2, 3, 4, 5]);
+    expect(new Set(a.map((x) => x.rank)).size).toBe(5);
+    expect(b.map((x) => x.id)).toEqual(a.map((x) => x.id));
   });
 });
