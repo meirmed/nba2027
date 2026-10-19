@@ -26,9 +26,13 @@ export function scoreGamePicks({ game, picks, scoring }) {
   valid.forEach(({ p }) => { counts[sideOf(p.s1, p.s2)] += 1; });
   const exactManual = valid.filter(({ p }) => !p.autoFilled && p.s1 === game.s1 && p.s2 === game.s2);
   const uniqueUid = exactManual.length === 1 ? exactManual[0].uid : null;
+  // exact MARGIN (right winner): includes the players who also hit the exact score, so a margin is unique only when nobody else has it
+  const realMargin = game.s1 - game.s2;
+  const marginManual = valid.filter(({ p }) => !p.autoFilled && realMargin !== 0 && p.s1 - p.s2 === realMargin);
+  const uniqueMarginUid = marginManual.length === 1 ? marginManual[0].uid : null;
   valid.forEach(({ uid, p, joker }) => {
     out[uid] = scoreGame(p, { s1: game.s1, s2: game.s2, status: 'finished' }, {
-      round: game.round, joker: !!joker, pickPct: (100 * counts[sideOf(p.s1, p.s2)]) / valid.length, isUniqueExact: uid === uniqueUid, scoring: sc,
+      round: game.round, joker: !!joker, pickPct: (100 * counts[sideOf(p.s1, p.s2)]) / valid.length, isUniqueExact: uid === uniqueUid, isUniqueMargin: uid === uniqueMarginUid, scoring: sc,
     });
   });
   return out;

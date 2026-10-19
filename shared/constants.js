@@ -27,6 +27,7 @@ export const DEFAULT_SCORING = {
   // risk bonus: winner correct AND <= maxPickPct % of the picks on that game chose that winner. pts = PLACEHOLDER
   risk: { maxPickPct: 10, pts: 2 },
   unique: 5, // only (non-auto-filled) user with the exact score. Auto-filled picks never earn it.
+  uniqueDiff: 5, // only (non-auto-filled) user with the exact MARGIN, without the exact score (an exact score gets `unique` instead; one unique bonus per game)
   roundMultipliers: { RS: 1, R1: 1, R2: 1, CF: 1, F: 1 },
   jokersPerSeason: 3,
   jokerMultiplier: 2,

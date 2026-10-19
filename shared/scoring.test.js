@@ -3,7 +3,7 @@ import { scoreGame, mergeScoring, isAnswerCorrect, compareRows } from './scoring
 import { PREV_ROUND, ROUNDS, DEFAULT_SCORING } from './constants.js';
 
 const fin = (s1, s2) => ({ s1, s2, status: 'finished' });
-const sc = { winner: 2, diffExact: 3, exact: 5, diffBonus: [{ maxErr: 3, pts: 2 }], risk: { maxPickPct: 10, pts: 4 }, unique: 3 };
+const sc = { winner: 2, diffExact: 3, exact: 5, diffBonus: [{ maxErr: 3, pts: 2 }], risk: { maxPickPct: 10, pts: 4 }, unique: 3, uniqueDiff: 1 };
 
 describe('constants', () => {
   it('PREV_ROUND is explicit and consistent with ROUNDS', () => {
@@ -42,6 +42,17 @@ describe('scoreGame', () => {
   it('exact MARGIN without the exact score = winner + exact margin only', () => {
     const r = scoreGame({ s1: 105, s2: 95 }, fin(110, 100), { scoring: sc });
     expect(r).toMatchObject({ pts: 2 + 3, diffPts: 3, exact: false });
+  });
+  it('the ONLY player with the exact margin (no exact score) also gets the unique margin bonus: winner + exact margin + unique', () => {
+    const r = scoreGame({ s1: 105, s2: 95 }, fin(110, 100), { scoring: sc, isUniqueMargin: true });
+    expect(r).toMatchObject({ pts: 2 + 3 + 1, diffPts: 3, uniquePts: 1, exact: false });
+  });
+  it('unique margin needs the exact margin, a manual pick, and is not added on top of an exact score', () => {
+    expect(scoreGame({ s1: 105, s2: 97 }, fin(110, 100), { scoring: sc, isUniqueMargin: true }).uniquePts).toBe(0); // margin 8 vs 10: not exact
+    expect(scoreGame({ s1: 105, s2: 95, autoFilled: true }, fin(110, 100), { scoring: sc, isUniqueMargin: true }).uniquePts).toBe(0);
+    const exact = scoreGame({ s1: 110, s2: 100 }, fin(110, 100), { scoring: sc, isUniqueMargin: true, isUniqueExact: true });
+    expect(exact.pts).toBe(2 + 3 + 5 + 3); // winner + exact margin + exact + the unique EXACT bonus (3), not the margin one (1)
+    expect(exact.uniquePts).toBe(3);
   });
   it('margin tiers apply for an error of 1 or more; no tier = no margin bonus', () => {
     expect(scoreGame({ s1: 105, s2: 98 }, fin(110, 100), { scoring: sc }).diffPts).toBe(2); // margin 7 vs 10: error 3

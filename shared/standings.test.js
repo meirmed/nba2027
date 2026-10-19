@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeAllPoints, rankRows, scoreGamePicks } from './standings.js';
 
-const sc = { winner: 5, diffExact: 6, exact: 6, diffBonus: [{ maxErr: 1, pts: 4 }, { maxErr: 2, pts: 3 }, { maxErr: 3, pts: 2 }, { maxErr: 4, pts: 1 }],
+const sc = { winner: 5, diffExact: 6, exact: 6, uniqueDiff: 5, diffBonus: [{ maxErr: 1, pts: 4 }, { maxErr: 2, pts: 3 }, { maxErr: 3, pts: 2 }, { maxErr: 4, pts: 1 }],
   risk: { maxPickPct: 10, pts: 2 }, unique: 5, roundMultipliers: { RS: 1 }, jokerMultiplier: 2, autoFillFactor: 0.5 };
 const game = (id, t, s1, s2, over = {}) => ({ id, round: 'RS', status: 'finished', t1: 'BOS', t2: 'NYK', s1, s2, tipoffMs: t, ...over });
 const run = (games, predictions) => computeAllPoints({ games, predictions, uids: Object.keys(predictions), scoring: sc, countedRounds: ['RS'] });
@@ -94,6 +94,36 @@ describe('players only: a user left out of `uids` (an admin) has no influence', 
     expect(without.A.uniqueHits).toBe(1); // A is the only exact pick among the players
     expect(withAdmin.A.uniqueHits).toBe(0); // if the admin counted, A would lose the unique bonus
     expect(without.ADMIN).toBeUndefined();
+  });
+});
+
+describe('unique exact MARGIN (right winner + exact margin, without the exact score)', () => {
+  const g = game('g', 1, 110, 100); // margin 10
+  it('the only player with the exact margin: 5 + 6 + 5 = 16; the others keep their normal points', () => {
+    const r = run([g], { A: { games: { g: P(105, 95) } }, B: { games: { g: P(107, 100) } }, C: { games: { g: P(90, 100) } } });
+    expect(r.A.gamePts).toBe(16);
+    expect(r.A).toMatchObject({ uniqueHits: 1, exactHits: 0 });
+    expect(r.B.gamePts).toBe(5 + 2); // margin 7 vs 10: error 3
+    expect(r.C.gamePts).toBe(0);
+  });
+  it('two players with the exact margin: nobody is unique (11 each)', () => {
+    const r = run([g], { A: { games: { g: P(105, 95) } }, B: { games: { g: P(120, 110) } } });
+    expect(r.A.gamePts).toBe(11);
+    expect(r.B.gamePts).toBe(11);
+  });
+  it('a player who hit the EXACT SCORE counts as having the exact margin, so he blocks the unique margin of another', () => {
+    const r = run([g], { A: { games: { g: P(110, 100) } }, B: { games: { g: P(105, 95) } } });
+    expect(r.A.gamePts).toBe(5 + 6 + 6 + 5); // 22: unique exact score
+    expect(r.B.gamePts).toBe(11); // margin is NOT unique: A has it too
+  });
+  it('an auto-filled pick with the exact margin neither gets the bonus nor blocks a manual one', () => {
+    const r = run([g], { A: { games: { g: P(105, 95) } }, D: { games: { g: P(106, 96, { autoFilled: true }) } } });
+    expect(r.A.gamePts).toBe(16);
+    expect(r.D.gamePts).toBe(Math.floor(11 * 0.5));
+  });
+  it('the joker doubles the unique margin bonus too: 32', () => {
+    const r = run([g], { A: { games: { g: P(105, 95) }, jokers: { g: true } } });
+    expect(r.A.gamePts).toBe(32);
   });
 });
 

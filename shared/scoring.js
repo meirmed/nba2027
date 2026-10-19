@@ -20,7 +20,7 @@ const isNum = (n) => typeof n === 'number' && Number.isFinite(n);
  * Score one game prediction.
  * pred:   { s1, s2, autoFilled? }
  * result: { s1, s2, status }   (status must be 'finished'; s1/s2 per the OT policy decided by the owner)
- * ctx:    { round, joker, pickPct, isUniqueExact, scoring }
+ * ctx:    { round, joker, pickPct, isUniqueExact, isUniqueMargin, scoring }
  */
 export function scoreGame(pred, result, ctx = {}) {
   const zero = { pts: 0, winnerCorrect: false, exact: false, diffPts: 0, riskPts: 0, uniquePts: 0 };
@@ -44,6 +44,8 @@ export function scoreGame(pred, result, ctx = {}) {
     if (err === 0) diffPts = sc.diffExact;
     else { const tier = [...sc.diffBonus].sort((a, b) => a.maxErr - b.maxErr).find((t) => err <= t.maxErr); if (tier) diffPts = tier.pts; }
     base += diffPts;
+    // the ONLY player with the exact margin (no exact score): a unique bonus too. With an exact score the exact-score unique bonus below applies instead.
+    if (err === 0 && !exact && ctx.isUniqueMargin && !pred.autoFilled) { uniquePts = sc.uniqueDiff; base += uniquePts; }
     if (isNum(ctx.pickPct) && ctx.pickPct <= sc.risk.maxPickPct) { riskPts = sc.risk.pts; base += riskPts; }
   }
   if (exact) {

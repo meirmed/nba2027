@@ -3,6 +3,7 @@ import PageShell from '../components/PageShell.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useScoring } from '../contexts/SettingsContext.jsx';
 import { useTournament } from '../hooks/useH2H.js';
+import { scoreGame } from '@shared/scoring.js';
 import { DEFAULT_H2H_TIEBREAKERS } from '@shared/h2h.js';
 
 // Same look as the World Cup rules page. EVERY number comes from the live scoring settings (Admin -> Scoring), never hardcoded.
@@ -40,6 +41,20 @@ export default function RulesPage() {
   const h2hTb = (tournament?.tiebreakers || DEFAULT_H2H_TIEBREAKERS).filter((k) => k !== 'seed'); // the page lists exact hits, then unique hits
   const pct = Math.round(s.autoFillFactor * 100);
 
+  // Worked example (numbers are computed with the live scoring settings, so they can never go stale): the game ended 110-102, a margin of 8.
+  const FINAL = { s1: 110, s2: 102, status: 'finished' };
+  const example = (s1, s2, ctx = {}) => scoreGame({ s1, s2 }, FINAL, { round: 'RS', scoring: s, ...ctx }).pts;
+  const topErr = tiers.length ? tiers[tiers.length - 1].maxErr : 0;
+  const exampleRows = [
+    { label: t('rules.ex.wrong'), guess: '98–105', pts: example(98, 105) },
+    { label: t('rules.ex.winnerOnly', { n: topErr }), guess: `${100 + 8 + topErr + 1}–100`, pts: example(100 + 8 + topErr + 1, 100) },
+    ...[...tiers].reverse().filter((d) => d.maxErr >= 1 && d.maxErr < 8).map((d) => ({ label: t('rules.ex.tier', { err: d.maxErr }), guess: `${100 + 8 - d.maxErr}–100`, pts: example(100 + 8 - d.maxErr, 100) })),
+    { label: t('rules.ex.margin0'), guess: '105–97', pts: example(105, 97) },
+    { label: t('rules.ex.margin0u'), guess: '105–97', pts: example(105, 97, { isUniqueMargin: true }) },
+    { label: t('rules.ex.exact'), guess: '110–102', pts: example(110, 102) },
+    { label: t('rules.ex.exactU'), guess: '110–102', pts: example(110, 102, { isUniqueExact: true }) },
+  ];
+
   return (
     <PageShell titleKey="rules.pageTitle">
       {hasPdf && (
@@ -52,8 +67,19 @@ export default function RulesPage() {
         <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub', { base, n: s.unique })} value={base + s.unique} />
         <Rule title={t('rules.r.winner')} sub={t('rules.r.winnerSub')} value={s.winner} />
         <Rule title={t('rules.r.margin0')} sub={t('rules.r.margin0Sub')} value={`${s.winner}+${s.diffExact}`} />
+        <Rule hl title={t('rules.r.margin0u')} sub={t('rules.r.margin0uSub')} value={`${s.winner}+${s.diffExact}+${s.uniqueDiff}`} />
         {tiers.map((d) => <Rule key={d.maxErr} title={t('rules.diff', { err: d.maxErr })} sub={t('rules.r.diffSub', { err: d.maxErr })} value={`${s.winner}+${d.pts}`} />)}
         <Rule title={t('rules.r.miss')} sub={t('rules.r.missSub')} value={0} />
+        <h4 className="bq-title">{t('rules.ex.title')}</h4>
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr className="muted small"><th>{t('rules.ex.case')}</th><th>{t('rules.ex.guess')}</th><th>{t('rules.ex.pts')}</th></tr></thead>
+            <tbody>
+              {exampleRows.map((r, i) => <tr key={i}><td dir="auto">{r.label}</td><td dir="ltr">{r.guess}</td><td dir="ltr"><strong className="save-ok">{r.pts}</strong></td></tr>)}
+            </tbody>
+          </table>
+        </div>
+        <Note tone="amber">{t('rules.ex.uniqueNote')}</Note>
         <Note tone="teal">🎲 {t('rules.note.auto', { pct })}</Note>
         <Note tone="green">🏀 {t('rules.ot')}</Note>
       </Section>
