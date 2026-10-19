@@ -63,8 +63,8 @@ export default function RulesPage() {
         </Note>
       )}
       <Section title={t('rules.sec.games')} intro={t('rules.games.intro')}>
-        <Rule hl title={t('rules.r.exact')} sub={`${t('rules.r.exactSub')} (${t('rules.r.exactBreak', { w: s.winner, d: s.diffExact, e: s.exact })})`} value={base} />
-        <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub', { base, n: s.unique })} value={base + s.unique} />
+        <Rule hl title={t('rules.r.exact')} sub={t('rules.r.exactSub')} value={base} />
+        <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub')} value={base + s.unique} />
         <Rule title={t('rules.r.winner')} sub={t('rules.r.winnerSub')} value={s.winner} />
         <Rule title={t('rules.r.margin0')} sub={t('rules.r.margin0Sub')} value={`${s.winner}+${s.diffExact}`} />
         <Rule hl title={t('rules.r.margin0u')} sub={t('rules.r.margin0uSub')} value={`${s.winner}+${s.diffExact}+${s.uniqueDiff}`} />
