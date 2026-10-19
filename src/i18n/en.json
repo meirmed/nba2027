@@ -478,7 +478,7 @@
   "rules.r.exact": "Exact score bonus",
   "rules.r.exactSub": "Additional {n} bonus on top of exact margin",
   "rules.r.unique": "Unique exact score bonus",
-  "rules.r.uniqueSub": "Additional {n} bonus for being the only player who predicted the exact score (additional bonus on top)",
+  "rules.r.uniqueSub": "Additional {n} bonus on top of right winner + exact score, for being the only player who predicted the exact score",
   "rules.r.winner": "Correct winner",
   "rules.r.winnerSub": "You predicted the winning team",
   "rules.r.diffSub": "Right winner, and the margin of victory was off by {err}",
@@ -662,7 +662,7 @@
   "rules.takanonOpen": "Open the regulations",
   "sc.diffExact": "Exact margin bonus (right winner and the exact difference between the teams)",
   "rules.r.margin0": "Exact margin bonus",
-  "rules.r.margin0Sub": "Additional {n} bonus on top of right winner, for the difference between the teams being exact (the scores themselves are not)",
+  "rules.r.margin0Sub": "Right winner, exact margin",
   "sc.uniqueDiff": "Unique exact margin bonus (the only player with the exact margin, without the exact score)",
   "rules.r.margin0u": "Unique exact margin bonus",
   "rules.r.margin0uSub": "Additional {n} bonus on top of right winner and exact margin, for being the only player with the exact difference between the teams (without the exact score)",
@@ -676,6 +676,5 @@
   "rules.ex.margin0": "Right winner + exact margin (not the exact score)",
   "rules.ex.margin0u": "Right winner + unique exact margin (you are the only one, not the exact score)",
   "rules.ex.exact": "Exact score of both teams",
-  "rules.ex.exactU": "Exact score of both teams, and you are the only one",
-  "rules.ex.uniqueNote": "The unique bonus is given once per game: for the exact score if you hit it, otherwise for the exact margin. The points above use the current settings."
+  "rules.ex.exactU": "Exact score of both teams, and you are the only one"
 }

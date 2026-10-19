@@ -66,7 +66,7 @@ export default function RulesPage() {
         <Rule title={t('rules.r.miss')} sub={t('rules.r.missSub')} value={0} />
         <Rule title={t('rules.r.winner')} sub={t('rules.r.winnerSub')} value={s.winner} />
         {[...tiers].reverse().map((d) => <Rule key={d.maxErr} title={t('rules.diff', { err: d.maxErr })} sub={t('rules.r.diffSub', { err: d.maxErr })} value={sum(s.winner, d.pts)} />)}
-        <Rule title={t('rules.r.margin0')} sub={t('rules.r.margin0Sub', { n: s.diffExact })} value={sum(s.winner, s.diffExact)} />
+        <Rule title={t('rules.r.margin0')} sub={t('rules.r.margin0Sub')} value={sum(s.winner, s.diffExact)} />
         <Rule hl title={t('rules.r.exact')} sub={t('rules.r.exactSub', { n: s.exact })} value={sum(s.winner, s.diffExact, s.exact)} />
         <Rule hl title={t('rules.r.margin0u')} sub={t('rules.r.margin0uSub', { n: s.uniqueDiff })} value={sum(s.winner, s.diffExact, s.uniqueDiff)} />
         <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub', { n: s.unique })} value={sum(s.winner, s.diffExact, s.exact, s.unique)} />
@@ -79,7 +79,6 @@ export default function RulesPage() {
             </tbody>
           </table>
         </div>
-        <Note tone="amber">{t('rules.ex.uniqueNote')}</Note>
         <Note tone="teal">🎲 {t('rules.note.auto', { pct })}</Note>
         <Note tone="green">🏀 {t('rules.ot')}</Note>
       </Section>
