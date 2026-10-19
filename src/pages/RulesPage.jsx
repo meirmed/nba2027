@@ -34,8 +34,7 @@ export default function RulesPage() {
   }, []);
   const s = useScoring();
   const tournament = useTournament();
-  const marginExact = s.winner + s.diffExact; // right winner + exact margin
-  const base = marginExact + s.exact; // exact score = winner + exact margin + exact score
+  const sum = (...parts) => parts.join(' + '); // the cards show the DETAILED sum, e.g. 5 + 6 + 6
   const tiers = [...s.diffBonus].sort((a, b) => a.maxErr - b.maxErr);
   const numbered = (keys, ns) => keys.map((k, i) => `${i + 1}) ${t(`${ns}${k}`)}`).join(', ');
   const h2hTb = (tournament?.tiebreakers || DEFAULT_H2H_TIEBREAKERS).filter((k) => k !== 'seed'); // the page lists exact hits, then unique hits
@@ -63,13 +62,14 @@ export default function RulesPage() {
         </Note>
       )}
       <Section title={t('rules.sec.games')} intro={t('rules.games.intro')}>
-        <Rule hl title={t('rules.r.exact')} sub={t('rules.r.exactSub')} value={base} />
-        <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub')} value={base + s.unique} />
-        <Rule title={t('rules.r.winner')} sub={t('rules.r.winnerSub')} value={s.winner} />
-        <Rule title={t('rules.r.margin0')} sub={t('rules.r.margin0Sub')} value={`${s.winner}+${s.diffExact}`} />
-        <Rule hl title={t('rules.r.margin0u')} sub={t('rules.r.margin0uSub')} value={`${s.winner}+${s.diffExact}+${s.uniqueDiff}`} />
-        {tiers.map((d) => <Rule key={d.maxErr} title={t('rules.diff', { err: d.maxErr })} sub={t('rules.r.diffSub', { err: d.maxErr })} value={`${s.winner}+${d.pts}`} />)}
+        {/* order: wrong winner, correct winner, the margin tiers from the farthest to the closest, then the four bonus cards. Values show the detailed sum. */}
         <Rule title={t('rules.r.miss')} sub={t('rules.r.missSub')} value={0} />
+        <Rule title={t('rules.r.winner')} sub={t('rules.r.winnerSub')} value={s.winner} />
+        {[...tiers].reverse().map((d) => <Rule key={d.maxErr} title={t('rules.diff', { err: d.maxErr })} sub={t('rules.r.diffSub', { err: d.maxErr })} value={sum(s.winner, d.pts)} />)}
+        <Rule title={t('rules.r.margin0')} sub={t('rules.r.margin0Sub', { n: s.diffExact })} value={sum(s.winner, s.diffExact)} />
+        <Rule hl title={t('rules.r.exact')} sub={t('rules.r.exactSub', { n: s.exact })} value={sum(s.winner, s.diffExact, s.exact)} />
+        <Rule hl title={t('rules.r.margin0u')} sub={t('rules.r.margin0uSub', { n: s.uniqueDiff })} value={sum(s.winner, s.diffExact, s.uniqueDiff)} />
+        <Rule hl title={t('rules.r.unique')} sub={t('rules.r.uniqueSub', { n: s.unique })} value={sum(s.winner, s.diffExact, s.exact, s.unique)} />
         <h4 className="bq-title">{t('rules.ex.title')}</h4>
         <div className="table-wrap">
           <table className="table">
