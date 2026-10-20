@@ -30,24 +30,31 @@ export default function EveryonesPicks({ gameId, result }) {
     [data],
   );
 
-  // Same shared module as the server: badges can never disagree with the saved points.
+  // Same shared module as the server: labels and points can never disagree with the saved points. While the game is LIVE the points are
+  // PROVISIONAL (computed with the current score, they change until the final buzzer). A tie right now has no winner: nothing is scored yet.
+  const live = result?.status === 'live';
   const scored = useMemo(() => {
-    const done = result?.status === 'finished' && countsForStandings(result, settings.countedRounds) && Number.isInteger(result.s1) && Number.isInteger(result.s2);
-    if (!done || rows.length === 0) return {};
-    return scoreGamePicks({ game: result, picks: rows.map((r) => ({ uid: r.uid, p: r, joker: r.joker })), scoring });
-  }, [rows, result, settings.countedRounds, scoring]);
+    const started = (result?.status === 'finished' || live) && countsForStandings(result, settings.countedRounds) && Number.isInteger(result.s1) && Number.isInteger(result.s2);
+    if (!started || rows.length === 0 || (live && result.s1 === result.s2)) return {};
+    return scoreGamePicks({ game: { ...result, status: 'finished' }, picks: rows.map((r) => ({ uid: r.uid, p: r, joker: r.joker })), scoring });
+  }, [rows, result, live, settings.countedRounds, scoring]);
+  const tiedNow = live && result.s1 === result.s2;
 
-  // ONE reason per player, most significant first: unique > exact > risk > diff > winner. (auto-filled is a marker, not a reason)
-  const reason = (r) => {
+  // What kind of score the pick is getting, in one or two words (the most valuable thing first): [css class, text]
+  const kind = (r) => {
     const sc = scored[r.uid];
     if (!sc) return null;
-    if (sc.uniquePts > 0) return ['unique', t('bd.unique')];
-    if (sc.exact) return ['exact', t('bd.exact')];
-    if (sc.riskPts > 0) return ['risk', t('bd.risk')];
-    if (sc.diffPts > 0) return ['diff', t('bd.diff', { n: sc.diffPts })];
-    if (sc.winnerCorrect) return ['winner', t('bd.winner')];
-    return null;
+    const err = Math.abs((r.s1 - r.s2) - (result.s1 - result.s2));
+    if (sc.exact && sc.uniquePts > 0) return ['unique', t('ev.exactUnique')];
+    if (sc.exact) return ['exact', t('ev.exact')];
+    if (sc.uniquePts > 0) return ['unique', t('ev.marginUnique')];
+    if (sc.winnerCorrect && err === 0) return ['margin0', t('ev.margin0')];
+    if (sc.winnerCorrect && sc.diffPts > 0) return ['diff', t('ev.marginOff', { n: err })];
+    if (sc.winnerCorrect) return ['winner', t('ev.winner')];
+    return ['miss', t('ev.miss')];
   };
+  // while the game is on / after it: the best score first (then by name)
+  const shown = useMemo(() => (Object.keys(scored).length ? [...rows].sort((a, b) => ((scored[b.uid]?.pts ?? 0) - (scored[a.uid]?.pts ?? 0)) || (a.name || '').localeCompare(b.name || '', 'he')) : rows), [rows, scored]);
 
   return (
     <div className="everyone">
@@ -55,18 +62,26 @@ export default function EveryonesPicks({ gameId, result }) {
       {open && data === undefined && <p className="muted">{t('common.loading')}</p>}
       {open && data === null && <p className="muted">{t('pred.picksSoon')}</p>}
       {open && data && rows.length === 0 && <p className="muted">{t('pred.noPicks')}</p>}
+      {open && live && <p className="muted small">{tiedNow ? t('ev.tiedNote') : t('ev.liveNote')}</p>}
       {open && rows.length > 0 && (
         <div className="table-wrap">
           <table className="table" dir="ltr">
+            <thead>
+              <tr className="muted small"><th dir="auto">{t('ev.colPlayer')}</th><th dir="auto">{t('ev.colPick')}</th><th dir="auto">{t('ev.colType')}</th><th dir="auto">{live ? t('ev.colPtsLive') : t('ev.colPts')}</th></tr>
+            </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.uid} className={r.uid === user?.uid ? 'me' : ''}>
-                  <td dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</td>
-                  <td><Score a={r.s1} b={r.s2} />{r.joker ? ' ⭐' : ''}{r.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</td>
-                  <td dir={dir}>{(() => { const x = reason(r); return x ? <span className={`chip chip-${x[0]}`}>{x[1]}</span> : null; })()}</td>
-                  <td>{scored[r.uid] ? <strong>{scored[r.uid].pts}</strong> : ''}</td>
-                </tr>
-              ))}
+              {shown.map((r) => {
+                const k = kind(r);
+                const sc = scored[r.uid];
+                return (
+                  <tr key={r.uid} className={r.uid === user?.uid ? 'me' : ''}>
+                    <td dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</td>
+                    <td><Score a={r.s1} b={r.s2} />{r.joker ? ' ⭐' : ''}{r.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</td>
+                    <td dir={dir}>{k ? <span className={`chip chip-${k[0]}`}>{k[1]}{sc?.riskPts > 0 ? <span title={t('bd.risk')}> 💪</span> : null}</span> : null}</td>
+                    <td>{sc ? <strong className={live ? 'pts-live' : ''}>{sc.pts}</strong> : ''}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
