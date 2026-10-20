@@ -8,7 +8,7 @@ const sideOf = (a, b) => (a > b ? 1 : a < b ? 2 : 0);
 const validPick = (p) => p && Number.isInteger(p.s1) && Number.isInteger(p.s2) && p.s1 !== p.s2;
 
 export const emptyStats = () => ({
-  gamePts: 0, gamePtsByRound: {}, gameHits: 0, exactHits: 0, winnerCorrect: 0, uniqueHits: 0, riskHits: 0, noScore: 0,
+  gamePts: 0, gamePtsByRound: {}, gameHits: 0, exactHits: 0, winnerCorrect: 0, uniqueHits: 0, riskHits: 0, noScore: 0, jokersUsed: 0,
   gamesPlayed: 0, bestStreak: 0, curStreak: 0, bestMiss: 0, curMiss: 0,
 });
 

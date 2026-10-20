@@ -352,3 +352,5 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .rules-ex { table-layout: fixed; width: 100%; font-size: .76rem; }
 .rules-ex th, .rules-ex td { padding: .35rem .4rem; white-space: nowrap; }
 .rules-ex th:first-child, .rules-ex td:first-child { overflow: hidden; text-overflow: ellipsis; }
+
+.pts-joker { color: #facc15; }

@@ -692,5 +692,8 @@
   "gm.summary": "{n} of {total} players are missing predictions ({g} games in the next {d} days).",
   "gm.none": "Everyone has predicted all the games of the next {d} days 🎉",
   "gm.noGames": "No games to predict in the next {d} days.",
-  "gm.predictedOf": "predicted {a} of {q}"
+  "gm.predictedOf": "predicted {a} of {q}",
+  "lb.tab.jokers": "Jokers",
+  "lb.jokers": "Jokers",
+  "lb.jokersNote": "Jokers each player has left (out of {n} per season). A joker counts as spent when its game starts; jokers on upcoming games are not shown."
 }

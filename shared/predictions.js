@@ -26,6 +26,14 @@ export const countJokers = (jokers) => Object.values(jokers || {}).filter(Boolea
  * is free again, so the player never loses one. games: {id: {round, status}} of the games that exist (a missing id = a deleted game).
  */
 export const isActiveJokerGame = (game, countedRounds = ['RS']) => !!game && game.status !== 'cancelled' && countedRounds.includes(game.round);
+/**
+ * Jokers already SPENT = on a game that exists, still counts, and has STARTED (live / finished, or its tip-off has passed).
+ * A joker on an upcoming game is not spent yet (it can still be moved), so the leaderboard never reveals where players put their jokers before tip-off.
+ */
+export const countSpentJokers = (jokers, games, countedRounds = ['RS'], nowMs = Date.now()) => Object.entries(jokers || {}).filter(([id, on]) => {
+  const g = games?.[id];
+  return on && isActiveJokerGame(g, countedRounds) && (g.status === 'live' || g.status === 'finished' || (g.tipoffMs ?? Infinity) <= nowMs);
+}).length;
 export const countActiveJokers = (jokers, games, countedRounds = ['RS']) => Object.entries(jokers || {}).filter(([id, on]) => on && isActiveJokerGame(games?.[id], countedRounds)).length;
 
 /**

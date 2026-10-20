@@ -9,13 +9,14 @@ import { rankRows } from '@shared/standings.js';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
 
-const TABS = ['total', 'games', 'bonus', 'stats'];
+const TABS = ['total', 'games', 'bonus', 'jokers', 'stats'];
 // [header key, field, css class] per tab. Total tab = Total (green) / Games (blue) / Bonus (orange), like the World Cup app.
 const COLS = {
   total: [['lb.totalCol', 'total', 'pts-total'], ['lb.games', 'gamePts', 'pts-games'], ['lb.bonus', 'bonus', 'pts-bonus']],
   // Games tab (like the World Cup): game points / correct winner / exact / unique / no score
   games: [['lb.gamePtsCol', 'gamePts', 'pts-games'], ['lb.winnerDir', 'winnerCorrect', 'pts-hit'], ['lb.exactHits', 'exactHits', 'pts-exact'], ['lb.uniqueHits', 'uniqueHits', 'pts-unique'], ['lb.noScore', 'noScore', 'pts-miss']],
   bonus: [['lb.bonus', 'bonus', 'pts-bonus']],
+  jokers: [['lb.jokers', 'jokersLeft', 'pts-joker']], // jokers LEFT = jokers per season - jokers already spent (games that started)
 };
 // Current streak (like the World Cup app): 🔥 = 3+ correct winners in a row, ❄️ = 3+ misses in a row, otherwise a dash.
 function Streak({ r }) {
@@ -34,8 +35,11 @@ function Board({ tab }) {
 
   // 'games' tab ranks by game points only; the others use the configured tiebreakers (total first).
   const ranked = useMemo(
-    () => rankRows(rows, tab === 'games' ? ['gamePts', 'exactHits', 'uniqueHits'] : tab === 'bonus' ? ['bonus', 'total'] : scoring.tiebreakers),
-    [rows, tab, scoring.tiebreakers],
+    () => rankRows(
+      tab === 'jokers' ? rows.map((r) => ({ ...r, jokersLeft: Math.max(0, scoring.jokersPerSeason - (r.jokersUsed ?? 0)) })) : rows,
+      tab === 'games' ? ['gamePts', 'exactHits', 'uniqueHits'] : tab === 'bonus' ? ['bonus', 'total'] : tab === 'jokers' ? ['jokersLeft', 'total'] : scoring.tiebreakers,
+    ),
+    [rows, tab, scoring.tiebreakers, scoring.jokersPerSeason],
   );
 
   if (loading) return <p className="muted">{t('common.loading')}</p>;
@@ -75,6 +79,7 @@ function Board({ tab }) {
         </tbody>
       </table>
       {tab === 'total' && <p className="muted small">{t('lb.streakLegend')}</p>}
+      {tab === 'jokers' && <p className="muted small">{t('lb.jokersNote', { n: scoring.jokersPerSeason })}</p>}
     </div>
   );
 }

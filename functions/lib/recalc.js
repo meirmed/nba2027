@@ -4,6 +4,7 @@ import { computeBonusPoints } from '../shared/bonus.js';
 import { DEFAULT_SETTINGS } from '../shared/constants.js';
 import { adminUidSet } from './admins.js';
 import { starOfNight } from '../shared/night.js';
+import { countSpentJokers } from '../shared/predictions.js';
 
 /** Reads RAW data only: games + predictions (+ stored points for bonus/names) + settings. */
 export async function loadState(db) {
@@ -34,6 +35,7 @@ export async function recalcAllPoints(db) {
   const st = await loadState(db);
   const res = computeAllPoints(st);
   const bon = computeBonusPoints({ questions: st.questions, predictions: st.predictions, uids: st.uids });
+  const gameById = Object.fromEntries(st.games.map((g) => [g.id, g]));
   const writes = [];
   // ⭐ star of the night (public, tiny): the top scorers of the latest complete game night
   const star = starOfNight({ games: st.games, results: res, countedRounds: st.countedRounds, timezone: st.timezone });
@@ -52,7 +54,7 @@ export async function recalcAllPoints(db) {
   st.admins.forEach((uid) => writes.push({ ref: db.doc(`points/${uid}`), data: { isAdmin: true }, opts: { mergeFields: ['isAdmin'] } }));
   st.uids.forEach((uid) => {
     const { byGame, byDay, ...stats } = res[uid];
-    const data = { ...stats, byDay, bonus: bon[uid].bonus, adjust: st.adjust[uid] || 0, bonusByCategory: bon[uid].byCategory, total: Math.round((stats.gamePts + bon[uid].bonus + (st.adjust[uid] || 0)) * 100) / 100, updatedAt: FieldValue.serverTimestamp() };
+    const data = { ...stats, jokersUsed: countSpentJokers(st.predictions[uid]?.jokers, gameById, st.countedRounds), byDay, bonus: bon[uid].bonus, adjust: st.adjust[uid] || 0, bonusByCategory: bon[uid].byCategory, total: Math.round((stats.gamePts + bon[uid].bonus + (st.adjust[uid] || 0)) * 100) / 100, updatedAt: FieldValue.serverTimestamp() };
     // mergeFields replaces each listed field WHOLE (so gamePtsByRound can't keep stale round keys)
     writes.push({ ref: db.doc(`points/${uid}`), data, opts: { mergeFields: Object.keys(data) } });
     writes.push({ ref: db.doc(`pointsDetail/${uid}`), data: { byGame, bonus: bon[uid].byQuestion, updatedAt: FieldValue.serverTimestamp() }, opts: undefined });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planSave, gameOpenReason, countJokers, pickIssue, countActiveJokers, isActiveJokerGame } from './predictions.js';
+import { planSave, gameOpenReason, countJokers, pickIssue, countActiveJokers, isActiveJokerGame, countSpentJokers } from './predictions.js';
 
 const NOW = 1_000_000;
 const open = { round: 'RS', status: 'scheduled', t1: 'BOS', t2: 'NYK', tipoffMs: NOW + 60_000 };
@@ -103,5 +103,26 @@ describe('jokers on deleted or cancelled games are free again', () => {
   it('a cancelled game that is scheduled again uses its joker again', () => {
     const games = { g5: open('g5'), a: { round: 'RS', status: 'finished' }, b: { round: 'RS', status: 'finished' }, c: { round: 'RS', status: 'scheduled' } };
     expect(plan({ a: true, b: true, c: true }, games, { g5: true }).rejected).toEqual([{ id: 'g5', reason: 'joker-limit' }]);
+  });
+});
+
+describe('jokers SPENT (shown in the leaderboard)', () => {
+  const NOW = 5_000_000;
+  const games = {
+    done: { round: 'RS', status: 'finished', tipoffMs: NOW - 9_000_000 }, live: { round: 'RS', status: 'live', tipoffMs: NOW - 1000 },
+    started: { round: 'RS', status: 'scheduled', tipoffMs: NOW - 5000 }, // tip-off passed, the API has not said "live" yet
+    soon: { round: 'RS', status: 'scheduled', tipoffMs: NOW + 5000 }, cancelled: { round: 'RS', status: 'cancelled', tipoffMs: NOW - 5000 }, po: { round: 'R1', status: 'finished', tipoffMs: NOW - 5000 },
+  };
+  it('only jokers on games that have started count as spent', () => {
+    const jokers = { done: true, live: true, started: true, soon: true, cancelled: true, po: true, deleted: true, off: false };
+    expect(countSpentJokers(jokers, { ...games, off: games.done }, ['RS'], NOW)).toBe(3); // done + live + started; not soon / cancelled / other round / deleted / false
+  });
+  it('an upcoming joker becomes spent exactly at tip-off', () => {
+    expect(countSpentJokers({ soon: true }, games, ['RS'], NOW)).toBe(0);
+    expect(countSpentJokers({ soon: true }, games, ['RS'], NOW + 5000)).toBe(1);
+  });
+  it('no jokers = 0', () => {
+    expect(countSpentJokers(undefined, games, ['RS'], NOW)).toBe(0);
+    expect(countSpentJokers({}, games, ['RS'], NOW)).toBe(0);
   });
 });

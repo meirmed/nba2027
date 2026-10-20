@@ -290,7 +290,7 @@ export const savePredictions = onCall(async (request) => {
  *  2) publish everyone's picks to picks/{gameId} (readable by all signed-in users). Before tip-off nobody can see other people's picks.
  * Idempotent: a retry sees the already auto-filled picks as picks.
  */
-export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone: 'UTC' }, async () => {
+export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone: 'UTC', timeoutSeconds: 120 }, async () => {
   const now = Date.now();
   await publishDueBonusPicks(now);
   const snap = await db.collection('games')
@@ -308,6 +308,7 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
   const names = new Map(points.docs.map((d) => [d.id, d.data().name || '']));
   const blocked = new Set(points.docs.filter((d) => d.data().blocked).map((d) => d.id));
 
+  let jokerPlayed = false; // a joker on a game that just started is SPENT: refresh the leaderboard's "jokers left"
   for (const g of todo) {
     const gd = g.data();
     const canFill = autoFillOn && counted.includes(gd.round) && !!gd.t1 && !!gd.t2;
@@ -334,7 +335,9 @@ export const lockGamePicks = onSchedule({ schedule: 'every 1 minutes', timeZone:
     batch.set(db.doc(`picks/${g.id}`), { gameId: g.id, lockedAt: FieldValue.serverTimestamp(), count: Object.keys(picks).length, picks });
     batch.update(g.ref, { picksLockedAt: FieldValue.serverTimestamp(), autoFilledCount: fills.length });
     await batch.commit();
+    if (Object.values(picks).some((x) => x.joker)) jokerPlayed = true;
   }
+  if (jokerPlayed) await recalcAllPoints(db);
 });
 
 // ---------------------------------------------------------------- bonus answers become public when a question closes
