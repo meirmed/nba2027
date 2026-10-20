@@ -3,6 +3,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../firebase.js';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useScoring, useSettings } from '../../contexts/SettingsContext.jsx';
+import { useNow } from '../../hooks/useNow.js';
 import { useGames } from '../../hooks/useGames.js';
 import { useMyPredictions } from '../../contexts/MyPredictionsContext.jsx';
 import { isActiveJokerGame, pickIssue } from '@shared/predictions.js';
@@ -136,6 +137,9 @@ export function usePredictionEditor() {
 export function SaveBar({ games }) {
   const { t } = useLang();
   const ed = usePredictionEditor();
+  const nowMs = useNow(1000);
+  // nothing left to edit (every game here has started / finished / was cancelled): no save box
+  if (!games.some((g) => g.status === 'scheduled' && g.t1 && g.t2 && (g.tipoff?.toMillis?.() ?? 0) > nowMs)) return null;
   const savedCount = games.filter((g) => ed.savedOf(g.id)).length;
   return (
     <div className="save-bar">

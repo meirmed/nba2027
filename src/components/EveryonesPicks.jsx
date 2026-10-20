@@ -39,6 +39,7 @@ export default function EveryonesPicks({ gameId, result }) {
     return scoreGamePicks({ game: { ...result, status: 'finished' }, picks: rows.map((r) => ({ uid: r.uid, p: r, joker: r.joker })), scoring });
   }, [rows, result, live, settings.countedRounds, scoring]);
   const tiedNow = live && result.s1 === result.s2;
+  const noScoreYet = live && Object.keys(scored).length === 0; // tied right now, or no live score yet: show a dash and the reason, not empty cells
 
   // What kind of score the pick is getting, in one or two words (the most valuable thing first): [css class, text]
   const kind = (r) => {
@@ -62,7 +63,7 @@ export default function EveryonesPicks({ gameId, result }) {
       {open && data === undefined && <p className="muted">{t('common.loading')}</p>}
       {open && data === null && <p className="muted">{t('pred.picksSoon')}</p>}
       {open && data && rows.length === 0 && <p className="muted">{t('pred.noPicks')}</p>}
-      {open && live && <p className="muted small">{tiedNow ? t('ev.tiedNote') : t('ev.liveNote')}</p>}
+      {open && live && <p className="muted small">{tiedNow ? t('ev.tiedNote') : noScoreYet ? t('ev.waitingNote') : t('ev.liveNote')}</p>}
       {open && rows.length > 0 && (
         <div className="table-wrap">
           <table className="table" dir={dir}>
@@ -77,8 +78,8 @@ export default function EveryonesPicks({ gameId, result }) {
                   <tr key={r.uid} className={r.uid === user?.uid ? 'me' : ''}>
                     <td dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</td>
                     <td><Score a={r.s1} b={r.s2} />{r.joker ? ' ⭐' : ''}{r.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</td>
-                    <td dir="ltr">{sc ? <strong className={live ? 'pts-live' : ''}>{sc.pts}</strong> : ''}</td>
-                    <td>{k ? <span className={`chip chip-${k[0]}`}>{k[1]}{sc?.riskPts > 0 ? <span title={t('bd.risk')}> 💪</span> : null}</span> : null}</td>
+                    <td dir="ltr">{sc ? <strong className={live ? 'pts-live' : ''}>{sc.pts}</strong> : noScoreYet ? <span className="muted">–</span> : ''}</td>
+                    <td>{noScoreYet ? <span className="chip chip-winner">{tiedNow ? t('ev.tiedKind') : t('ev.waitingKind')}</span> : k ? <span className={`chip chip-${k[0]}`}>{k[1]}{sc?.riskPts > 0 ? <span title={t('bd.risk')}> 💪</span> : null}</span> : null}</td>
                   </tr>
                 );
               })}
