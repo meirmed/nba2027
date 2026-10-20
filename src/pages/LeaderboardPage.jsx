@@ -31,7 +31,8 @@ function Board({ tab }) {
   const { t, dir } = useLang();
   const { user } = useAuth();
   const scoring = useScoring();
-  const { rows, loading } = usePoints();
+  const { rows: liveRows, baseRows, loading } = usePoints();
+  const rows = tab === 'stats' ? baseRows : liveRows; // Total, Games, Bonus and Jokers move live; Statistics only changes when a game ends
 
   // 'games' tab ranks by game points only; the others use the configured tiebreakers (total first).
   const ranked = useMemo(
