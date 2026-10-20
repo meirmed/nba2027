@@ -13,6 +13,7 @@ import { groupBonusQuestions, hasCustomOrder, reorderQuestions } from '@shared/b
 import { bonusSectionTitle } from '../../utils/bonusSections.js';
 import BonusForm from './BonusForm.jsx';
 import PlayersManager from './PlayersManager.jsx';
+import MissingBonusReport from './MissingBonusReport.jsx';
 
 // Shell: Questions (list + form) | Players list. Editors live in BonusForm / PlayersManager (one setting = one editor).
 export default function AdminBonusPanel() {
@@ -64,12 +65,13 @@ export default function AdminBonusPanel() {
   return (
     <PageShell titleKey="admin.bonus">
       <div className="tabs" role="tablist">
-        {['questions', 'players'].map((k) => (
+        {['questions', 'players', 'missing'].map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => { setTab(k); setEditing(undefined); }}>{t(`bq.tab.${k}`)}</button>
         ))}
       </div>
 
       {tab === 'players' && <PlayersManager />}
+      {tab === 'missing' && <MissingBonusReport />}
 
       {tab === 'questions' && editing !== undefined && <BonusForm question={editing} onDone={(m) => { setEditing(undefined); setMsg(m || ''); }} />}
 

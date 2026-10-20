@@ -669,5 +669,19 @@
   "rules.ex.margin0": "Right winner + exact margin",
   "rules.ex.margin0u": "Right winner + unique exact margin",
   "rules.ex.exact": "Exact score of both teams",
-  "rules.ex.exactU": "Unique exact score"
+  "rules.ex.exactU": "Unique exact score",
+  "bq.tab.missing": "Missing answers",
+  "bm.hint": "Checks every PAID player (players who haven't paid can't answer yet). A question counts as answered when the player has saved an answer.",
+  "bm.run": "Run the report",
+  "bm.includeClosed": "Also show closed questions (already missed)",
+  "bm.summary": "{n} of {total} players have missing answers ({q} questions checked).",
+  "bm.none": "Everyone has answered all the questions 🎉",
+  "bm.missingCount": "{n} missing",
+  "bm.answeredOf": "answered {a} of {q}",
+  "bm.closedTag": "closed",
+  "bm.deadline": "deadline",
+  "bm.copyMsg": "Copy reminder message",
+  "bm.copyList": "Copy the whole list",
+  "bm.copied": "Copied ✓",
+  "bm.copyFail": "Couldn't copy. Select the text and copy it by hand."
 }

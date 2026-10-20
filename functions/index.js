@@ -861,3 +861,34 @@ export const onParticipantUpdated = onDocumentWritten('participants/{id}', async
   if (await resetInProgress()) return;
   await recalcAllPoints(db);
 });
+
+/**
+ * Admin: which PAID players have not answered which bonus questions. Read-only. includeClosed=false (default) = only questions that are still open
+ * (the ones a reminder can still fix); true = also closed ones (already missed). A question counts as answered when predictions/{uid}.bonus[id].answer is not empty.
+ * Admins, unpaid and blocked players are not checked (they can't answer). Players are sorted by the number of missing answers.
+ */
+export const bonusMissingReport = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  const includeClosed = request.data?.includeClosed === true;
+  const [qs, preds, parts, users, admins] = await Promise.all([
+    db.collection('bonus').get(), db.collection('predictions').get(), db.collection('participants').get(), db.collection('users').get(), adminUidSet(),
+  ]);
+  const now = Date.now();
+  const questions = qs.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const isClosed = (q) => (q.answer?.length || 0) > 0 || (q.deadline?.toMillis?.() ?? Infinity) <= now;
+  const checked = (includeClosed ? questions : questions.filter((q) => !isClosed(q))).sort((a, b) => (a.deadline?.toMillis?.() ?? 0) - (b.deadline?.toMillis?.() ?? 0));
+  const paid = parts.docs.map((d) => d.data()).filter((p) => p.claimedBy && p.paid === true).map((p) => p.claimedBy).filter((uid) => !admins.has(uid));
+  const userBy = new Map(users.docs.map((d) => [d.id, d.data()]));
+  const predBy = new Map(preds.docs.map((d) => [d.id, d.data()]));
+  const players = [];
+  paid.forEach((uid) => {
+    const u = userBy.get(uid);
+    if (!u || u.blocked) return;
+    const answers = predBy.get(uid)?.bonus || {};
+    const missing = checked.filter((q) => !((answers[q.id]?.answer?.length || 0) > 0))
+      .map((q) => ({ id: q.id, he: q.question?.he || '', en: q.question?.en || '', deadlineMs: q.deadline?.toMillis?.() ?? null, closed: isClosed(q) }));
+    if (missing.length > 0) players.push({ uid, name: u.name || '', phone: u.phone || '', email: u.email || '', lang: u.lang === 'en' ? 'en' : 'he', answered: checked.length - missing.length, missing });
+  });
+  players.sort((a, b) => (b.missing.length - a.missing.length) || a.name.localeCompare(b.name, 'he'));
+  return { questionCount: checked.length, playerCount: paid.length, players, generatedAt: now };
+});
