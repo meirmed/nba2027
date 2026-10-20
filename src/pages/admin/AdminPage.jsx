@@ -10,6 +10,7 @@ import AdminH2HPanel from './AdminH2HPanel.jsx';
 import AdminSettingsPanel from './AdminSettingsPanel.jsx';
 import AdminBackupPanel from './AdminBackupPanel.jsx';
 import AdminAuditPanel from './AdminAuditPanel.jsx';
+import AdminRemindersPanel from './AdminRemindersPanel.jsx';
 
 // Tab shell ONLY - no business logic. Each setting has exactly one editor in exactly one panel.
 const PANELS = {
@@ -17,6 +18,7 @@ const PANELS = {
   scoring: ['admin.scoring', AdminScoringPanel],
   bonus: ['admin.bonus', AdminBonusPanel],
   users: ['admin.users', AdminUsersPanel],
+  reminders: ['admin.reminders', AdminRemindersPanel],
   h2h: ['admin.h2h', AdminH2HPanel],
   settings: ['admin.settings', AdminSettingsPanel],
   backup: ['admin.backup', AdminBackupPanel],

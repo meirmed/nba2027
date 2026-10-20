@@ -683,5 +683,14 @@
   "bm.copyMsg": "Copy reminder message",
   "bm.copyList": "Copy the whole list",
   "bm.copied": "Copied ✓",
-  "bm.copyFail": "Couldn't copy. Select the text and copy it by hand."
+  "bm.copyFail": "Couldn't copy. Select the text and copy it by hand.",
+  "admin.reminders": "Reminders",
+  "rm.tab.games": "Games (next days)",
+  "rm.tab.bonus": "Bonus questions",
+  "gm.hint": "Checks every PAID player (players who haven't paid can't predict yet) for games that start soon and have no saved prediction. Auto-fill happens only at tip-off, so every game that hasn't started needs a real pick.",
+  "gm.days": "Days ahead",
+  "gm.summary": "{n} of {total} players are missing predictions ({g} games in the next {d} days).",
+  "gm.none": "Everyone has predicted all the games of the next {d} days 🎉",
+  "gm.noGames": "No games to predict in the next {d} days.",
+  "gm.predictedOf": "predicted {a} of {q}"
 }

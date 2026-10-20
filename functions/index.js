@@ -20,6 +20,7 @@ import { parseApiGame, planGameUpdate } from './shared/live.js';
 import { cleanAnswer, bonusClosedReason } from './shared/bonus.js';
 import { makeAutoPick } from './shared/autofill.js';
 import { normalizePhone } from './shared/phone.js';
+import { TEAMS_BY_ABBR } from './shared/teams.js';
 import { createHash } from 'node:crypto';
 import { managerCanAddGame } from './shared/gamesAccess.js';
 import { adminUidSet } from './lib/admins.js';
@@ -891,4 +892,37 @@ export const bonusMissingReport = onCall({ timeoutSeconds: 120 }, async (request
   });
   players.sort((a, b) => (b.missing.length - a.missing.length) || a.name.localeCompare(b.name, 'he'));
   return { questionCount: checked.length, playerCount: paid.length, players, generatedAt: now };
+});
+
+/**
+ * Admin: which PAID players have not predicted which games that start in the next `days` days (default 3, max 14). Read-only.
+ * Auto-fill only happens at tip-off, so every game that has not started needs a real pick. Admins, unpaid and blocked players are not checked.
+ * Games = scheduled, both teams known, a counted round. Players are sorted by the number of missing games.
+ */
+export const gamesMissingReport = onCall({ timeoutSeconds: 120 }, async (request) => {
+  requireAdmin(request);
+  const days = Math.min(14, Math.max(1, Math.floor(Number(request.data?.days)) || 3));
+  const now = Date.now();
+  const [gSnap, preds, parts, users, admins, settingsSnap] = await Promise.all([
+    db.collection('games').where('tipoff', '>', Timestamp.fromMillis(now)).where('tipoff', '<=', Timestamp.fromMillis(now + days * 86400000)).get(),
+    db.collection('predictions').get(), db.collection('participants').get(), db.collection('users').get(), adminUidSet(), db.doc('appSettings/main').get(),
+  ]);
+  const counted = settingsSnap.data()?.countedRounds || DEFAULT_SETTINGS.countedRounds;
+  const side = (abbr) => ({ he: TEAMS_BY_ABBR[abbr]?.shortHe || abbr, en: TEAMS_BY_ABBR[abbr]?.shortEn || abbr });
+  const games = gSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .filter((g) => g.status === 'scheduled' && g.t1 && g.t2 && counted.includes(g.round))
+    .sort((a, b) => a.tipoff.toMillis() - b.tipoff.toMillis());
+  const paid = parts.docs.map((d) => d.data()).filter((p) => p.claimedBy && p.paid === true).map((p) => p.claimedBy).filter((uid) => !admins.has(uid));
+  const userBy = new Map(users.docs.map((d) => [d.id, d.data()]));
+  const predBy = new Map(preds.docs.map((d) => [d.id, d.data()]));
+  const players = [];
+  paid.forEach((uid) => {
+    const u = userBy.get(uid);
+    if (!u || u.blocked) return;
+    const picks = predBy.get(uid)?.games || {};
+    const missing = games.filter((g) => !picks[g.id]).map((g) => ({ id: g.id, home: side(g.t1), away: side(g.t2), tipoffMs: g.tipoff.toMillis() }));
+    if (missing.length > 0) players.push({ uid, name: u.name || '', phone: u.phone || '', email: u.email || '', lang: u.lang === 'en' ? 'en' : 'he', predicted: games.length - missing.length, missing });
+  });
+  players.sort((a, b) => (b.missing.length - a.missing.length) || a.name.localeCompare(b.name, 'he'));
+  return { days, gameCount: games.length, playerCount: paid.length, players, generatedAt: now };
 });
