@@ -65,9 +65,9 @@ export default function EveryonesPicks({ gameId, result }) {
       {open && live && <p className="muted small">{tiedNow ? t('ev.tiedNote') : t('ev.liveNote')}</p>}
       {open && rows.length > 0 && (
         <div className="table-wrap">
-          <table className="table" dir="ltr">
+          <table className="table" dir={dir}>
             <thead>
-              <tr className="muted small"><th dir="auto">{t('ev.colPlayer')}</th><th dir="auto">{t('ev.colPick')}</th><th dir="auto">{t('ev.colType')}</th><th dir="auto">{live ? t('ev.colPtsLive') : t('ev.colPts')}</th></tr>
+              <tr className="muted small"><th>{t('ev.colPlayer')}</th><th>{t('ev.colPick')}</th><th>{live ? t('ev.colPtsLive') : t('ev.colPts')}</th><th>{t('ev.colType')}</th></tr>
             </thead>
             <tbody>
               {shown.map((r) => {
@@ -77,8 +77,8 @@ export default function EveryonesPicks({ gameId, result }) {
                   <tr key={r.uid} className={r.uid === user?.uid ? 'me' : ''}>
                     <td dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</td>
                     <td><Score a={r.s1} b={r.s2} />{r.joker ? ' ⭐' : ''}{r.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</td>
-                    <td dir={dir}>{k ? <span className={`chip chip-${k[0]}`}>{k[1]}{sc?.riskPts > 0 ? <span title={t('bd.risk')}> 💪</span> : null}</span> : null}</td>
-                    <td>{sc ? <strong className={live ? 'pts-live' : ''}>{sc.pts}</strong> : ''}</td>
+                    <td dir="ltr">{sc ? <strong className={live ? 'pts-live' : ''}>{sc.pts}</strong> : ''}</td>
+                    <td>{k ? <span className={`chip chip-${k[0]}`}>{k[1]}{sc?.riskPts > 0 ? <span title={t('bd.risk')}> 💪</span> : null}</span> : null}</td>
                   </tr>
                 );
               })}
