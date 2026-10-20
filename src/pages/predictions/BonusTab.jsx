@@ -104,10 +104,13 @@ export default function BonusTab() {
         </section>
       ))}
 
-      <div className="save-bar">
-        <button className="btn" onClick={() => save(true)} disabled={busy}>{t('bq.saveAll', { n: savedCount, total: visible.length })}</button>
-        <span className={msg.startsWith('✓') ? 'save-ok' : 'muted'}>{busy ? t('pred.saving') : msg}</span>
-      </div>
+      {/* the save box only exists while at least one question can still be answered (every question closed = nothing to save) */}
+      {visible.some((q) => !bonusClosedReason(q, nowMs)) && (
+        <div className="save-bar">
+          <button className="btn" onClick={() => save(true)} disabled={busy}>{t('bq.saveAll', { n: savedCount, total: visible.length })}</button>
+          <span className={msg.startsWith('✓') ? 'save-ok' : 'muted'}>{busy ? t('pred.saving') : msg}</span>
+        </div>
+      )}
     </div>
   );
 }
