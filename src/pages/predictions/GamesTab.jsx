@@ -5,6 +5,7 @@ import { useGames } from '../../hooks/useGames.js';
 import { useNow } from '../../hooks/useNow.js';
 import { dayKey, formatDay } from '../../utils/dates.js';
 import { countsForStandings } from '@shared/games.js';
+import { showInPredictions } from '@shared/predictions.js';
 import GameCard from './GameCard.jsx';
 import { SaveBar, usePredictionEditor } from './PredictionEditor.jsx';
 
@@ -18,15 +19,19 @@ export default function GamesTab() {
   const tz = settings.timezone;
   const [selKey, setSelKey] = useState(null);
 
-  const days = useMemo(() => {
+  // a game disappears from this page one hour after tip-off (the Results page keeps it, with everyone's picks); checked once a minute
+  const minute = Math.floor(nowMs / 60000);
+  const { days, hidden } = useMemo(() => {
     const m = new Map();
+    let hiddenCount = 0;
     games.filter((g) => countsForStandings(g, settings.countedRounds)).forEach((g) => {
+      if (!showInPredictions(g.tipoff?.toMillis?.() ?? 0, minute * 60000)) { hiddenCount += 1; return; }
       const k = dayKey(g.tipoff, tz);
       if (!m.has(k)) m.set(k, []);
       m.get(k).push(g);
     });
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [games, settings.countedRounds, tz]);
+    return { days: [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])), hidden: hiddenCount };
+  }, [games, settings.countedRounds, tz, minute]);
 
   const todayKey = dayKey(new Date(nowMs), tz);
   const defaultKey = (days.find(([k]) => k >= todayKey) || days[days.length - 1] || [null])[0];
@@ -35,7 +40,7 @@ export default function GamesTab() {
   const dayGames = idx >= 0 ? days[idx][1] : [];
 
   if (loading) return <p className="muted">{t('common.loading')}</p>;
-  if (days.length === 0) return <p className="muted">{t('pred.noGames')}</p>;
+  if (days.length === 0) return <p className="muted">{t(hidden > 0 ? 'pred.noOpenGames' : 'pred.noGames')}</p>;
 
   return (
     <div>

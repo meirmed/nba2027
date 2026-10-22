@@ -12,10 +12,10 @@ export default function WeekTab() {
   const { timezone } = useSettings();
   const nowMs = useNow(1000);
   const ed = usePredictionEditor();
-  const { groups, games, loading } = useWeekGames(nowMs);
+  const { groups, games, hidden, loading } = useWeekGames(nowMs);
 
   if (loading) return <p className="muted">{t('common.loading')}</p>;
-  if (games.length === 0) return <p className="muted">{t('pred.noGamesWeek')}</p>;
+  if (games.length === 0) return <p className="muted">{t(hidden > 0 ? 'pred.noOpenGames' : 'pred.noGamesWeek')}</p>;
   return (
     <div>
       <p className="muted small">{t('pred.jokersLeft', { n: ed.jokersLeft, max: ed.jokersMax })}</p>

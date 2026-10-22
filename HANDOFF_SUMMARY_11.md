@@ -43,3 +43,12 @@ Player: Home (hero, missing predictions next 3 days, next game, star of the nigh
 
 ## 7. Tools
 `npm run dev|lint|test|build|sync-shared`; `node scripts/simulate-season.mjs` (load check), `simulate-balance.mjs` (bonus vs games), `simulate-jokers.mjs`, `estimate-cost.mjs` (~$3/month at peak). Docs: `docs/` (go-live, QA, cost, blueprint).
+
+## 8. Updates since 2026-10-17 (delivered as nba2027-update-59 ... 76; details in HANDOFF_SUMMARY_10.md)
+- **Ranking numbers** are unique 1..N in every table (ties broken by name after the tiebreakers).
+- **New game scoring**: right winner 5 + exact margin 6; exact score = 5 + 6 + 6 = 17; unique exact score +5 (22); **unique exact margin** (only player with the exact margin, no exact score) 5 + 6 + 5 = 16; margin tiers for an error of 1-4 (4/3/2/1); risk +2 (placeholder); joker doubles everything of the game. Rules page: new card order and detailed sums, a worked example table computed from the LIVE settings, the ranking box reads the ranking question's own pool / penalty. In Admin -> Scoring: `exact` 6, `diffExact` 6, `unique` 5, `uniqueDiff` 5, Save, Recalculate all points.
+- **Reports** (admin only): Admin -> Bonus -> Missing answers, and the new **Reminders** tab (games of the next N days + bonus) with copyable WhatsApp reminders (`bonusMissingReport`, `gamesMissingReport`; deploy functions).
+- **Leaderboard**: new **Jokers** tab (`points.jokersUsed`), and the **LIVE leaderboard + Home** (Total / Games / Bonus / Jokers tabs and every rank use saved points + provisional points of the games in play; Statistics stays official; `shared/livePoints.js`).
+- **Everyone's picks**: live provisional points and a "type" column (Exact + unique, Exact score, Unique margin, Exact margin, Margin +-N, Right winner, Miss). The save box is hidden when every game / question in view is closed. Games leave the Predictions page one hour after tip-off (Results keeps them).
+- Self-registration with first + last name; only PAID players can predict; games manager role; regulations PDF link in Rules (`public/takanon.pdf`).
+- Open: confirm the risk-bonus points, joker count, bonus values, H2H tie rule; tournament idea for 23 players (NBA-Cup style: 4 groups, top 2 advance, QF / SF / final) was only PROPOSED, nothing built.

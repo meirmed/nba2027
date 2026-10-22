@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planSave, gameOpenReason, countJokers, pickIssue, countActiveJokers, isActiveJokerGame, countSpentJokers } from './predictions.js';
+import { planSave, gameOpenReason, countJokers, pickIssue, countActiveJokers, isActiveJokerGame, countSpentJokers, showInPredictions, HIDE_AFTER_TIPOFF_MS } from './predictions.js';
 
 const NOW = 1_000_000;
 const open = { round: 'RS', status: 'scheduled', t1: 'BOS', t2: 'NYK', tipoffMs: NOW + 60_000 };
@@ -124,5 +124,19 @@ describe('jokers SPENT (shown in the leaderboard)', () => {
   it('no jokers = 0', () => {
     expect(countSpentJokers(undefined, games, ['RS'], NOW)).toBe(0);
     expect(countSpentJokers({}, games, ['RS'], NOW)).toBe(0);
+  });
+});
+
+describe('games hidden from the Predictions page one hour after tip-off', () => {
+  const NOW = 50_000_000;
+  it('upcoming games and games that started less than an hour ago are shown', () => {
+    expect(showInPredictions(NOW + 5 * 3600_000, NOW)).toBe(true);
+    expect(showInPredictions(NOW - 1000, NOW)).toBe(true); // just started (locked, but still visible)
+    expect(showInPredictions(NOW - HIDE_AFTER_TIPOFF_MS + 1, NOW)).toBe(true); // 59 min 59 s after tip-off
+  });
+  it('from exactly one hour after tip-off the game is hidden', () => {
+    expect(showInPredictions(NOW - HIDE_AFTER_TIPOFF_MS, NOW)).toBe(false);
+    expect(showInPredictions(NOW - 3 * 3600_000, NOW)).toBe(false);
+    expect(showInPredictions(NOW - 24 * 3600_000, NOW)).toBe(false);
   });
 });

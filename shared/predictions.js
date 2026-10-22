@@ -27,6 +27,13 @@ export const countJokers = (jokers) => Object.values(jokers || {}).filter(Boolea
  */
 export const isActiveJokerGame = (game, countedRounds = ['RS']) => !!game && game.status !== 'cancelled' && countedRounds.includes(game.round);
 /**
+ * The Predictions page hides a game one hour after its tip-off (it has been closed for betting for a while): the result, the live score and
+ * everyone's picks stay in the Results page. Bonus questions are not affected.
+ */
+export const HIDE_AFTER_TIPOFF_MS = 60 * 60 * 1000;
+export const showInPredictions = (tipoffMs, nowMs) => tipoffMs > nowMs - HIDE_AFTER_TIPOFF_MS;
+
+/**
  * Jokers already SPENT = on a game that exists, still counts, and has STARTED (live / finished, or its tip-off has passed).
  * A joker on an upcoming game is not spent yet (it can still be moved), so the leaderboard never reveals where players put their jokers before tip-off.
  */

@@ -708,5 +708,6 @@
   "ev.tiedNote": "The game is tied right now, so nothing is scored yet.",
   "ev.tiedKind": "Tied now",
   "ev.waitingKind": "Waiting",
-  "ev.waitingNote": "No live score yet: the points appear as soon as the first score update arrives."
+  "ev.waitingNote": "No live score yet: the points appear as soon as the first score update arrives.",
+  "pred.noOpenGames": "No games to predict right now. Games that have started, their live scores and everyone's picks are in the Results page."
 }
