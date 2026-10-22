@@ -6,7 +6,7 @@ import { useBonus } from '../contexts/BonusContext.jsx';
 import { useTournament } from '../hooks/useH2H.js';
 import { scoreGame } from '@shared/scoring.js';
 import { formatKeyDay } from '../utils/dates.js';
-import { MID_STAGES, MID_WINDOWS, QF_SLOTS, SF_SLOTS } from '@shared/midTournament.js';
+import { MID_STAGES, MID_WINDOWS } from '@shared/midTournament.js';
 import { DEFAULT_H2H_TIEBREAKERS } from '@shared/h2h.js';
 
 // Same look as the World Cup rules page. EVERY number comes from the live scoring settings (Admin -> Scoring), never hardcoded.
@@ -37,7 +37,6 @@ export default function RulesPage() {
   }, []);
   const s = useScoring();
   const tournament = useTournament();
-  const pairLabel = (k) => `${t(`mid.stage.${k.startsWith('QF') ? 'QF' : k.startsWith('SF') ? 'SF' : 'F'}`)} ${k.replace(/\D/g, '')}`; // 'QF1' -> 'Quarter final 1'
   const { questions } = useBonus();
   // the ranking question's OWN points and penalty (set by the admin on the question); no ranking question = no ranking box
   const rankQ = questions.find((q) => q.type === 'ranking');
@@ -159,15 +158,6 @@ export default function RulesPage() {
             </tbody>
           </table>
         </div>
-        <Note tone="blue">
-          <strong>{t('rules.mid.ko.title')}</strong>
-          <ul>
-            <li>{t('rules.mid.ko.qf', { pairs: Object.values(QF_SLOTS).map(([a, b]) => t('rules.mid.vs', { a, b })).join(' · ') })}</li>
-            <li>{t('rules.mid.ko.sf', { pairs: Object.values(SF_SLOTS).map(([a, b]) => t('rules.mid.winnerVs', { a: pairLabel(a), b: pairLabel(b) })).join(' · ') })}</li>
-            <li>{t('rules.mid.ko.f')}</li>
-            <li>{t('rules.mid.ko.rule')}</li>
-          </ul>
-        </Note>
         <Note tone="amber"><strong>{t('rules.mid.tb.title')}</strong><p>{t('rules.mid.tb.body')}</p></Note>
         <Note tone="teal">{t('rules.mid.where')}</Note>
       </Section>

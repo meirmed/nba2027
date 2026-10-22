@@ -183,3 +183,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 87: Rules page order + tournament tab note
 - Rules, tournament section order: group stage box, schedule table, **knockout box**, tie box, "where to see it" (the knockout box moved down under the table). The note at the bottom of the tournament tab no longer says that the admin decides a tie (the admin still decides a real tie in the app). App-only.
+
+## Update 88: Rules page - the "Knockout: quarter finals, semi finals and the final" box was DELETED (owner)
+- The tournament section now has: intro, group stage box, schedule table, tie box, "where to see it". The pairs of the quarter finals / semi finals, the final and the "more points advances" rule are therefore no longer written in the Rules page (they are still shown on the tournament tab and in its note). Unused texts `rules.mid.ko.*`, `rules.mid.vs`, `rules.mid.winnerVs` removed. App-only.

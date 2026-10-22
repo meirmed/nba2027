@@ -756,13 +756,6 @@
   "rules.mid.groups.b1": "The players are split into four groups (A, B, C and D). The draw and the placement are done by the admin.",
   "rules.mid.groups.b2": "Inside each group the ranking is by the game points collected during the dates of the group stage, without bonus points.",
   "rules.mid.groups.b3": "The top 2 of every group advance to the quarter finals.",
-  "rules.mid.ko.title": "Knockout: quarter finals, semi finals and the final",
-  "rules.mid.ko.qf": "Quarter finals: {pairs}. A1 is first place of group A, B2 is second place of group B, and so on.",
-  "rules.mid.ko.sf": "Semi finals: {pairs}.",
-  "rules.mid.ko.f": "Final: the two winners of the semi finals. The winner of the final is the champion of the mid-season tournament.",
-  "rules.mid.ko.rule": "In every pair, the player with more game points during the dates of that stage advances.",
-  "rules.mid.vs": "{a} vs {b}",
-  "rules.mid.winnerVs": "winner of {a} vs winner of {b}",
   "rules.mid.tb.title": "A tie",
   "rules.mid.tb.body": "Correct winners, then more exact scores, then more unique hits, then the higher overall score in the main table.",
   "rules.mid.where": "The groups, the pairs and the live results are in the Leaderboard page, in the “Mid-season tournament” tab."
