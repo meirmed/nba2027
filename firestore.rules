@@ -47,6 +47,7 @@ service cloud.firestore {
     match /bonus/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
     match /appSettings/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
     match /h2hTournament/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /midTournament/{id} { allow read: if signedIn(); allow write: if isAdmin(); } // mid-season tournament: groups + the admin's tie decisions
     match /h2h/{id}     { allow read: if signedIn(); allow write: if isAdmin(); }
 
     // Everyone's bonus answers, published when a question closes (deadline passed or correct answer set). Written by functions only.

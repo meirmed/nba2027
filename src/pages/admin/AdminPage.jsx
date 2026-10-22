@@ -11,6 +11,7 @@ import AdminSettingsPanel from './AdminSettingsPanel.jsx';
 import AdminBackupPanel from './AdminBackupPanel.jsx';
 import AdminAuditPanel from './AdminAuditPanel.jsx';
 import AdminRemindersPanel from './AdminRemindersPanel.jsx';
+import AdminMidTournamentPanel from './AdminMidTournamentPanel.jsx';
 
 // Tab shell ONLY - no business logic. Each setting has exactly one editor in exactly one panel.
 const PANELS = {
@@ -20,6 +21,7 @@ const PANELS = {
   users: ['admin.users', AdminUsersPanel],
   reminders: ['admin.reminders', AdminRemindersPanel],
   h2h: ['admin.h2h', AdminH2HPanel],
+  mid: ['admin.mid', AdminMidTournamentPanel],
   settings: ['admin.settings', AdminSettingsPanel],
   backup: ['admin.backup', AdminBackupPanel],
   audit: ['admin.audit', AdminAuditPanel],
