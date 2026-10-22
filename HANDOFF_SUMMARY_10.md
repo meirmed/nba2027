@@ -159,3 +159,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 81: "Champion of the month" = ONE tab in a second row; the months appear after the click
 - Leaderboard: row 1 = the main tabs; row 2 = a single tab "אלוף החודש". Only after clicking it a row with one chip per month (November 2026 - April 2027; months that have not arrived are grey and disabled; the current month is selected by default) and the table of the chosen month appear; before November it explains that it starts on November 1. Replaces update 80 (the table and `shared/monthly.js` are unchanged). 236 tests.
+
+## Update 82: Statistics moved to the second row
+- Leaderboard tabs: row 1 = Total, Games, Bonus, Jokers; row 2 = Champion of the month, then Statistics. App-only change.

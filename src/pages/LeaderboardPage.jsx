@@ -14,7 +14,7 @@ import { rankRows } from '@shared/standings.js';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
 
-const TABS = ['total', 'games', 'bonus', 'jokers', 'stats'];
+const TABS = ['total', 'games', 'bonus', 'jokers']; // row 1; row 2 = Champion of the month, then Statistics
 // [header key, field, css class] per tab. Total tab = Total (green) / Games (blue) / Bonus (orange), like the World Cup app.
 const COLS = {
   total: [['lb.totalCol', 'total', 'pts-total'], ['lb.games', 'gamePts', 'pts-games'], ['lb.bonus', 'bonus', 'pts-bonus']],
@@ -169,7 +169,7 @@ function MonthTab() {
 
 export default function LeaderboardPage() {
   const { t } = useLang();
-  const [tab, setTab] = useState('total'); // a main tab, or 'month' = "Champion of the month" (its months appear only after the click)
+  const [tab, setTab] = useState('total'); // 'total' | 'games' | 'bonus' | 'jokers' | 'stats' | 'month' (= "Champion of the month": its months appear only after the click)
   return (
     <PageShell titleKey="nav.leaderboard">
       <div className="tabs scroll" role="tablist">
@@ -179,6 +179,7 @@ export default function LeaderboardPage() {
       </div>
       <div className="tabs scroll sub-tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'month'} className={`tab ${tab === 'month' ? 'active' : ''}`} onClick={() => setTab('month')}>{t('lb.tab.month')}</button>
+        <button role="tab" aria-selected={tab === 'stats'} className={`tab ${tab === 'stats' ? 'active' : ''}`} onClick={() => setTab('stats')}>{t('lb.tab.stats')}</button>
       </div>
       <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab === 'month' ? <MonthTab /> : <Board tab={tab} />}</ErrorBoundary>
     </PageShell>
