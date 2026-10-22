@@ -6,6 +6,7 @@ import { useBonus } from '../../contexts/BonusContext.jsx';
 import { useMyPredictions } from '../../contexts/MyPredictionsContext.jsx';
 import { usePlayers } from '../../hooks/usePlayers.js';
 import { useNow } from '../../hooks/useNow.js';
+import { saveErrorInfo } from '@shared/saveErrors.js';
 import { bonusClosedReason, cleanAnswer, groupBonusQuestions } from '@shared/bonus.js';
 import { bonusSectionTitle } from '../../utils/bonusSections.js';
 import BonusCard from './BonusCard.jsx';
@@ -67,7 +68,7 @@ export default function BonusTab() {
       setDraft((d) => omit(d, r.saved));
       setReasons(Object.fromEntries(r.rejected.map((x) => [x.id, x.reason])));
       setMsg(r.rejected.length ? t('pred.partial', { ok: r.saved.length, bad: r.rejected.length }) : `✓ ${t('pred.saved')}`);
-    } catch (e) { console.error(e); setMsg(t('pred.saveFailed')); }
+    } catch (e) { console.error(e); const info = saveErrorInfo(e); setMsg(info.key === 'pred.saveFailed' ? `${t(info.key)} (${info.detail})` : t(info.key)); } // say WHY it failed
     savingRef.current = false; setBusy(false);
   };
   saveRef.current = save;

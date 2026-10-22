@@ -225,8 +225,10 @@ async function assertCanPlay(request) {
   if (!p.exists) throw new HttpsError('permission-denied', 'no-profile');
   if (p.data().blocked) throw new HttpsError('permission-denied', 'blocked');
   // the admin must have ticked "paid" (participants.paid); until then the player can only look around
-  const part = p.data().participantId ? await db.doc(`participants/${p.data().participantId}`).get() : null;
-  if (!part?.exists || part.data().paid !== true) throw new HttpsError('permission-denied', 'not-paid');
+  // the roster row(s) that belong to this player are found by claimedBy (that is what the admin ticks, and what the score sync uses); the old participantId link is only a fallback
+  const rows = (await db.collection('participants').where('claimedBy', '==', request.auth.uid).get()).docs;
+  if (rows.length === 0 && p.data().participantId) { const s = await db.doc(`participants/${p.data().participantId}`).get(); if (s.exists) rows.push(s); }
+  if (!rows.some((d) => d.data().paid === true)) throw new HttpsError('permission-denied', 'not-paid');
 }
 
 /**

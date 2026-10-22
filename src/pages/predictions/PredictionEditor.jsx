@@ -4,6 +4,7 @@ import { functions } from '../../firebase.js';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useScoring, useSettings } from '../../contexts/SettingsContext.jsx';
 import { useNow } from '../../hooks/useNow.js';
+import { saveErrorInfo } from '@shared/saveErrors.js';
 import { useGames } from '../../hooks/useGames.js';
 import { useMyPredictions } from '../../contexts/MyPredictionsContext.jsx';
 import { isActiveJokerGame, pickIssue } from '@shared/predictions.js';
@@ -91,7 +92,7 @@ export function PredictionEditorProvider({ children }) {
       setJokerDraft((j) => omit(j, [...r.jokersOn, ...r.jokersOff]));
       setReasons(Object.fromEntries(r.rejected.map((x) => [x.id, x.reason])));
       setMsg(r.rejected.length ? t('pred.partial', { ok: r.saved.length + r.jokersOn.length + r.jokersOff.length, bad: r.rejected.length }) : `✓ ${t('pred.saved')}`);
-    } catch (e) { console.error(e); setMsg(t('pred.saveFailed')); }
+    } catch (e) { console.error(e); const info = saveErrorInfo(e); setMsg(info.key === 'pred.saveFailed' ? `${t(info.key)} (${info.detail})` : t(info.key)); } // say WHY it failed
     savingRef.current = false; setBusy(false);
   };
   saveRef.current = save;

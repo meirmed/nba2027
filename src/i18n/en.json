@@ -758,5 +758,12 @@
   "rules.mid.groups.b3": "The top 2 of every group advance to the quarter finals.",
   "rules.mid.tb.title": "A tie",
   "rules.mid.tb.body": "Correct winners, then more exact scores, then more unique hits, then the higher overall score in the main table.",
-  "rules.mid.where": "The groups, the pairs and the live results are in the Leaderboard page, in the “Mid-season tournament” tab."
+  "rules.mid.where": "The groups, the pairs and the live results are in the Leaderboard page, in the “Mid-season tournament” tab.",
+  "pred.err.notPaid": "Your registration is still waiting for the admin's approval (payment), so predictions can't be saved yet.",
+  "pred.err.blocked": "Your account is blocked. Contact the admin.",
+  "pred.err.admin": "An admin account does not take part in the predictions.",
+  "pred.err.noProfile": "Your profile was not found. Sign out and sign in again.",
+  "pred.err.denied": "You are not allowed to save here. Sign out and in again, or contact the admin.",
+  "pred.err.login": "You were signed out. Sign in again.",
+  "pred.err.network": "No connection to the server. Check your internet and try again."
 }

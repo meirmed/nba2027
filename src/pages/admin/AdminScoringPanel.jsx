@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { errorDetail } from '@shared/saveErrors.js';
 import { doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../firebase.js';
@@ -62,13 +63,13 @@ export default function AdminScoringPanel() {
       addAudit(batch, user.uid, { action: 'scoring.update', target: 'appSettings/main.scoring', before: s.scoring, after: sc });
       await batch.commit();
       setMsg(`${t('common.saved')} ${t('sc.recalcHint')}`);
-    } catch (e) { console.error(e); setMsg(t('common.error')); }
+    } catch (e) { console.error(e); setMsg(`${t('common.error')} (${errorDetail(e)})`); }
     setBusy(false);
   };
 
   const call = async (name, ok) => {
     setBusy(true); setMsg(''); setRecon(null);
-    try { const r = (await httpsCallable(functions, name)()).data; ok(r); } catch (e) { console.error(e); setMsg(t('common.error')); }
+    try { const r = (await httpsCallable(functions, name)()).data; ok(r); } catch (e) { console.error(e); setMsg(`${t('common.error')} (${errorDetail(e)})`); } // the code tells what is wrong
     setBusy(false);
   };
   const Num = ({ k, label, disabled }) => (
