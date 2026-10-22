@@ -364,3 +364,6 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .sub-tabs { margin-top: .4rem; align-items: center; }
 .sub-label { white-space: nowrap; padding-inline-end: .25rem; }
 .month-banner { font-weight: 700; margin: .5rem 0; }
+
+/* a month that has not arrived yet: grey and not clickable */
+.tab.disabled, .tab:disabled { opacity: .4; cursor: not-allowed; }

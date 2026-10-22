@@ -3,7 +3,7 @@ import { useGames } from '../hooks/useGames.js';
 import { useNow } from '../hooks/useNow.js';
 import { dayKey } from '../utils/dates.js';
 import { countsForStandings } from '@shared/games.js';
-import { monthChampions, monthFinished, monthKeys, monthlyRows } from '@shared/monthly.js';
+import { monthArrived, monthChampions, monthFinished, monthlyRows, seasonMonths } from '@shared/monthly.js';
 import PageShell from '../components/PageShell.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
@@ -14,7 +14,7 @@ import { rankRows } from '@shared/standings.js';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
 
-const TABS = ['total', 'games', 'bonus', 'jokers', 'stats'];
+const TABS = ['total', 'games', 'bonus', 'jokers', 'stats', 'month'];
 // [header key, field, css class] per tab. Total tab = Total (green) / Games (blue) / Bonus (orange), like the World Cup app.
 const COLS = {
   total: [['lb.totalCol', 'total', 'pts-total'], ['lb.games', 'gamePts', 'pts-games'], ['lb.bonus', 'bonus', 'pts-bonus']],
@@ -139,12 +139,37 @@ function Board({ tab }) {
   );
 }
 
-export default function LeaderboardPage() {
+/** The "Champion of the month" tab: a sub-tab for EVERY month of the season; months that have not arrived yet are grey and disabled. */
+function MonthTab() {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const nowMs = useNow(60000);
-  const [tab, setTab] = useState('total'); // a main tab, or 'm:YYYY-MM' = champion of that month
-  const months = useMemo(() => monthKeys(dayKey(new Date(nowMs), timezone)), [nowMs, timezone]); // from November; a new month appears on the 1st
+  const todayKey = dayKey(new Date(nowMs), timezone);
+  const months = seasonMonths();
+  const arrived = months.filter((m) => monthArrived(m, todayKey));
+  const [sel, setSel] = useState(null);
+  const active = sel && arrived.includes(sel) ? sel : arrived[arrived.length - 1] ?? null; // the current month unless another one was picked
+  return (
+    <div>
+      <div className="tabs scroll sub-tabs" role="tablist">
+        <span className="sub-label muted small">{t('lb.monthsLabel')}</span>
+        {months.map((m) => {
+          const open = arrived.includes(m);
+          return (
+            <button key={m} role="tab" disabled={!open} aria-selected={active === m} className={`tab ${active === m ? 'active' : ''} ${open ? '' : 'disabled'}`} onClick={() => setSel(m)}>{monthLabel(m, lang)}</button>
+          );
+        })}
+      </div>
+      {active
+        ? <ErrorBoundary key={active} name={`leaderboard-month-${active}`}><MonthBoard monthKey={active} /></ErrorBoundary>
+        : <p className="muted">{t('lb.monthSoon', { month: monthLabel(months[0], lang) })}</p>}
+    </div>
+  );
+}
+
+export default function LeaderboardPage() {
+  const { t } = useLang();
+  const [tab, setTab] = useState('total');
   return (
     <PageShell titleKey="nav.leaderboard">
       <div className="tabs scroll" role="tablist">
@@ -152,15 +177,7 @@ export default function LeaderboardPage() {
           <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{t(`lb.tab.${k}`)}</button>
         ))}
       </div>
-      {months.length > 0 && (
-        <div className="tabs scroll sub-tabs" role="tablist">
-          <span className="sub-label muted small">{t('lb.monthsLabel')}</span>
-          {months.map((m) => (
-            <button key={m} role="tab" aria-selected={tab === `m:${m}`} className={`tab ${tab === `m:${m}` ? 'active' : ''}`} onClick={() => setTab(`m:${m}`)}>{monthLabel(m, lang)}</button>
-          ))}
-        </div>
-      )}
-      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab.startsWith('m:') ? <MonthBoard monthKey={tab.slice(2)} /> : <Board tab={tab} />}</ErrorBoundary>
+      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab === 'month' ? <MonthTab /> : <Board tab={tab} />}</ErrorBoundary>
     </PageShell>
   );
 }

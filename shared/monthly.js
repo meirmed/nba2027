@@ -16,6 +16,16 @@ export function monthKeys(todayKey, from = MONTHLY_CHAMPION_FROM, until = MONTHL
   return out;
 }
 
+/** All the months of the competition, from November to April: they are all shown as sub-tabs; the ones that have not arrived yet are grey. */
+export function seasonMonths(from = MONTHLY_CHAMPION_FROM, until = MONTHLY_CHAMPION_UNTIL) {
+  const out = [];
+  for (let m = from; m <= until; m = nextMonth(m)) out.push(m);
+  return out;
+}
+
+/** A month is open from its 1st (Israel date). */
+export const monthArrived = (monthKey, todayKey) => todayKey >= `${monthKey}-01`;
+
 /** rows + {mPts, mExact, mUnique} = game points / exact hits / unique hits of that month (rows are not changed). */
 export function monthlyRows(rows, monthKey) {
   const lo = `${monthKey}-01`;

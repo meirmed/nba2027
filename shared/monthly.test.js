@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monthChampions, monthFinished, monthKeys, monthlyRows } from './monthly.js';
+import { monthArrived, monthChampions, monthFinished, monthKeys, monthlyRows, seasonMonths } from './monthly.js';
 
 describe('months shown as tabs', () => {
   it('nothing before November; a new month appears on the 1st; never past April', () => {
@@ -58,5 +58,17 @@ describe('when a month is over', () => {
     expect(monthFinished({ monthKey: '2026-11', todayKey: '2026-12-01', games: [g('2026-11-30', 'live')] })).toBe(false);
     expect(monthFinished({ monthKey: '2026-11', todayKey: '2026-12-01', games: [g('2026-11-29', 'scheduled')] })).toBe(false);
     expect(monthFinished({ monthKey: '2026-11', todayKey: '2026-12-01', games: [g('2026-11-29', 'cancelled'), g('2026-12-02', 'scheduled')] })).toBe(true); // other months / cancelled do not count
+  });
+});
+
+describe('all the months, and which of them are open', () => {
+  it('November to April, six months', () => {
+    expect(seasonMonths()).toEqual(['2026-11', '2026-12', '2027-01', '2027-02', '2027-03', '2027-04']);
+  });
+  it('a month opens on its 1st and stays open', () => {
+    expect(monthArrived('2026-11', '2026-10-31')).toBe(false);
+    expect(monthArrived('2026-11', '2026-11-01')).toBe(true);
+    expect(monthArrived('2026-11', '2027-02-10')).toBe(true);
+    expect(monthArrived('2027-01', '2026-12-31')).toBe(false);
   });
 });
