@@ -177,3 +177,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 ## Update 85: semi-final pairing (owner) + the tournament in the Rules page
 - Semi finals: the winner of QF1 v the winner of QF3, and the winner of QF2 v the winner of QF4 (`SF_SLOTS` = {SF1: [QF1, QF3], SF2: [QF2, QF4]}), so A1 and A2 end up in opposite halves; replaces the neighbouring pairs of update 84. Quarter finals unchanged (A1-B2, B1-A2, C1-D2, D1-C2).
 - Rules page: new section "🏆 טורניר אמצע" (after Head to Head): what it is, the schedule table, the group stage, the knockout (the pairs are printed FROM `QF_SLOTS` / `SF_SLOTS` and the dates FROM `MID_WINDOWS`, so the text can never differ from the real tournament), the tie order, and where to see it. `formatKeyDay` in `src/utils/dates.js`. App-only change; 255 tests.
+
+## Update 86: Rules page, tournament section
+- The schedule table now sits right under the "Knockout" box (order: group stage box, knockout box, schedule table, tie box, "where to see it"). The tie text now only lists the order (correct winners, exact scores, unique hits, overall score in the main table); the opening "if two players are equal..." and the closing "only if that is equal too, the admin decides" were removed (the admin still decides a real tie in the app; the note on the tournament tab itself was not changed). App-only.

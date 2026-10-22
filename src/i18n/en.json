@@ -764,6 +764,6 @@
   "rules.mid.vs": "{a} vs {b}",
   "rules.mid.winnerVs": "winner of {a} vs winner of {b}",
   "rules.mid.tb.title": "A tie",
-  "rules.mid.tb.body": "If two players are equal on the game points of the stage: first more correct winners, then more exact scores, then more unique hits, then the higher overall score in the main table. Only if that is equal too, the admin decides.",
+  "rules.mid.tb.body": "Correct winners, then more exact scores, then more unique hits, then the higher overall score in the main table.",
   "rules.mid.where": "The groups, the pairs and the live results are in the Leaderboard page, in the “Mid-season tournament” tab."
 }
