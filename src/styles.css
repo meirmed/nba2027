@@ -367,3 +367,6 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 
 /* a month that has not arrived yet: grey and not clickable */
 .tab.disabled, .tab:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Build stamp: changing it gives the stylesheet a NEW file name, so phones that kept a broken copy of the old one fetch a fresh one */
+:root { --build-stamp: 79; }
