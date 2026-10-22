@@ -731,7 +731,7 @@
   "mid.slotWinner": "Winner of {name}",
   "mid.tiedDecision": "A tie: waiting for the admin's decision.",
   "mid.champion": "🏆 Mid-season tournament champion: {name}",
-  "mid.note": "Game points only, no bonus questions, inside the dates of each stage. The top 2 of every group advance. Quarter finals: A1-B2, B1-A2, C1-D2, D1-C2; semi finals: the winner of quarter final 1 against the winner of quarter final 3, and the winner of quarter final 2 against the winner of quarter final 4. In a tie: more correct winners, then more exact hits, then more unique hits, then the higher overall score in the main table; if still equal the admin decides.",
+  "mid.note": "Game points only, no bonus questions, inside the dates of each stage. The top 2 of every group advance. Quarter finals: A1-B2, B1-A2, C1-D2, D1-C2; semi finals: the winner of quarter final 1 against the winner of quarter final 3, and the winner of quarter final 2 against the winner of quarter final 4. In a tie: more correct winners, then more exact hits, then more unique hits, then the higher overall score in the main table.",
   "am.hint": "Put the players into the groups (the draw is done elsewhere); each drop-down shows only players who are not in a group yet. Recommended with 23 players: 6 + 6 + 6 + 5. The table, the quarter finals, the semi finals and the final are calculated by themselves from the game points inside the dates of each stage; the admin is needed only for a real tie.",
   "am.groupsTitle": "Groups",
   "am.addPlayer": "Add a player…",

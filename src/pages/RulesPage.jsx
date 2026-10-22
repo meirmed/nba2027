@@ -151,6 +151,14 @@ export default function RulesPage() {
             <li>{t('rules.mid.groups.b3')}</li>
           </ul>
         </Note>
+        <div className="table-wrap">
+          <table className="table" dir={dir}>
+            <thead><tr className="muted small"><th>{t('rules.mid.scheduleTitle')}</th><th /></tr></thead>
+            <tbody>
+              {MID_STAGES.map((k) => <tr key={k}><td><strong>{t(`mid.stage.${k}`)}</strong></td><td>{formatKeyDay(MID_WINDOWS[k].lo, lang)} – {formatKeyDay(MID_WINDOWS[k].hi, lang)}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
         <Note tone="blue">
           <strong>{t('rules.mid.ko.title')}</strong>
           <ul>
@@ -160,14 +168,6 @@ export default function RulesPage() {
             <li>{t('rules.mid.ko.rule')}</li>
           </ul>
         </Note>
-        <div className="table-wrap">
-          <table className="table" dir={dir}>
-            <thead><tr className="muted small"><th>{t('rules.mid.scheduleTitle')}</th><th /></tr></thead>
-            <tbody>
-              {MID_STAGES.map((k) => <tr key={k}><td><strong>{t(`mid.stage.${k}`)}</strong></td><td>{formatKeyDay(MID_WINDOWS[k].lo, lang)} – {formatKeyDay(MID_WINDOWS[k].hi, lang)}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
         <Note tone="amber"><strong>{t('rules.mid.tb.title')}</strong><p>{t('rules.mid.tb.body')}</p></Note>
         <Note tone="teal">{t('rules.mid.where')}</Note>
       </Section>

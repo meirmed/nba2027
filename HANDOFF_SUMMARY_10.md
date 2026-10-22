@@ -180,3 +180,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 86: Rules page, tournament section
 - The schedule table now sits right under the "Knockout" box (order: group stage box, knockout box, schedule table, tie box, "where to see it"). The tie text now only lists the order (correct winners, exact scores, unique hits, overall score in the main table); the opening "if two players are equal..." and the closing "only if that is equal too, the admin decides" were removed (the admin still decides a real tie in the app; the note on the tournament tab itself was not changed). App-only.
+
+## Update 87: Rules page order + tournament tab note
+- Rules, tournament section order: group stage box, schedule table, **knockout box**, tie box, "where to see it" (the knockout box moved down under the table). The note at the bottom of the tournament tab no longer says that the admin decides a tie (the admin still decides a real tie in the app). App-only.
