@@ -139,14 +139,37 @@ function Board({ tab }) {
   );
 }
 
-export default function LeaderboardPage() {
+/** What opens after a click on "Champion of the month": a chip for EVERY month of the season (the ones that have not arrived yet are grey and disabled) and the table of the chosen month. */
+function MonthTab() {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const nowMs = useNow(60000);
-  const [tab, setTab] = useState('total'); // a main tab, or 'm:YYYY-MM' = champion of that month (the main tabs are then not selected, like the stages row of the World Cup app)
   const todayKey = dayKey(new Date(nowMs), timezone);
-  const months = seasonMonths(); // November - April: ALL are shown; a month that has not arrived yet is grey and disabled
+  const months = seasonMonths();
   const arrived = months.filter((m) => monthArrived(m, todayKey));
+  const [sel, setSel] = useState(null);
+  const active = sel && arrived.includes(sel) ? sel : arrived[arrived.length - 1] ?? null; // the current month unless another one was picked
+  return (
+    <div>
+      <div className="tabs scroll sub-tabs" role="tablist">
+        <span className="sub-label muted small">{t('lb.monthsLabel')}</span>
+        {months.map((m) => {
+          const open = arrived.includes(m);
+          return (
+            <button key={m} role="tab" disabled={!open} aria-selected={active === m} className={`tab ${active === m ? 'active' : ''} ${open ? '' : 'disabled'}`} onClick={() => setSel(m)}>{monthLabel(m, lang)}</button>
+          );
+        })}
+      </div>
+      {active
+        ? <ErrorBoundary key={active} name={`leaderboard-month-${active}`}><MonthBoard monthKey={active} /></ErrorBoundary>
+        : <p className="muted">{t('lb.monthSoon', { month: monthLabel(months[0], lang) })}</p>}
+    </div>
+  );
+}
+
+export default function LeaderboardPage() {
+  const { t } = useLang();
+  const [tab, setTab] = useState('total'); // a main tab, or 'month' = "Champion of the month" (its months appear only after the click)
   return (
     <PageShell titleKey="nav.leaderboard">
       <div className="tabs scroll" role="tablist">
@@ -155,16 +178,9 @@ export default function LeaderboardPage() {
         ))}
       </div>
       <div className="tabs scroll sub-tabs" role="tablist">
-        <span className="sub-label muted small">{t('lb.monthsLabel')}</span>
-        {months.map((m) => {
-          const open = arrived.includes(m);
-          return (
-            <button key={m} role="tab" disabled={!open} aria-selected={tab === `m:${m}`} className={`tab ${tab === `m:${m}` ? 'active' : ''} ${open ? '' : 'disabled'}`} onClick={() => setTab(`m:${m}`)}>{monthLabel(m, lang)}</button>
-          );
-        })}
+        <button role="tab" aria-selected={tab === 'month'} className={`tab ${tab === 'month' ? 'active' : ''}`} onClick={() => setTab('month')}>{t('lb.tab.month')}</button>
       </div>
-      {arrived.length === 0 && <p className="muted small">{t('lb.monthSoon', { month: monthLabel(months[0], lang) })}</p>}
-      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab.startsWith('m:') ? <MonthBoard monthKey={tab.slice(2)} /> : <Board tab={tab} />}</ErrorBoundary>
+      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab === 'month' ? <MonthTab /> : <Board tab={tab} />}</ErrorBoundary>
     </PageShell>
   );
 }
