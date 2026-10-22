@@ -14,8 +14,8 @@ export const MID_GROUPS = ['A', 'B', 'C', 'D'];
 export const QUALIFIERS_PER_GROUP = 2;
 // quarter finals (the owner's order): the first of a group against the second of another group; 'A1' = first place of group A, 'B2' = second place of group B
 export const QF_SLOTS = { QF1: ['A1', 'B2'], QF2: ['B1', 'A2'], QF3: ['C1', 'D2'], QF4: ['D1', 'C2'] };
-// semi finals / final: the winners of the neighbouring pairs (QF1 v QF2 = the A / B half, QF3 v QF4 = the C / D half)
-export const SF_SLOTS = { SF1: ['QF1', 'QF2'], SF2: ['QF3', 'QF4'] };
+// semi finals (the owner's order): the winner of QF1 against the winner of QF3, the winner of QF2 against the winner of QF4; then the final
+export const SF_SLOTS = { SF1: ['QF1', 'QF3'], SF2: ['QF2', 'QF4'] };
 export const F_SLOTS = { F: ['SF1', 'SF2'] };
 export const PAIR_KEYS = ['QF1', 'QF2', 'QF3', 'QF4', 'SF1', 'SF2', 'F'];
 

@@ -45,3 +45,6 @@ export function formatCountdown(ms) {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m ${String(s % 60).padStart(2, '0')}s`;
 }
+
+/** '2026-11-09' -> "9 בנובמבר" / "9 November" (a plain Israel date key, no time zone shift). */
+export const formatKeyDay = (key, lang) => new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${key}T12:00:00Z`));

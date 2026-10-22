@@ -122,18 +122,18 @@ describe('the whole tournament: 23 players, groups of 6 + 6 + 6 + 5', () => {
     expect(b.status.QF).toBe('live'); // Dec 7 is the first day of the quarter-final window
     expect(build('2026-12-06', rows()).status.QF).toBe('upcoming');
   });
-  it('semi finals = the winners of QF1 v QF2 and of QF3 v QF4, then the final, then the champion', () => {
-    // QF: the first-named player of each pair wins; SF1: u1 beats u7; SF2: u13 beats u19; final: u13 beats u1
-    const pts = { u1: { QF: 50, SF: 40, F: 55 }, u8: { QF: 10 }, u7: { QF: 50, SF: 30 }, u2: { QF: 10 }, u13: { QF: 50, SF: 60, F: 70 }, u20: { QF: 10 }, u19: { QF: 50, SF: 20 }, u14: { QF: 10 } };
+  it('semi finals = the winner of QF1 v the winner of QF3, and the winner of QF2 v the winner of QF4; then the final and the champion', () => {
+    // QF: the first-named player of each pair wins (u1, u7, u13, u19); SF1: u1 beats u13; SF2: u7 beats u19; final: u7 beats u1
+    const pts = { u1: { QF: 50, SF: 40, F: 55 }, u8: { QF: 10 }, u7: { QF: 50, SF: 60, F: 70 }, u2: { QF: 10 }, u13: { QF: 50, SF: 30 }, u20: { QF: 10 }, u19: { QF: 50, SF: 20 }, u14: { QF: 10 } };
     const b = build(AFTER.F, rows((u) => pts[u] || {}));
-    expect(b.pairs.QF1.winner).toBe('u1');
-    expect([b.pairs.SF1.a.uid, b.pairs.SF1.b.uid]).toEqual(['u1', 'u7']); // winner of A1-B2 v winner of B1-A2
-    expect([b.pairs.SF2.a.uid, b.pairs.SF2.b.uid]).toEqual(['u13', 'u19']);
+    expect(['QF1', 'QF2', 'QF3', 'QF4'].map((k) => b.pairs[k].winner)).toEqual(['u1', 'u7', 'u13', 'u19']);
+    expect([b.pairs.SF1.a.uid, b.pairs.SF1.b.uid]).toEqual(['u1', 'u13']); // winner of A1-B2 v winner of C1-D2
+    expect([b.pairs.SF2.a.uid, b.pairs.SF2.b.uid]).toEqual(['u7', 'u19']); // winner of B1-A2 v winner of D1-C2
     expect(b.pairs.SF1.winner).toBe('u1');
-    expect(b.pairs.SF2.winner).toBe('u13');
-    expect([b.pairs.F.a.uid, b.pairs.F.b.uid]).toEqual(['u1', 'u13']);
-    expect(b.pairs.F.winner).toBe('u13'); // 70 > 55
-    expect(b.champion).toBe('u13');
+    expect(b.pairs.SF2.winner).toBe('u7');
+    expect([b.pairs.F.a.uid, b.pairs.F.b.uid]).toEqual(['u1', 'u7']);
+    expect(b.pairs.F.winner).toBe('u7'); // 70 > 55
+    expect(b.champion).toBe('u7');
   });
   it('the final is open (no champion) until its stage is over', () => {
     const rs = rows((u) => ({ u1: { QF: 50 }, u13: { QF: 50 }, u7: { QF: 50 }, u19: { QF: 50 } }[u] || {}));

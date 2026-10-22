@@ -1,10 +1,10 @@
 import { useLang } from '../contexts/LangContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useMidBracket } from '../hooks/useMidBracket.js';
+import { formatKeyDay } from '../utils/dates.js';
 import { MID_GROUPS, MID_STAGES, MID_WINDOWS, PAIR_KEYS } from '@shared/midTournament.js';
 
-const dayLabel = (key, lang) => new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${key}T12:00:00Z`));
-const rangeLabel = (w, lang) => `${dayLabel(w.lo, lang)} – ${dayLabel(w.hi, lang)}`;
+const rangeLabel = (w, lang) => `${formatKeyDay(w.lo, lang)} – ${formatKeyDay(w.hi, lang)}`;
 const stageOfPair = (k) => (k.startsWith('QF') ? 'QF' : k.startsWith('SF') ? 'SF' : 'F');
 
 /** "Mid-season tournament": groups -> quarter finals -> semi finals -> final. Game points only (no bonus), inside the window of every stage; live. */
