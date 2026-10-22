@@ -709,5 +709,9 @@
   "ev.tiedKind": "Tied now",
   "ev.waitingKind": "Waiting",
   "ev.waitingNote": "No live score yet: the points appear as soon as the first score update arrives.",
-  "pred.noOpenGames": "No games to predict right now. Games that have started, their live scores and everyone's picks are in the Results page."
+  "pred.noOpenGames": "No games to predict right now. Games that have started, their live scores and everyone's picks are in the Results page.",
+  "lb.monthsLabel": "Champion of the month:",
+  "lb.monthChampion": "🏆 {month} champion: {names}",
+  "lb.monthLeading": "Leading now ({month}): {names}",
+  "lb.monthNote": "Game points only, no bonus questions. Every month starts from zero. The month is the date of the game in Israel. Players equal on points, exact hits and unique hits share the title."
 }

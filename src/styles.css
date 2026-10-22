@@ -359,3 +359,8 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .chip-margin0 { background: #14b8a6; color: #fff; font-weight: 600; }
 .chip-miss { background: rgba(239, 68, 68, .22); color: #fca5a5; }
 .pts-live { color: #22c55e; }
+
+/* Leaderboard: the second row of tabs (champion of the month) and its banner */
+.sub-tabs { margin-top: .4rem; align-items: center; }
+.sub-label { white-space: nowrap; padding-inline-end: .25rem; }
+.month-banner { font-weight: 700; margin: .5rem 0; }

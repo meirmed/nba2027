@@ -15,19 +15,20 @@ export function liveGameIds({ games, countedRounds = ['RS'], lastRecalcMs = 0, n
  * rows: points docs ({uid, total, gamePts, winnerCorrect, gameHits, exactHits, uniqueHits, noScore, ...}); picksByGame: {gameId: {uid: {s1, s2, joker, autoFilled}} | null | undefined}
  * (undefined / null = the picks are not loaded / not published yet: that game is skipped). A live game that is TIED has no winner: not scored yet.
  * Adds, for every game in play: the provisional points to total + gamePts, the correct-winner / exact / unique hits, and a "no score" for players with 0 points
- * (or no pick). Returns NEW row objects (the input is not changed). Streaks, bonus, byDay stay official.
+ * (or no pick). Returns NEW row objects (the input is not changed). Streaks and bonus stay official. byDay stays official too, unless trackDays is on
+ * (the monthly table): then byDay[g.day] = [points, exact, unique] also gets the provisional points (g.day = the Israel date of the tip-off).
  */
-export function applyLiveGames({ rows, games, picksByGame, scoring, countedRounds = ['RS'], lastRecalcMs = 0, nowMs = Date.now() }) {
+export function applyLiveGames({ rows, games, picksByGame, scoring, countedRounds = ['RS'], lastRecalcMs = 0, nowMs = Date.now(), trackDays = false }) {
   const ids = new Set(liveGameIds({ games, countedRounds, lastRecalcMs, nowMs }));
   const toScore = games.filter((g) => ids.has(g.id) && Number.isInteger(g.s1) && Number.isInteger(g.s2) && g.s1 !== g.s2 && picksByGame[g.id]);
   if (toScore.length === 0) return rows;
   const scored = toScore.map((g) => {
     const picks = Object.entries(picksByGame[g.id]).map(([uid, p]) => ({ uid, p, joker: !!p.joker }));
-    return scoreGamePicks({ game: { ...g, status: 'finished' }, picks, scoring });
+    return { g, res: scoreGamePicks({ game: { ...g, status: 'finished' }, picks, scoring }) };
   });
   return rows.map((row) => {
     const out = { ...row };
-    scored.forEach((res) => {
+    scored.forEach(({ g, res }) => {
       const sc = res[row.uid];
       if (!sc) { out.noScore = (out.noScore ?? 0) + 1; return; } // no pick in this game
       out.gamePts = r2((out.gamePts ?? 0) + sc.pts);
@@ -36,6 +37,13 @@ export function applyLiveGames({ rows, games, picksByGame, scoring, countedRound
       if (sc.exact) out.exactHits = (out.exactHits ?? 0) + 1;
       if (sc.uniquePts > 0) out.uniqueHits = (out.uniqueHits ?? 0) + 1;
       if (sc.pts === 0) out.noScore = (out.noScore ?? 0) + 1;
+      if (trackDays && g.day) { // the per-day cell of the monthly table: [game points, exact hits, unique hits]
+        const cell = [...(out.byDay?.[g.day] ?? [0, 0, 0])];
+        cell[0] = r2(cell[0] + sc.pts);
+        if (sc.exact) cell[1] += 1;
+        if (sc.uniquePts > 0) cell[2] += 1;
+        out.byDay = { ...out.byDay, [g.day]: cell };
+      }
     });
     return out;
   });

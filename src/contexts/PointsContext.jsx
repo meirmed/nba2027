@@ -6,8 +6,9 @@ import { useGames } from './GamesContext.jsx';
 import { useScoring, useSettings } from './SettingsContext.jsx';
 import { useNow } from '../hooks/useNow.js';
 import { applyLiveGames, liveGameIds } from '@shared/livePoints.js';
+import { dayKey } from '../utils/dates.js';
 
-const Ctx = createContext({ rows: [], allRows: [], baseRows: [], loading: true, hasLive: false });
+const Ctx = createContext({ rows: [], allRows: [], baseRows: [], dayRows: [], loading: true, hasLive: false });
 
 /**
  * points/{uid} for everyone (small summary docs written by Cloud Functions). One listener for the whole app, plus the LIVE overlay:
@@ -15,6 +16,7 @@ const Ctx = createContext({ rows: [], allRows: [], baseRows: [], loading: true, 
  *    server has saved it), so the leaderboard, Home and every rank move in real time. rows = paid players only (admins and unpaid players don't take part);
  *    allRows also keeps them (names, e.g. the audit log).
  *  - baseRows = the OFFICIAL saved points of the players (the Statistics tab uses them: those numbers only change when a game ends).
+ *  - dayRows = like rows, but the per-day points (byDay) are live too: ONLY the "champion of the month" table uses them (Head to Head keeps the official byDay).
  */
 export function PointsProvider({ children }) {
   const { user } = useAuth();
@@ -33,7 +35,7 @@ export function PointsProvider({ children }) {
   }, [user]);
 
   const lastRecalcMs = useMemo(() => state.all.reduce((m, r) => Math.max(m, r.updatedAt?.toMillis?.() ?? 0), 0), [state.all]);
-  const gameInfo = useMemo(() => games.map((g) => ({ id: g.id, round: g.round, status: g.status, s1: g.s1, s2: g.s2, updatedMs: g.updatedAt?.toMillis?.() ?? 0 })), [games]);
+  const gameInfo = useMemo(() => games.map((g) => ({ id: g.id, round: g.round, status: g.status, s1: g.s1, s2: g.s2, updatedMs: g.updatedAt?.toMillis?.() ?? 0, day: dayKey(g.tipoff, settings.timezone) })), [games, settings.timezone]);
   const idsKey = useMemo(() => liveGameIds({ games: gameInfo, countedRounds: settings.countedRounds, lastRecalcMs, nowMs }).sort().join(','), [gameInfo, settings.countedRounds, lastRecalcMs, nowMs]);
 
   // the published picks (picks/{gameId}, written at tip-off) of the games in play: one small listener each
@@ -50,8 +52,10 @@ export function PointsProvider({ children }) {
     const base = state.all.filter(competes);
     const liveRows = applyLiveGames({ rows: base, games: gameInfo, picksByGame, scoring, countedRounds: settings.countedRounds, lastRecalcMs, nowMs });
     const byUid = new Map(liveRows.map((r) => [r.uid, r]));
+    const dayRows = applyLiveGames({ rows: base, games: gameInfo, picksByGame, scoring, countedRounds: settings.countedRounds, lastRecalcMs, nowMs, trackDays: true });
     return {
       rows: liveRows,
+      dayRows,
       allRows: state.all.map((r) => byUid.get(r.uid) ?? r),
       baseRows: base,
       loading: state.loading,

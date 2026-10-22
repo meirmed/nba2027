@@ -94,3 +94,23 @@ describe('several games at the same time', () => {
     expect(r).toMatchObject({ winnerCorrect: 2, exactHits: 1, uniqueHits: 2 });
   });
 });
+
+describe('per-day points for the monthly table (trackDays)', () => {
+  const rows = [{ ...base('A', 100), byDay: { '2026-11-05': [10, 1, 0] } }, base('B', 50)];
+  const pk = { g1: picks({ A: [60, 55], B: [110, 100] }) };
+  const game = (day) => live(60, 55, { day });
+  it('adds the provisional points, exact and unique hits to the game\'s day', () => {
+    const r = by(run(rows, [game('2026-11-05')], pk, { trackDays: true }));
+    expect(r.A.byDay['2026-11-05']).toEqual([10 + 22, 2, 1]); // exact + unique = 22 points
+    expect(r.B.byDay['2026-11-05']).toEqual([5, 0, 0]); // right winner only, a new cell
+  });
+  it('is OFF by default: Head to Head (which uses byDay) does not move live', () => {
+    const r = by(run(rows, [game('2026-11-05')], pk));
+    expect(r.A.byDay).toEqual({ '2026-11-05': [10, 1, 0] });
+    expect(r.B.byDay).toBeUndefined();
+  });
+  it('does not change the input byDay', () => {
+    run(rows, [game('2026-11-05')], pk, { trackDays: true });
+    expect(rows[0].byDay['2026-11-05']).toEqual([10, 1, 0]);
+  });
+});

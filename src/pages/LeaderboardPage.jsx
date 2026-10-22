@@ -1,9 +1,14 @@
 import { useMemo, useState } from 'react';
+import { useGames } from '../hooks/useGames.js';
+import { useNow } from '../hooks/useNow.js';
+import { dayKey } from '../utils/dates.js';
+import { countsForStandings } from '@shared/games.js';
+import { monthChampions, monthFinished, monthKeys, monthlyRows } from '@shared/monthly.js';
 import PageShell from '../components/PageShell.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { useScoring } from '../contexts/SettingsContext.jsx';
+import { useScoring, useSettings } from '../contexts/SettingsContext.jsx';
 import { usePoints } from '../contexts/PointsContext.jsx';
 import { rankRows } from '@shared/standings.js';
 import { Link } from 'react-router-dom';
@@ -26,6 +31,55 @@ function Streak({ r }) {
   return <span className="muted">–</span>;
 }
 const pct = (a, b) => (b > 0 ? `${Math.round((100 * a) / b)}%` : '–');
+
+// "January", "ינואר": the month name from a 'YYYY-MM' key
+const monthLabel = (key, lang) => new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(`${key}-15T12:00:00Z`));
+
+/** Champion of the month: game points of ONE calendar month (no bonus), live like the rest of the table; it starts from zero every month. */
+function MonthBoard({ monthKey }) {
+  const { t, lang, dir } = useLang();
+  const { user } = useAuth();
+  const settings = useSettings();
+  const { dayRows, loading } = usePoints();
+  const { games } = useGames();
+  const nowMs = useNow(60000);
+  const tz = settings.timezone;
+  const month = monthLabel(monthKey, lang);
+
+  const rows = useMemo(() => monthlyRows(dayRows, monthKey), [dayRows, monthKey]);
+  const ranked = useMemo(() => rankRows(rows, ['mPts', 'mExact', 'mUnique']), [rows]); // every player gets his own number 1..N
+  const champs = useMemo(() => monthChampions(rows), [rows]); // a real tie on all three shares the title
+  const over = useMemo(() => monthFinished({
+    monthKey, todayKey: dayKey(new Date(nowMs), tz),
+    games: games.filter((g) => countsForStandings(g, settings.countedRounds)).map((g) => ({ dayKey: dayKey(g.tipoff, tz), status: g.status })),
+  }), [monthKey, nowMs, tz, games, settings.countedRounds]);
+
+  if (loading) return <p className="muted">{t('common.loading')}</p>;
+  if (ranked.length === 0) return <p className="muted">{t('lb.empty')}</p>;
+  const champIds = new Set(champs.map((r) => r.uid));
+  const names = champs.map((r) => r.name).join(' · ');
+
+  return (
+    <div className="table-wrap">
+      {champs.length > 0 && <p className="month-banner">{t(over ? 'lb.monthChampion' : 'lb.monthLeading', { month, names })}</p>}
+      <table className="table lb" dir={dir}>
+        <thead>
+          <tr className="muted small"><th>#</th><th className="lb-name">{t('lb.name')}</th><th>{t('lb.gamePtsCol')}</th><th>{t('lb.exactHits')}</th><th>{t('lb.uniqueHits')}</th></tr>
+        </thead>
+        <tbody>
+          {ranked.map((r) => (
+            <tr key={r.id} className={r.uid === user?.uid ? 'me' : ''}>
+              <td>{r.rank}</td>
+              <td className="lb-name"><Link className="lb-link" to={r.uid === user?.uid ? '/my-points' : `/player/${r.uid}`}><Avatar name={r.name} url={r.photoURL} size={24} /><span dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('lb.you')}` : ''}{over && champIds.has(r.uid) ? ' 🏆' : ''}</span></Link></td>
+              <td><strong className="pts-games">{r.mPts}</strong></td><td><strong className="pts-exact">{r.mExact}</strong></td><td><strong className="pts-unique">{r.mUnique}</strong></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="muted small">{t('lb.monthNote')}</p>
+    </div>
+  );
+}
 
 function Board({ tab }) {
   const { t, dir } = useLang();
@@ -86,8 +140,11 @@ function Board({ tab }) {
 }
 
 export default function LeaderboardPage() {
-  const { t } = useLang();
-  const [tab, setTab] = useState('total');
+  const { t, lang } = useLang();
+  const { timezone } = useSettings();
+  const nowMs = useNow(60000);
+  const [tab, setTab] = useState('total'); // a main tab, or 'm:YYYY-MM' = champion of that month
+  const months = useMemo(() => monthKeys(dayKey(new Date(nowMs), timezone)), [nowMs, timezone]); // from November; a new month appears on the 1st
   return (
     <PageShell titleKey="nav.leaderboard">
       <div className="tabs scroll" role="tablist">
@@ -95,7 +152,15 @@ export default function LeaderboardPage() {
           <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{t(`lb.tab.${k}`)}</button>
         ))}
       </div>
-      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}><Board tab={tab} /></ErrorBoundary>
+      {months.length > 0 && (
+        <div className="tabs scroll sub-tabs" role="tablist">
+          <span className="sub-label muted small">{t('lb.monthsLabel')}</span>
+          {months.map((m) => (
+            <button key={m} role="tab" aria-selected={tab === `m:${m}`} className={`tab ${tab === `m:${m}` ? 'active' : ''}`} onClick={() => setTab(`m:${m}`)}>{monthLabel(m, lang)}</button>
+          ))}
+        </div>
+      )}
+      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab.startsWith('m:') ? <MonthBoard monthKey={tab.slice(2)} /> : <Board tab={tab} />}</ErrorBoundary>
     </PageShell>
   );
 }
