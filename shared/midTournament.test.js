@@ -9,15 +9,19 @@ const AFTER = { G: '2026-12-07', QF: '2026-12-14', SF: '2026-12-21', F: '2026-12
 
 describe('window stats', () => {
   it('sums only the days of the window; the edges are inclusive; other days and the bonus do not count', () => {
-    const r = { bonus: 99, byDay: { '2026-11-08': [50, 5, 5], '2026-11-09': [10, 1, 0], '2026-12-06': [7, 0, 1], '2026-12-07': [100, 9, 9] } };
-    expect(windowStats(r, MID_WINDOWS.G)).toEqual({ pts: 17, exact: 1, unique: 1 });
-    expect(windowStats(undefined, MID_WINDOWS.G)).toEqual({ pts: 0, exact: 0, unique: 0 });
+    const r = { total: 321, bonus: 99, byDay: { '2026-11-08': [50, 5, 5, 5], '2026-11-09': [10, 1, 0, 2], '2026-12-06': [7, 0, 1, 1], '2026-12-07': [100, 9, 9, 9] } };
+    expect(windowStats(r, MID_WINDOWS.G)).toEqual({ pts: 17, winners: 3, exact: 1, unique: 1, total: 321 }); // total = the overall score, only for the last tiebreaker
+    expect(windowStats(undefined, MID_WINDOWS.G)).toEqual({ pts: 0, winners: 0, exact: 0, unique: 0, total: 0 });
+    expect(windowStats({ byDay: { '2026-11-10': [5, 0, 0] } }, MID_WINDOWS.G).winners).toBe(0); // an older day with only 3 numbers
   });
-  it('better = points, then exact hits, then unique hits', () => {
-    expect(compareStats({ pts: 5, exact: 0, unique: 0 }, { pts: 4, exact: 9, unique: 9 })).toBeLessThan(0);
-    expect(compareStats({ pts: 5, exact: 2, unique: 0 }, { pts: 5, exact: 1, unique: 9 })).toBeLessThan(0);
-    expect(compareStats({ pts: 5, exact: 1, unique: 2 }, { pts: 5, exact: 1, unique: 1 })).toBeLessThan(0);
-    expect(compareStats({ pts: 5, exact: 1, unique: 1 }, { pts: 5, exact: 1, unique: 1 })).toBe(0);
+  it('better = points; then correct winners, then exact hits, then unique hits, then the overall score in the main table', () => {
+    const S = (pts, winners, exact, unique, total) => ({ pts, winners, exact, unique, total });
+    expect(compareStats(S(5, 0, 0, 0, 0), S(4, 9, 9, 9, 999))).toBeLessThan(0); // points come first
+    expect(compareStats(S(5, 3, 0, 0, 0), S(5, 2, 9, 9, 999))).toBeLessThan(0); // then correct winners
+    expect(compareStats(S(5, 3, 2, 0, 0), S(5, 3, 1, 9, 999))).toBeLessThan(0); // then exact hits
+    expect(compareStats(S(5, 3, 1, 2, 0), S(5, 3, 1, 1, 999))).toBeLessThan(0); // then unique hits
+    expect(compareStats(S(5, 3, 1, 1, 200), S(5, 3, 1, 1, 150))).toBeLessThan(0); // then the overall total
+    expect(compareStats(S(5, 3, 1, 1, 150), S(5, 3, 1, 1, 150))).toBe(0); // a real tie: only now the admin decides
   });
 });
 
@@ -38,9 +42,19 @@ describe('group table', () => {
     const tie34 = rowsOf([row('a', { G: 60 }), row('b', { G: 50 }), row('c', { G: 5 }), row('d', { G: 5 })]);
     expect(groupTable({ members: ['a', 'b', 'c', 'd'], rowsByUid: tie34, window: MID_WINDOWS.G }).needsDecision).toBe(false);
   });
-  it('exact hits and then unique hits break the tie', () => {
-    const r = rowsOf([row('a', { G: [50, 1, 0] }), row('b', { G: [50, 2, 0] }), row('c', { G: [50, 2, 1] })]);
-    expect(groupTable({ members: ['a', 'b', 'c'], rowsByUid: r, window: MID_WINDOWS.G }).table.map((t) => t.uid)).toEqual(['c', 'b', 'a']);
+  it('correct winners, then exact hits, then unique hits, then the overall score break the tie', () => {
+    const r = rowsOf([row('a', { G: [50, 0, 0, 5] }), row('b', { G: [50, 0, 0, 7] }), row('c', { G: [50, 1, 0, 5] }), row('d', { G: [50, 1, 1, 5] })]);
+    // same points: b has the most correct winners; then c and d (5 winners): d has more unique hits; then a (5 winners, no exact hit)
+    expect(groupTable({ members: ['a', 'b', 'c', 'd'], rowsByUid: r, window: MID_WINDOWS.G }).table.map((t) => t.uid)).toEqual(['b', 'd', 'c', 'a']);
+  });
+  it('everything equal in the window: the overall score in the main table decides, and only a real tie needs the admin', () => {
+    const base = (u, total) => ({ ...row(u, { G: [50, 1, 1, 5] }), total });
+    const r = rowsOf([base('a', 100), base('b', 300), base('c', 200)]);
+    const g = groupTable({ members: ['a', 'b', 'c'], rowsByUid: r, window: MID_WINDOWS.G });
+    expect(g.table.map((t) => t.uid)).toEqual(['b', 'c', 'a']);
+    expect(g.needsDecision).toBe(false);
+    const tied = rowsOf([base('a', 300), base('b', 300), base('c', 100)]);
+    expect(groupTable({ members: ['a', 'b', 'c'], rowsByUid: tied, window: MID_WINDOWS.G }).needsDecision).toBe(true);
   });
   it('the admin decision puts the chosen first and second on top; an invalid decision is ignored', () => {
     const tie = rowsOf([row('a', { G: 50 }), row('b', { G: 50 }), row('c', { G: 50 })]);
@@ -69,6 +83,10 @@ describe('a pair', () => {
     const done = pairState({ aUid: 'x', bUid: 'y', rowsByUid: rows, window: MID_WINDOWS.QF, over: true });
     expect(done).toMatchObject({ winner: 'x', needsDecision: false });
   });
+  it('equal in the window: the overall score in the main table decides the pair', () => {
+    const r = rowsOf([{ ...row('p', { QF: [25, 2, 1, 4] }), total: 500 }, { ...row('q', { QF: [25, 2, 1, 4] }), total: 450 }]);
+    expect(pairState({ aUid: 'p', bUid: 'q', rowsByUid: r, window: MID_WINDOWS.QF, over: true })).toMatchObject({ winner: 'p', needsDecision: false });
+  });
   it('a full tie needs the admin; his decision must be one of the two', () => {
     expect(pairState({ aUid: 'p', bUid: 'q', rowsByUid: rows, window: MID_WINDOWS.QF, over: true })).toMatchObject({ winner: null, needsDecision: true });
     expect(pairState({ aUid: 'p', bUid: 'q', rowsByUid: rows, window: MID_WINDOWS.QF, over: true, winnerOverride: 'q' })).toMatchObject({ winner: 'q', needsDecision: false });
@@ -94,29 +112,28 @@ describe('the whole tournament: 23 players, groups of 6 + 6 + 6 + 5', () => {
     expect(b.pairs.QF1.a).toBeNull();
     expect(b.champion).toBeNull();
   });
-  it('quarter finals: first of a group against the second of another (A1-B2, C1-D2, B1-A2, D1-C2)', () => {
+  it('quarter finals in the owner\'s order: A1-B2, B1-A2, C1-D2, D1-C2', () => {
     const b = build(AFTER.G, rows());
     const names = (k) => [b.pairs[k].a.uid, b.pairs[k].b.uid];
     expect(names('QF1')).toEqual(['u1', 'u8']); // A1 - B2
-    expect(names('QF2')).toEqual(['u13', 'u20']); // C1 - D2
-    expect(names('QF3')).toEqual(['u7', 'u2']); // B1 - A2
+    expect(names('QF2')).toEqual(['u7', 'u2']); // B1 - A2
+    expect(names('QF3')).toEqual(['u13', 'u20']); // C1 - D2
     expect(names('QF4')).toEqual(['u19', 'u14']); // D1 - C2
     expect(b.status.QF).toBe('live'); // Dec 7 is the first day of the quarter-final window
     expect(build('2026-12-06', rows()).status.QF).toBe('upcoming');
   });
-  it('the winners of the quarter finals meet in the semi finals (QF1 v QF2, QF3 v QF4), then the final, then the champion', () => {
-    // QF: the first-named player of each pair wins; SF: u1 beats u13, u7 beats u19; F: u7 beats u1
-    const rs = rows((u) => ({ u1: { QF: 50, SF: 40 }, u8: { QF: 10 }, u13: { QF: 50, SF: 30 }, u20: { QF: 10 }, u7: { QF: 50, SF: 60, F: 70 }, u2: { QF: 10 }, u19: { QF: 50, SF: 20 }, u14: { QF: 10 } }[u] || {}));
-    const rsWithFinal = { ...rs, u1: { ...rs.u1, byDay: { ...rs.u1.byDay, [day.F]: [55, 0, 0] } } };
-    const b = build(AFTER.F, rsWithFinal);
+  it('semi finals = the winners of QF1 v QF2 and of QF3 v QF4, then the final, then the champion', () => {
+    // QF: the first-named player of each pair wins; SF1: u1 beats u7; SF2: u13 beats u19; final: u13 beats u1
+    const pts = { u1: { QF: 50, SF: 40, F: 55 }, u8: { QF: 10 }, u7: { QF: 50, SF: 30 }, u2: { QF: 10 }, u13: { QF: 50, SF: 60, F: 70 }, u20: { QF: 10 }, u19: { QF: 50, SF: 20 }, u14: { QF: 10 } };
+    const b = build(AFTER.F, rows((u) => pts[u] || {}));
     expect(b.pairs.QF1.winner).toBe('u1');
-    expect([b.pairs.SF1.a.uid, b.pairs.SF1.b.uid]).toEqual(['u1', 'u13']);
-    expect([b.pairs.SF2.a.uid, b.pairs.SF2.b.uid]).toEqual(['u7', 'u19']);
+    expect([b.pairs.SF1.a.uid, b.pairs.SF1.b.uid]).toEqual(['u1', 'u7']); // winner of A1-B2 v winner of B1-A2
+    expect([b.pairs.SF2.a.uid, b.pairs.SF2.b.uid]).toEqual(['u13', 'u19']);
     expect(b.pairs.SF1.winner).toBe('u1');
-    expect(b.pairs.SF2.winner).toBe('u7');
-    expect([b.pairs.F.a.uid, b.pairs.F.b.uid]).toEqual(['u1', 'u7']);
-    expect(b.pairs.F.winner).toBe('u7'); // 70 > 55
-    expect(b.champion).toBe('u7');
+    expect(b.pairs.SF2.winner).toBe('u13');
+    expect([b.pairs.F.a.uid, b.pairs.F.b.uid]).toEqual(['u1', 'u13']);
+    expect(b.pairs.F.winner).toBe('u13'); // 70 > 55
+    expect(b.champion).toBe('u13');
   });
   it('the final is open (no champion) until its stage is over', () => {
     const rs = rows((u) => ({ u1: { QF: 50 }, u13: { QF: 50 }, u7: { QF: 50 }, u19: { QF: 50 } }[u] || {}));

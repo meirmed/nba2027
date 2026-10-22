@@ -1,5 +1,5 @@
 // "Mid-season tournament" (טורניר אמצע): 4 groups assigned by the admin -> the top 2 of every group -> quarter finals -> semi finals -> final.
-// Everything is DERIVED from the per-day game points (points/{uid}.byDay[day] = [game points, exact hits, unique hits], day = Israel date of the tip-off)
+// Everything is DERIVED from the per-day game points (points/{uid}.byDay[day] = [game points, exact hits, unique hits, correct winners], day = Israel date of the tip-off)
 // plus two things the admin stores: the groups, and decisions for REAL ties (overrides). Bonus points never count. Pure functions, unit-tested.
 
 /** The time window (Israel dates, inclusive) in which games count for each stage. */
@@ -12,9 +12,9 @@ export const MID_WINDOWS = {
 export const MID_STAGES = ['G', 'QF', 'SF', 'F'];
 export const MID_GROUPS = ['A', 'B', 'C', 'D'];
 export const QUALIFIERS_PER_GROUP = 2;
-// quarter finals: the first of a group against the second of another group; the slots 'A1' = first place of group A, 'B2' = second place of group B
-export const QF_SLOTS = { QF1: ['A1', 'B2'], QF2: ['C1', 'D2'], QF3: ['B1', 'A2'], QF4: ['D1', 'C2'] };
-// semi finals / final: the winners of earlier pairs (A1 and A2 end up in opposite halves of the bracket)
+// quarter finals (the owner's order): the first of a group against the second of another group; 'A1' = first place of group A, 'B2' = second place of group B
+export const QF_SLOTS = { QF1: ['A1', 'B2'], QF2: ['B1', 'A2'], QF3: ['C1', 'D2'], QF4: ['D1', 'C2'] };
+// semi finals / final: the winners of the neighbouring pairs (QF1 v QF2 = the A / B half, QF3 v QF4 = the C / D half)
 export const SF_SLOTS = { SF1: ['QF1', 'QF2'], SF2: ['QF3', 'QF4'] };
 export const F_SLOTS = { F: ['SF1', 'SF2'] };
 export const PAIR_KEYS = ['QF1', 'QF2', 'QF3', 'QF4', 'SF1', 'SF2', 'F'];
@@ -22,18 +22,21 @@ export const PAIR_KEYS = ['QF1', 'QF2', 'QF3', 'QF4', 'SF1', 'SF2', 'F'];
 const r2 = (x) => Math.round(x * 100) / 100;
 const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'he') || String(a.uid).localeCompare(String(b.uid));
 
-/** Game points / exact hits / unique hits of one player inside a window (day keys, inclusive). */
+/** Game points / correct winners / exact hits / unique hits of one player inside a window (day keys, inclusive), plus his overall total (the last tiebreaker). */
 export function windowStats(row, { lo, hi }) {
-  let pts = 0; let exact = 0; let unique = 0;
-  Object.entries(row?.byDay || {}).forEach(([day, c]) => { if (day >= lo && day <= hi) { pts += c[0] || 0; exact += c[1] || 0; unique += c[2] || 0; } });
-  return { pts: r2(pts), exact, unique };
+  let pts = 0; let exact = 0; let unique = 0; let winners = 0;
+  Object.entries(row?.byDay || {}).forEach(([day, c]) => { if (day >= lo && day <= hi) { pts += c[0] || 0; exact += c[1] || 0; unique += c[2] || 0; winners += c[3] || 0; } });
+  return { pts: r2(pts), winners, exact, unique, total: row?.total ?? 0 };
 }
-/** Better first: points, then exact hits, then unique hits. 0 = a real tie. */
-export const compareStats = (a, b) => (b.pts - a.pts) || (b.exact - a.exact) || (b.unique - a.unique);
+/**
+ * Better first: game points of the window; a tie -> more correct winners, then more exact hits, then more unique hits, then the higher OVERALL score in the
+ * main table (total). 0 = a real tie (only then the admin decides).
+ */
+export const compareStats = (a, b) => (b.pts - a.pts) || ((b.winners ?? 0) - (a.winners ?? 0)) || (b.exact - a.exact) || (b.unique - a.unique) || ((b.total ?? 0) - (a.total ?? 0));
 
 /**
  * One group's table (best first, rank 1..N). `top` = the admin's decision [first, second] for a real tie. needsDecision = the order of places 1-2 or the
- * cut between 2 and 3 is a real tie (equal on points, exact and unique hits) and no decision was made: it matters for who advances and for the bracket.
+ * cut between 2 and 3 is a real tie (equal on every tiebreaker) and no decision was made: it matters for who advances and for the bracket.
  */
 export function groupTable({ members = [], rowsByUid = {}, window, top }) {
   const stats = members.map((uid) => ({ uid, name: rowsByUid[uid]?.name ?? '', ...windowStats(rowsByUid[uid], window) }));

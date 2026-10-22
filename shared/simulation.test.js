@@ -21,6 +21,7 @@ describe('season dry run: points are internally consistent', () => {
       expect(sum(r.byDay, (d) => d[0])).toBe(r.gamePts);
       expect(sum(r.byDay, (d) => d[1])).toBe(r.exactHits);
       expect(sum(r.byDay, (d) => d[2])).toBe(r.uniqueHits);
+      expect(sum(r.byDay, (d) => d[3])).toBe(r.winnerCorrect); // the new 4th number: correct winners per day
       expect(r.gamePtsByRound.RS ?? 0).toBe(r.gamePts);
       expect(Object.keys(r.byGame).length).toBe(r.gamesPlayed);
       expect(Number.isInteger(r.gamePts)).toBe(true);

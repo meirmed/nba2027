@@ -101,8 +101,8 @@ describe('per-day points for the monthly table (trackDays)', () => {
   const game = (day) => live(60, 55, { day });
   it('adds the provisional points, exact and unique hits to the game\'s day', () => {
     const r = by(run(rows, [game('2026-11-05')], pk, { trackDays: true }));
-    expect(r.A.byDay['2026-11-05']).toEqual([10 + 22, 2, 1]); // exact + unique = 22 points
-    expect(r.B.byDay['2026-11-05']).toEqual([5, 0, 0]); // right winner only, a new cell
+    expect(r.A.byDay['2026-11-05']).toEqual([10 + 22, 2, 1, 1]); // exact + unique = 22 points; an older 3-number cell is upgraded
+    expect(r.B.byDay['2026-11-05']).toEqual([5, 0, 0, 1]); // right winner only, a new cell
   });
   it('is OFF by default: Head to Head (which uses byDay) does not move live', () => {
     const r = by(run(rows, [game('2026-11-05')], pk));

@@ -80,8 +80,8 @@ describe('byDay (feeds Head to Head)', () => {
     const d2 = Date.parse('2026-10-30T23:30:00Z'); // 01:30 next day in Israel
     const games = [game('g1', d1, 110, 100), game('g2', d2, 110, 100)];
     const r = computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'Asia/Jerusalem' });
-    expect(r.A.byDay).toEqual({ '2026-10-30': [22, 1, 1], '2026-10-31': [8, 0, 0] });
-    expect(computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'UTC' }).A.byDay).toEqual({ '2026-10-30': [30, 1, 1] }); // 22 + 8
+    expect(r.A.byDay).toEqual({ '2026-10-30': [22, 1, 1, 1], '2026-10-31': [8, 0, 0, 1] }); // [points, exact, unique, correct winners]
+    expect(computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'UTC' }).A.byDay).toEqual({ '2026-10-30': [30, 1, 1, 2] }); // 22 + 8, two correct winners
   });
 });
 

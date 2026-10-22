@@ -61,13 +61,13 @@ export default function MidTournamentView() {
               <h4 className="bq-title">{t('mid.group', { g })}</h4>
               {groups[g].length === 0 ? <p className="muted">–</p> : (
                 <table className="table lb" dir={dir}>
-                  <thead><tr className="muted small"><th>#</th><th className="lb-name">{t('lb.name')}</th><th>{t('lb.gamePtsCol')}</th><th>{t('lb.exactHits')}</th><th>{t('lb.uniqueHits')}</th></tr></thead>
+                  <thead><tr className="muted small"><th>#</th><th className="lb-name">{t('lb.name')}</th><th>{t('lb.gamePtsCol')}</th><th>{t('lb.winnerDir')}</th><th>{t('lb.exactHits')}</th><th>{t('lb.uniqueHits')}</th></tr></thead>
                   <tbody>
                     {info.table.map((r) => (
                       <tr key={r.uid} className={`${r.qualified ? 'mid-qual' : ''} ${r.uid === user?.uid ? 'me' : ''}`}>
                         <td>{r.rank}</td>
                         <td className="lb-name"><span dir="auto">{r.name}{r.qualified ? ' ✓' : ''}</span></td>
-                        <td><strong className="pts-games">{r.pts}</strong></td><td>{r.exact}</td><td>{r.unique}</td>
+                        <td><strong className="pts-games">{r.pts}</strong></td><td>{r.winners}</td><td>{r.exact}</td><td>{r.unique}</td>
                       </tr>
                     ))}
                   </tbody>
