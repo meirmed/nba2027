@@ -24,8 +24,9 @@ export default function EveryonesPicks({ gameId, result }) {
     if (data) return;
     try { const s = await getDoc(doc(db, 'picks', gameId)); setData(s.exists() ? s.data() : null); } catch { setData(null); }
   };
-  const toggle = () => { const next = !open; setOpen(next); if (next) load(); };
-  const toggleStats = () => { const next = !statsOpen; setStatsOpen(next); if (next) load(); };
+  // the list and the statistics are two separate views: opening one closes the other (the list never shows the statistics block)
+  const toggle = () => { const next = !open; setOpen(next); if (next) { setStatsOpen(false); load(); } };
+  const toggleStats = () => { const next = !statsOpen; setStatsOpen(next); if (next) { setOpen(false); load(); } };
 
   const rows = useMemo(
     () => (data ? Object.entries(data.picks || {}).map(([uid, p]) => ({ uid, ...p })).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')) : []),

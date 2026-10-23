@@ -224,3 +224,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 98: statistics behind a "Statistics" button, on the game card
 - The statistics block is now COLLAPSED behind a "📊 סטטיסטיקה" button placed next to "הניחושים של כולם" on the game card itself (Predictions `GameCard`, Results `GameBlock`: both render `EveryonesPicks`, only after tip-off, when the picks are published). The two buttons are independent (the list and the statistics can be open together); the picks are loaded once for both. With only auto-filled picks the button says "no real picks yet". `PickStats` now receives the calculated stats (`pickStats` is computed in `EveryonesPicks`). On the Predictions page a game disappears one hour after tip-off, so the button is there only for that first hour; on the Results page it stays. App-only.
+
+## Update 99: the list of everyone's picks and the statistics are exclusive
+- In `EveryonesPicks` opening the list closes the statistics and opening the statistics closes the list, so pressing "הניחושים של כולם" shows only the list (before, both could be open together). The "Statistics" button stays on the game card. App-only.
