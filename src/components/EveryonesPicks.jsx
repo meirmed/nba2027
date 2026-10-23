@@ -7,6 +7,7 @@ import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { scoreGamePicks } from '@shared/standings.js';
 import { countsForStandings } from '@shared/games.js';
 import Score from './Score.jsx';
+import PickStats from './PickStats.jsx';
 
 /** Reads picks/{gameId} (written by lockGamePicks at tip-off). Doesn't exist before lock, so nothing leaks early. */
 export default function EveryonesPicks({ gameId, result }) {
@@ -64,6 +65,7 @@ export default function EveryonesPicks({ gameId, result }) {
       {open && data === null && <p className="muted">{t('pred.picksSoon')}</p>}
       {open && data && rows.length === 0 && <p className="muted">{t('pred.noPicks')}</p>}
       {open && live && <p className="muted small">{tiedNow ? t('ev.tiedNote') : noScoreYet ? t('ev.waitingNote') : t('ev.liveNote')}</p>}
+      {open && rows.length > 0 && <PickStats rows={rows} game={result} />}
       {open && rows.length > 0 && (
         <div className="table-wrap">
           <table className="table" dir={dir}>

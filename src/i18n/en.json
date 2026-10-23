@@ -773,5 +773,15 @@
   "ah.tb.winners": "correct winners",
   "ah.tb.total": "the overall score in the main table",
   "ah.tbFixed": "Tie-break order (after the game points; fixed, the same as the mid-season tournament): {order}. A tie in all of them is left to the admin.",
-  "ah.err.openGames": "Some games of this period are still waiting or being played. You can close it only after they finish."
+  "ah.err.openGames": "Some games of this period are still waiting or being played. You can close it only after they finish.",
+  "ps.title": "Picks statistics",
+  "ps.count": "{n} picks",
+  "ps.tie": "Tie",
+  "ps.avg": "Average pick",
+  "ps.avgMargin": "Average margin",
+  "ps.popular": "Most popular score",
+  "ps.times": "picked by {n} players",
+  "ps.allDifferent": "Every pick is different",
+  "ps.spread": "Spread of the predicted margins (points)",
+  "ps.note": "Without auto-filled picks."
 }

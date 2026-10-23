@@ -377,3 +377,21 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .mid-side.lead { background: rgba(34, 197, 94, .12); }
 .mid-side.win { background: rgba(34, 197, 94, .25); font-weight: 700; }
 .mid-qual td { background: rgba(34, 197, 94, .09); }
+
+/* Everyone's picks: the statistics block above the list */
+.pstat { display: flex; flex-direction: column; gap: .55rem; padding: .7rem .75rem; margin: .6rem 0; border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--line); }
+.pstat-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+.pstat-bar { display: flex; height: 1.7rem; border-radius: 999px; overflow: hidden; background: var(--line); font-size: .8rem; font-weight: 700; }
+.pstat-bar > span { display: flex; align-items: center; justify-content: center; color: #fff; min-width: 0; }
+.pstat-home { background: var(--accent); }
+.pstat-away { background: #3b82f6; }
+.pstat-tie { background: #8892a6; }
+.pstat-legend { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.pstat-dot { display: inline-block; width: .65rem; height: .65rem; border-radius: 50%; vertical-align: middle; }
+.pstat-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .7rem; }
+.pstat-score { margin-inline-end: .5rem; }
+.pstat-row { display: flex; align-items: center; gap: .5rem; }
+.pstat-lbl { min-width: 3.2rem; font-size: .8rem; color: var(--muted); }
+.pstat-track { flex: 1; height: .6rem; border-radius: 999px; background: var(--line); overflow: hidden; }
+.pstat-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.pstat-n { min-width: 1.6rem; text-align: end; }
