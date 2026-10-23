@@ -24,13 +24,13 @@ export default function LeagueTab() {
             <h3 className="bq-title">{t('h2h.group', { g })}</h3>
             <div className="table-wrap">
               <table className="table lb" dir={dir}>
-                <thead><tr className="muted small"><th>#</th><th className="lb-name">{t('lb.name')}</th><th>{t('h2h.exact')}</th><th>{t('h2h.unique')}</th><th>{t('h2h.pts')}</th></tr></thead>
+                <thead><tr className="muted small"><th>#</th><th className="lb-name">{t('lb.name')}</th><th>{t('lb.winnerDir')}</th><th>{t('h2h.exact')}</th><th>{t('h2h.unique')}</th><th>{t('h2h.pts')}</th></tr></thead>
                 <tbody>
                   {table.map((r) => (
                     <tr key={r.uid} className={`${r.uid === user?.uid ? 'me' : ''} ${r.pos <= advancePerGroup ? 'adv' : ''}`}>
                       <td>{r.rank}</td>
                       <td className="lb-name" dir="auto">{nameOf(r.uid)}{r.uid === user?.uid ? ` ${t('lb.you')}` : ''}</td>
-                      <td>{r.exactHits}</td><td>{r.uniqueHits}</td><td><strong className="pts-total">{r.pts}</strong></td>
+                      <td>{r.winners}</td><td>{r.exactHits}</td><td>{r.uniqueHits}</td><td><strong className="pts-total">{r.pts}</strong></td>
                     </tr>
                   ))}
                 </tbody>

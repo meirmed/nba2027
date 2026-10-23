@@ -101,7 +101,9 @@ describe('season dry run: Head to Head from the daily totals', () => {
       const a = stats(u, null, addDaysToKey(firstDay, 19));
       const b = stats(u, addDaysToKey(firstDay, 20), addDaysToKey(firstDay, 39));
       const c = stats(u, addDaysToKey(firstDay, 40), null);
-      expect(a.pts + b.pts + c.pts).toBe(res[u].gamePts);
+      expect(a.pts + b.pts + c.pts).toBeCloseTo(sum(res[u].byDay, (d) => d[4]), 6); // Head to Head counts the points WITHOUT the joker doubling
+      expect(a.pts + b.pts + c.pts).toBeLessThanOrEqual(res[u].gamePts + 1e-9);
+      expect(a.winners + b.winners + c.winners).toBe(res[u].winnerCorrect);
       expect(a.exactHits + b.exactHits + c.exactHits).toBe(res[u].exactHits);
       expect(stats(u, null, null).uniqueHits).toBe(res[u].uniqueHits);
     });

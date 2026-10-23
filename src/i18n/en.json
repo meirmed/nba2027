@@ -345,10 +345,8 @@
   "ah.status.league": "Status: group league",
   "ah.status.knockout": "Status: knockout",
   "ah.status.finished": "Status: finished",
-  "ah.tiebreakers": "Tie-break order (after points)",
   "ah.tb.exactHits": "Exact hits",
   "ah.tb.uniqueHits": "Unique hits",
-  "ah.tb.seed": "Better seed",
   "ah.groupsEditor": "Groups",
   "ah.closeLeague": "Close the league and create the knockout",
   "ah.koStart": "The knockout starts on",
@@ -501,7 +499,7 @@
   "rules.joker.sub": "There are {max} jokers per season",
   "rules.joker.note": "You can use a joker on any game, and move it to another game, until the game starts. The joker multiplies everything you earn on that game, including the unique and risk bonuses.",
   "rules.sec.h2h": "⚔️ Head to Head",
-  "rules.h2h.intro": "Head to Head has a group league, a knockout and pairs for fun. Only game points count here, bonus points don't.",
+  "rules.h2h.intro": "Head to Head has a group league, a knockout and pairs for fun. Only game points count here: no bonus points, and the joker's double points do not count. The points move live during the games.",
   "rules.h2h.league.title": "🏟️ Group league",
   "rules.h2h.league.b1": "Players are drawn into groups.",
   "rules.h2h.league.b2": "Points in this stage come only from the regular games, with no bonus points.",
@@ -771,5 +769,9 @@
   "rules.month.intro": "Every month has its own table, starting from zero. The leader at the end of the month is the champion of the month.",
   "rules.month.b1": "The months: from {from} to {to}.",
   "rules.month.b2": "Only game points count, no bonus questions. The joker counts in the points of the champion of the month.",
-  "rules.month.b4": "In a tie on points: more exact scores, then more unique hits. If that is equal too, the title is shared."
+  "rules.month.b4": "In a tie on points: more exact scores, then more unique hits. If that is equal too, the title is shared.",
+  "ah.tb.winners": "correct winners",
+  "ah.tb.total": "the overall score in the main table",
+  "ah.tbFixed": "Tie-break order (after the game points; fixed, the same as the mid-season tournament): {order}. A tie in all of them is left to the admin.",
+  "ah.err.openGames": "Some games of this period are still waiting or being played. You can close it only after they finish."
 }

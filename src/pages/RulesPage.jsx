@@ -49,7 +49,7 @@ export default function RulesPage() {
   const sum = (...parts) => parts.join(' + '); // the cards show the DETAILED sum, e.g. 5 + 6 + 6
   const tiers = [...s.diffBonus].sort((a, b) => a.maxErr - b.maxErr);
   const numbered = (keys, ns) => keys.map((k, i) => `${i + 1}) ${t(`${ns}${k}`)}`).join(', ');
-  const h2hTb = (tournament?.tiebreakers || DEFAULT_H2H_TIEBREAKERS).filter((k) => k !== 'seed'); // the page lists exact hits, then unique hits
+  const h2hTb = DEFAULT_H2H_TIEBREAKERS; // fixed order (the same as the mid-season tournament)
   const pct = Math.round(s.autoFillFactor * 100);
 
   // Worked example (numbers are computed with the live scoring settings, so they can never go stale): the game ended 110-102, a margin of 8.

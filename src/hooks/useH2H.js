@@ -29,11 +29,19 @@ export function useFunPairs() {
   return pairs;
 }
 
-/** Names + windowed GAME-point stats for everyone, from points/{uid}.byDay (bonus points are never part of it). */
+/**
+ * Names + windowed GAME-point stats for everyone, from points/{uid}.byDay: LIVE (the provisional points of the games being played are in it), without the
+ * joker doubling, never with bonus points. statsOf also carries the overall main-table total (the last tiebreaker).
+ */
 export function usePlayerStats() {
-  const { rows, allRows } = usePoints();
-  const byUid = useMemo(() => Object.fromEntries(allRows.map((r) => [r.uid, r])), [allRows]); // names also resolve for admins (audit log)
+  const { rows, allRows, dayRows } = usePoints();
+  const byUid = useMemo(() => { // names of everybody (also admins, for the audit log) + the live per-day points of the players
+    const m = {};
+    allRows.forEach((r) => { m[r.uid] = r; });
+    dayRows.forEach((r) => { m[r.uid] = r; });
+    return m;
+  }, [allRows, dayRows]);
   const nameOf = (uid) => byUid[uid]?.name || '…';
-  const statsOf = (uid, from = null, to = null) => windowStats(byUid[uid]?.byDay, from, to);
+  const statsOf = (uid, from = null, to = null) => ({ ...windowStats(byUid[uid]?.byDay, from, to), total: byUid[uid]?.total ?? 0 });
   return { rows, byUid, nameOf, statsOf };
 }

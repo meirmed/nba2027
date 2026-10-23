@@ -5,7 +5,7 @@ import { DEFAULT_H2H_TIEBREAKERS, resolvePair } from '@shared/h2h.js';
 
 const pairOrder = ([ia, a], [ib, b]) => ((a.seedA ?? 999) - (b.seedA ?? 999)) || ia.localeCompare(ib);
 
-/** Knockout stages (newest first). Points = game points inside the stage's day window; head start added; tie-breaks per tournament settings. */
+/** Knockout stages (newest first). Points = game points inside the stage's day window; head start added; tie-breaks in the fixed order. */
 export default function KnockoutTab() {
   const { t } = useLang();
   const tournament = useTournament();
@@ -15,7 +15,7 @@ export default function KnockoutTab() {
 
   const stages = Object.entries(tournament.stages || {}).sort((a, b) => b[1].stageNum - a[1].stageNum);
   if (stages.length === 0) return <p className="muted">{t('h2h.noKnockout')}</p>;
-  const tiebreakers = tournament.tiebreakers || DEFAULT_H2H_TIEBREAKERS;
+  const tiebreakers = DEFAULT_H2H_TIEBREAKERS; // fixed: the same order as the mid-season tournament
 
   return (
     <div>

@@ -42,7 +42,7 @@ describe('i18n', () => {
       'status.': GAME_STATUSES, 'round.': GAME_ROUNDS, 'bq.type.': BONUS_TYPES, 'bq.cat.': ['general', 'season', 'month', 'ranking'],
       'lb.tab.': ['total', 'games', 'bonus', 'jokers', 'stats'], 'h2h.tab.': ['league', 'knockout', 'fun'], 'tabs.': ['games', 'week', 'bonus'],
       'ah.tab.': ['tournament', 'fun'], 'al.view.': ['actions', 'errors'], 'results.tab.': ['live', 'finished', 'bonus'], 'home.hi.': ['morning', 'afternoon', 'evening', 'night'], 'mp.tab.': ['games', 'bonus'], 'bq.tab.': ['questions', 'players', 'missing'], 'rm.tab.': ['games', 'bonus'], 'mid.stage.': ['G', 'QF', 'SF', 'F'], 'mid.status.': ['upcoming', 'live', 'over'], 'ah.status.': ['league', 'knockout', 'finished'],
-      'ah.tb.': ['exactHits', 'uniqueHits', 'seed'], 'tb.': ['total', 'exactHits', 'uniqueHits', 'bonus'],
+      'ah.tb.': ['winners', 'exactHits', 'uniqueHits', 'total'], 'tb.': ['total', 'exactHits', 'uniqueHits', 'bonus'],
       'pred.err.': ['locked', 'closed', 'not-found', 'not-counted', 'teams-tbd', 'invalid-score', 'tie', 'joker-limit', 'joker-needs-pick'],
       'bq.err.': ['locked', 'answered', 'not-found', 'not-supported', 'invalid-answer', 'too-many'],
     };

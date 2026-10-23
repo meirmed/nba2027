@@ -1,18 +1,30 @@
-// Head to Head (Phase 6): pure rules. Used by the app to show standings/results LIVE from points/{uid}.byDay (game points only,
-// bonus points never count) and by the admin tools. Day keys are "YYYY-MM-DD" (Israel date by default), windows are inclusive.
+// Head to Head (Phase 6): pure rules. Used by the app to show standings/results LIVE from points/{uid}.byDay and by the admin tools. Only GAME points count:
+// bonus points never do, and the JOKER's doubling does not either (like in the mid-season tournament). Day keys are "YYYY-MM-DD" (Israel date by default),
+// windows are inclusive.
 
-/** Tie-break order for a tied head-to-head (after points incl. any head start). 'seed' = the better (lower) seed wins. Editable by admin. */
-export const DEFAULT_H2H_TIEBREAKERS = ['exactHits', 'uniqueHits', 'seed'];
+/**
+ * The tie-break order (the same as the mid-season tournament; FIXED, not editable): after the game points of the window -> more correct winners,
+ * then more exact hits, then more unique hits, then the higher OVERALL total in the main table; only a tie in all of them is left to the admin.
+ * ('seed' is still understood by decideMatch if a caller passes it, but it is no longer part of the order.)
+ */
+export const H2H_TIEBREAKERS = ['winners', 'exactHits', 'uniqueHits', 'total'];
+export const DEFAULT_H2H_TIEBREAKERS = H2H_TIEBREAKERS;
 
-/** A player's stats inside [from, to] from points.byDay = {day: [points, exact, unique]}. null = open end. */
+/**
+ * A player's stats inside [from, to] from points.byDay = {day: [points, exact, unique, correct winners, points WITHOUT the joker doubling]}. null = open end.
+ * pts = the points without the joker (the 5th number; an older day without it: its points). `total` (the overall main-table score) is added by the caller.
+ */
 export function windowStats(byDay, from = null, to = null) {
-  let pts = 0; let exactHits = 0; let uniqueHits = 0;
+  let pts = 0; let exactHits = 0; let uniqueHits = 0; let winners = 0;
   Object.entries(byDay || {}).forEach(([day, v]) => {
     if ((from && day < from) || (to && day > to)) return;
-    const [p = 0, x = 0, u = 0] = Array.isArray(v) ? v : [];
-    pts += p; exactHits += x; uniqueHits += u;
+    const c = Array.isArray(v) ? v : [];
+    pts += c[4] ?? c[0] ?? 0;
+    exactHits += c[1] || 0;
+    uniqueHits += c[2] || 0;
+    winners += c[3] || 0;
   });
-  return { pts, exactHits, uniqueHits };
+  return { pts: Math.round(pts * 100) / 100, winners, exactHits, uniqueHits };
 }
 
 /**
@@ -47,10 +59,10 @@ export function resolvePair(pair, statsOf, tiebreakers) {
   return { winnerUid, scoreA: d.scoreA, scoreB: d.scoreB, reason: forced ? 'override' : d.reason, auto: !forced };
 }
 
-/** Group league table: members ordered by points, then exact hits, then unique hits, then name (stable). pos = strict order, rank = ties share. */
+/** Group league table: members ordered by points, then correct winners, exact hits, unique hits, the overall total, then name (stable). pos = strict order, rank = ties share. */
 export function rankGroup(members, statsOf, nameOf = (u) => u) {
   const rows = members.map((uid) => ({ uid, ...statsOf(uid) }));
-  const cmp = (x, y) => (y.pts - x.pts) || (y.exactHits - x.exactHits) || (y.uniqueHits - x.uniqueHits);
+  const cmp = (x, y) => (y.pts - x.pts) || ((y.winners ?? 0) - (x.winners ?? 0)) || (y.exactHits - x.exactHits) || (y.uniqueHits - x.uniqueHits) || ((y.total ?? 0) - (x.total ?? 0));
   rows.sort((x, y) => cmp(x, y) || String(nameOf(x.uid)).localeCompare(String(nameOf(y.uid)), 'he'));
   let rank = 0;
   return rows.map((r, i) => {
@@ -72,11 +84,11 @@ export function drawGroups(uids, groupCount, rng = Math.random) {
   return out;
 }
 
-/** Seeds for the knockout: top `advancePerGroup` of each group table, ordered by position in group, then points, exact, unique. -> [{uid, seed}] */
+/** Seeds for the knockout: top `advancePerGroup` of each group table, ordered by position in group, then points, correct winners, exact, unique, overall total. -> [{uid, seed}] */
 export function seedQualifiers(tables, advancePerGroup) {
   const rows = [];
   Object.entries(tables).forEach(([g, table]) => table.slice(0, advancePerGroup).forEach((r) => rows.push({ ...r, g })));
-  rows.sort((x, y) => (x.pos - y.pos) || (y.pts - x.pts) || (y.exactHits - x.exactHits) || (y.uniqueHits - x.uniqueHits) || x.g.localeCompare(y.g));
+  rows.sort((x, y) => (x.pos - y.pos) || (y.pts - x.pts) || ((y.winners ?? 0) - (x.winners ?? 0)) || (y.exactHits - x.exactHits) || (y.uniqueHits - x.uniqueHits) || ((y.total ?? 0) - (x.total ?? 0)) || x.g.localeCompare(y.g));
   return rows.map((r, i) => ({ uid: r.uid, seed: i + 1 }));
 }
 

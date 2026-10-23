@@ -9,6 +9,7 @@ import { useTournament, usePlayerStats } from '../../hooks/useH2H.js';
 import { addAudit, auditEntry } from '../../utils/audit.js';
 import { dayKey } from '../../utils/dates.js';
 import { addDaysToKey } from '@shared/daykeys.js';
+import { countsForStandings } from '@shared/games.js';
 import { DEFAULT_H2H_TIEBREAKERS, activeStageId, closeStagePatch, drawGroups, pairSeeds, prevDayKey, rankGroup, resolvePair, seedQualifiers } from '@shared/h2h.js';
 import LeagueTab from '../h2h/LeagueTab.jsx';
 import KnockoutTab from '../h2h/KnockoutTab.jsx';
@@ -66,7 +67,7 @@ function Setup({ players }) {
       const groups = Object.fromEntries(Object.entries(draft).map(([g, members]) => [g, { members }]));
       const batch = writeBatch(db);
       batch.set(ref, {
-        status: 'league', groupsCount: Object.keys(draft).length, advancePerGroup: adv, tiebreakers: DEFAULT_H2H_TIEBREAKERS,
+        status: 'league', groupsCount: Object.keys(draft).length, advancePerGroup: adv,
         league: { startDay, endDay: null, groups }, stages: {}, championUid: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
       });
       addAudit(batch, user.uid, { action: 'h2h.create', target: 'h2hTournament/main', after: { groups: Object.keys(draft).length, advancePerGroup: adv, players: sel.size, startDay } });
@@ -116,14 +117,18 @@ function Running({ tournament, players }) {
   const { user } = useAuth();
   const { nameOf, statsOf } = usePlayerStats();
   const { tomorrow } = useDays();
-  const tb = tournament.tiebreakers || DEFAULT_H2H_TIEBREAKERS;
+  const tb = DEFAULT_H2H_TIEBREAKERS; // fixed order, the same as the mid-season tournament (no longer editable)
+  const { games } = useGames();
+  const settings = useSettings();
+  // a stage / league may be closed only when none of its games is still waiting or being played (the points are live and would be frozen half way)
+  const hasOpenGames = (lo, hi) => games.some((g) => countsForStandings(g, settings.countedRounds) && (g.status === 'scheduled' || g.status === 'live') && dayKey(g.tipoff, settings.timezone) >= lo && dayKey(g.tipoff, settings.timezone) <= hi);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [koStart, setKoStart] = useState(tomorrow);
   const [nextStart, setNextStart] = useState(tomorrow);
   const [extra, setExtra] = useState({}); // uid -> include? (overrides the computed qualifiers)
 
-  const run = async (fn) => { setBusy(true); setMsg(''); try { await fn(); } catch (e) { console.error(e); setMsg(e.message === 'state' ? t('ah.err.state') : t('common.error')); } setBusy(false); };
+  const run = async (fn) => { setBusy(true); setMsg(''); try { await fn(); } catch (e) { console.error(e); setMsg(e.message === 'state' ? t('ah.err.state') : e.message === 'openGames' ? t('ah.err.openGames') : t('common.error')); } setBusy(false); };
   const write = (data, action, after) => {
     const batch = writeBatch(db);
     batch.update(ref, { ...data, updatedAt: serverTimestamp() });
@@ -147,6 +152,7 @@ function Running({ tournament, players }) {
   });
   const closeLeague = () => run(async () => {
     if (ordered.length < 2 || !koStart) throw new Error('invalid');
+    if (hasOpenGames(league.startDay, prevDayKey(koStart))) throw new Error('openGames');
     if (!window.confirm(t('ah.confirmCloseLeague', { n: ordered.length }))) return;
     await runTransaction(db, async (tx) => {
       const cur = (await tx.get(ref)).data();
@@ -169,6 +175,7 @@ function Running({ tournament, players }) {
   const results = stage ? Object.fromEntries(Object.entries(stage.pairs || {}).map(([pid, p]) => [pid, resolvePair(p, (uid) => statsOf(uid, stage.startDay, stage.endDay), tb)])) : {};
   const closeStage = () => run(async () => {
     if (Object.values(results).some((r) => !r.winnerUid)) throw new Error('unresolved');
+    if (hasOpenGames(stage.startDay, prevDayKey(nextStart))) throw new Error('openGames');
     if (!window.confirm(t('ah.confirmCloseStage'))) return;
     await runTransaction(db, async (tx) => {
       const cur = (await tx.get(ref)).data();
@@ -179,21 +186,13 @@ function Running({ tournament, players }) {
     });
   });
 
-  const moveTb = (i, d) => { const next = [...tb]; const j = i + d; if (j < 0 || j >= next.length) return; [next[i], next[j]] = [next[j], next[i]]; run(() => write({ tiebreakers: next }, 'h2h.tiebreakers', { tiebreakers: next })); };
   const playerOptions = <>{players.map((p) => <option key={p.uid} value={p.uid}>{p.name}</option>)}</>;
 
   return (
     <div>
       <div className="card">
         <strong>{t(`ah.status.${tournament.status}`)}</strong>
-        <h4>{t('ah.tiebreakers')}</h4>
-        {tb.map((k, i) => (
-          <div key={k} className="inline">
-            <span>{i + 1}. {t(`ah.tb.${k}`)}</span>
-            <button className="btn ghost" disabled={i === 0 || busy} onClick={() => moveTb(i, -1)}>↑</button>
-            <button className="btn ghost" disabled={i === tb.length - 1 || busy} onClick={() => moveTb(i, 1)}>↓</button>
-          </div>
-        ))}
+        <p className="muted small">{t('ah.tbFixed', { order: tb.map((k, i) => `${i + 1}) ${t(`ah.tb.${k}`)}`).join(', ') })}</p>
         <p className="muted">{msg}</p>
       </div>
 

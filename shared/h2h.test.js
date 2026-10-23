@@ -1,15 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { windowStats, decideMatch, resolvePair, rankGroup, drawGroups, seedQualifiers, pairSeeds, closeStagePatch, activeStageId, prevDayKey, DEFAULT_H2H_TIEBREAKERS } from './h2h.js';
 
-const side = (pts, exactHits = 0, uniqueHits = 0, seed = null, adv = 0) => ({ stats: { pts, exactHits, uniqueHits }, seed, adv });
+const side = (pts, exactHits = 0, uniqueHits = 0, seed = null, adv = 0, winners = 0, total = 0) => ({ stats: { pts, winners, exactHits, uniqueHits, total }, seed, adv });
 
 describe('windowStats', () => {
   const byDay = { '2026-10-20': [10, 1, 0], '2026-10-21': [5, 0, 1], '2026-10-25': [7, 1, 1] };
   it('sums inclusive windows and handles open ends', () => {
-    expect(windowStats(byDay, '2026-10-21', '2026-10-25')).toEqual({ pts: 12, exactHits: 1, uniqueHits: 2 });
-    expect(windowStats(byDay, null, '2026-10-20')).toEqual({ pts: 10, exactHits: 1, uniqueHits: 0 });
-    expect(windowStats(byDay)).toEqual({ pts: 22, exactHits: 2, uniqueHits: 2 });
-    expect(windowStats(undefined)).toEqual({ pts: 0, exactHits: 0, uniqueHits: 0 });
+    expect(windowStats(byDay, '2026-10-21', '2026-10-25')).toEqual({ pts: 12, winners: 0, exactHits: 1, uniqueHits: 2 });
+    expect(windowStats(byDay, null, '2026-10-20')).toEqual({ pts: 10, winners: 0, exactHits: 1, uniqueHits: 0 });
+    expect(windowStats(byDay)).toEqual({ pts: 22, winners: 0, exactHits: 2, uniqueHits: 2 });
+    expect(windowStats(undefined)).toEqual({ pts: 0, winners: 0, exactHits: 0, uniqueHits: 0 });
+  });
+  it('the JOKER doubling does not count: the 5th number of the day is used (an older day falls back to its points); correct winners are summed', () => {
+    const days = { '2026-11-10': [44, 1, 1, 1, 22], '2026-11-11': [10, 0, 0, 1], '2026-11-12': [6, 0, 0, 2, 6] };
+    expect(windowStats(days)).toEqual({ pts: 22 + 10 + 6, winners: 4, exactHits: 1, uniqueHits: 1 }); // not 44 + 10 + 6
   });
 });
 
@@ -18,10 +22,14 @@ describe('decideMatch', () => {
     expect(decideMatch({ a: side(10), b: side(8) }).winner).toBe('a');
     expect(decideMatch({ a: side(10), b: side(8, 0, 0, null, 3) })).toMatchObject({ winner: 'b', scoreB: 11 });
   });
-  it('tie-break order: exact hits, unique hits, then better seed', () => {
-    expect(decideMatch({ a: side(10, 1), b: side(10, 2) })).toMatchObject({ winner: 'b', reason: 'exactHits' });
-    expect(decideMatch({ a: side(10, 2, 1), b: side(10, 2, 0) })).toMatchObject({ winner: 'a', reason: 'uniqueHits' });
-    expect(decideMatch({ a: side(10, 2, 1, 5), b: side(10, 2, 1, 2) })).toMatchObject({ winner: 'b', reason: 'seed' });
+  it('tie-break order (the same as the mid-season tournament): correct winners, exact hits, unique hits, then the overall total', () => {
+    expect(decideMatch({ a: side(10, 0, 0, null, 0, 3), b: side(10, 5, 5, null, 0, 2) })).toMatchObject({ winner: 'a', reason: 'winners' });
+    expect(decideMatch({ a: side(10, 1, 0, null, 0, 2), b: side(10, 2, 0, null, 0, 2) })).toMatchObject({ winner: 'b', reason: 'exactHits' });
+    expect(decideMatch({ a: side(10, 2, 1, null, 0, 2), b: side(10, 2, 0, null, 0, 2) })).toMatchObject({ winner: 'a', reason: 'uniqueHits' });
+    expect(decideMatch({ a: side(10, 2, 1, null, 0, 2, 400), b: side(10, 2, 1, null, 0, 2, 500) })).toMatchObject({ winner: 'b', reason: 'total' });
+  });
+  it('the better seed no longer decides by default: a tie in everything is left to the admin', () => {
+    expect(decideMatch({ a: side(10, 2, 1, 5, 0, 2, 500), b: side(10, 2, 1, 2, 0, 2, 500) })).toMatchObject({ winner: null, reason: 'tie' });
   });
   it('configurable order and unresolved tie', () => {
     expect(decideMatch({ a: side(10, 5, 0, 1), b: side(10, 1, 0, 2), tiebreakers: ['seed', 'exactHits'] })).toMatchObject({ winner: 'a', reason: 'seed' });
@@ -46,6 +54,16 @@ describe('groups', () => {
     expect(r.map((x) => x.uid)).toEqual(['z', 'x', 'y']);
     expect(r.map((x) => x.rank)).toEqual([1, 2, 2]);
     expect(r[1].tied && r[2].tied).toBe(true);
+  });
+  it('rankGroup: equal points -> correct winners, then exact, unique, then the overall total; only then a tie', () => {
+    const s = {
+      a: { pts: 10, winners: 2, exactHits: 5, uniqueHits: 5, total: 900 }, b: { pts: 10, winners: 3, exactHits: 0, uniqueHits: 0, total: 0 },
+      c: { pts: 10, winners: 3, exactHits: 0, uniqueHits: 0, total: 100 }, d: { pts: 10, winners: 3, exactHits: 0, uniqueHits: 0, total: 100 },
+    };
+    const r = rankGroup(['a', 'b', 'c', 'd'], (u) => s[u]);
+    expect(r.map((x) => x.uid)).toEqual(['c', 'd', 'b', 'a']); // c, d (3 winners, total 100) > b (3 winners, total 0) > a (2 winners)
+    expect(r.map((x) => x.rank)).toEqual([1, 1, 3, 4]); // c and d are a real tie
+    expect(r[0].tied && r[1].tied).toBe(true);
   });
   it('drawGroups is balanced and uses every player once', () => {
     const uids = Array.from({ length: 11 }, (_, i) => `u${i}`);
@@ -94,6 +112,6 @@ describe('closeStagePatch', () => {
     expect(activeStageId({ K1: { stageNum: 1, endDay: '2026-11-07' }, K2: { stageNum: 2, endDay: null } })).toBe('K2');
     expect(activeStageId({ K1: { stageNum: 1, endDay: '2026-11-07' } })).toBeNull();
     expect(prevDayKey('2026-11-01')).toBe('2026-10-31');
-    expect(DEFAULT_H2H_TIEBREAKERS).toEqual(['exactHits', 'uniqueHits', 'seed']);
+    expect(DEFAULT_H2H_TIEBREAKERS).toEqual(['winners', 'exactHits', 'uniqueHits', 'total']);
   });
 });
