@@ -149,11 +149,9 @@ export default function RulesPage() {
           <ul>
             <li>{t('rules.month.b1', { from: monthName(months[0]), to: monthName(months[months.length - 1]) })}</li>
             <li>{t('rules.month.b2')}</li>
-            <li>{t('rules.month.b3')}</li>
             <li>{t('rules.month.b4')}</li>
           </ul>
         </Note>
-        <Note tone="teal">{t('rules.month.where')}</Note>
       </Section>
 
       <Section title={t('rules.sec.mid')} intro={t('rules.mid.intro')}>

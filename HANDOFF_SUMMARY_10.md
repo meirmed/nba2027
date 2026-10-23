@@ -207,3 +207,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 93: Rules page - short section "אלוף החודש"
 - New section "🏆 אלוף החודש" before the mid-season tournament section: separate table per month starting from zero, the months (from / to are read from `seasonMonths()`), game points only (the joker DOUBLES here like in the main table; only the tournament excludes it), the month = Israel date of the game, tie order (exact, then unique, a real tie shares the title), and where to see it. App-only.
+
+## Update 94: Rules page, Champion of the month - shorter text
+- Removed: "a month opens on the 1st; until then grey", "the month is decided by the date in Israel" and the "where to see it" note. The joker sentence now says "the joker counts in the points of the champion of the month". App-only.
