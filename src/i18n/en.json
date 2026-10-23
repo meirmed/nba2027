@@ -782,6 +782,5 @@
   "ps.popular": "Most popular score",
   "ps.times": "picked by {n} players",
   "ps.allDifferent": "Every pick is different",
-  "ps.spread": "Spread of the predicted margins (points)",
-  "ps.note": "Without auto-filled picks."
+  "ps.spread": "Spread of the predicted margins (points)"
 }

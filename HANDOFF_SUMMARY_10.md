@@ -218,3 +218,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 96: statistics block in "Everyone's picks"
 - `shared/pickStats.js` (`pickStats`, 5 tests, 276 total) + `src/components/PickStats.jsx`, shown ALWAYS OPEN above the list inside `EveryonesPicks` (Predictions page `GameCard` and Results page `GameBlock` use that component). Owner's set: winner split bar with percentages (add up to 100; counts in the legend), average predicted score + average predicted margin (size of the win), most popular exact score (ties listed; "every pick is different" when none repeats), margin spread (1-5, 6-10, 11-15, 16+ points). **Auto-filled picks are ignored in all of them.** If the owner dislikes it open: replace by a collapsed "statistics" button (owner said so). App-only.
+
+## Update 97: statistics block - the "without auto-filled picks" sentence removed
+- The line under the block was removed (the rule itself stays: auto-filled picks are still ignored). App-only.

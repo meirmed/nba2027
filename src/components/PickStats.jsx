@@ -53,7 +53,6 @@ export default function PickStats({ rows, game }) {
           </div>
         ))}
       </div>
-      <div className="muted small">{t('ps.note')}</div>
     </div>
   );
 }
