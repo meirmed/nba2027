@@ -8,6 +8,7 @@ import { scoreGamePicks } from '@shared/standings.js';
 import { countsForStandings } from '@shared/games.js';
 import Score from './Score.jsx';
 import PickStats from './PickStats.jsx';
+import { pickStats } from '@shared/pickStats.js';
 
 /** Reads picks/{gameId} (written by lockGamePicks at tip-off). Doesn't exist before lock, so nothing leaks early. */
 export default function EveryonesPicks({ gameId, result }) {
@@ -15,16 +16,16 @@ export default function EveryonesPicks({ gameId, result }) {
   const { user } = useAuth();
   const settings = useSettings();
   const scoring = useScoring();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); // the list of everyone's picks
+  const [statsOpen, setStatsOpen] = useState(false); // the statistics (collapsed until the button is pressed)
   const [data, setData] = useState(undefined); // undefined=not loaded, null=not published yet
 
-  const toggle = async () => {
-    const next = !open;
-    setOpen(next);
-    if (next && !data) {
-      try { const s = await getDoc(doc(db, 'picks', gameId)); setData(s.exists() ? s.data() : null); } catch { setData(null); }
-    }
+  const load = async () => {
+    if (data) return;
+    try { const s = await getDoc(doc(db, 'picks', gameId)); setData(s.exists() ? s.data() : null); } catch { setData(null); }
   };
+  const toggle = () => { const next = !open; setOpen(next); if (next) load(); };
+  const toggleStats = () => { const next = !statsOpen; setStatsOpen(next); if (next) load(); };
 
   const rows = useMemo(
     () => (data ? Object.entries(data.picks || {}).map(([uid, p]) => ({ uid, ...p })).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')) : []),
@@ -33,6 +34,7 @@ export default function EveryonesPicks({ gameId, result }) {
 
   // Same shared module as the server: labels and points can never disagree with the saved points. While the game is LIVE the points are
   // PROVISIONAL (computed with the current score, they change until the final buzzer). A tie right now has no winner: nothing is scored yet.
+  const stats = useMemo(() => pickStats(rows), [rows]);
   const live = result?.status === 'live';
   const scored = useMemo(() => {
     const started = (result?.status === 'finished' || live) && countsForStandings(result, settings.countedRounds) && Number.isInteger(result.s1) && Number.isInteger(result.s2);
@@ -60,12 +62,15 @@ export default function EveryonesPicks({ gameId, result }) {
 
   return (
     <div className="everyone">
-      <button className="btn ghost" onClick={toggle}>{open ? t('pred.hide') : t('pred.everyone')}</button>
-      {open && data === undefined && <p className="muted">{t('common.loading')}</p>}
-      {open && data === null && <p className="muted">{t('pred.picksSoon')}</p>}
+      <div className="everyone-actions">
+        <button className="btn ghost" onClick={toggle}>{open ? t('pred.hide') : t('pred.everyone')}</button>
+        <button className="btn ghost" onClick={toggleStats}>📊 {statsOpen ? t('ps.hide') : t('ps.button')}</button>
+      </div>
+      {(open || statsOpen) && data === undefined && <p className="muted">{t('common.loading')}</p>}
+      {(open || statsOpen) && data === null && <p className="muted">{t('pred.picksSoon')}</p>}
+      {statsOpen && data && (stats ? <PickStats stats={stats} game={result} /> : <p className="muted">{t('ps.none')}</p>)}
       {open && data && rows.length === 0 && <p className="muted">{t('pred.noPicks')}</p>}
       {open && live && <p className="muted small">{tiedNow ? t('ev.tiedNote') : noScoreYet ? t('ev.waitingNote') : t('ev.liveNote')}</p>}
-      {open && rows.length > 0 && <PickStats rows={rows} game={result} />}
       {open && rows.length > 0 && (
         <div className="table-wrap">
           <table className="table" dir={dir}>

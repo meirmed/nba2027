@@ -782,5 +782,8 @@
   "ps.popular": "Most popular score",
   "ps.times": "picked by {n} players",
   "ps.allDifferent": "Every pick is different",
-  "ps.spread": "Spread of the predicted margins (points)"
+  "ps.spread": "Spread of the predicted margins (points)",
+  "ps.button": "Statistics",
+  "ps.hide": "Hide statistics",
+  "ps.none": "No real picks yet for the statistics."
 }

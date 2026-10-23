@@ -221,3 +221,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 97: statistics block - the "without auto-filled picks" sentence removed
 - The line under the block was removed (the rule itself stays: auto-filled picks are still ignored). App-only.
+
+## Update 98: statistics behind a "Statistics" button, on the game card
+- The statistics block is now COLLAPSED behind a "📊 סטטיסטיקה" button placed next to "הניחושים של כולם" on the game card itself (Predictions `GameCard`, Results `GameBlock`: both render `EveryonesPicks`, only after tip-off, when the picks are published). The two buttons are independent (the list and the statistics can be open together); the picks are loaded once for both. With only auto-filled picks the button says "no real picks yet". `PickStats` now receives the calculated stats (`pickStats` is computed in `EveryonesPicks`). On the Predictions page a game disappears one hour after tip-off, so the button is there only for that first hour; on the Results page it stays. App-only.

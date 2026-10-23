@@ -1,13 +1,10 @@
-import { useMemo } from 'react';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useTeams } from '../contexts/TeamsContext.jsx';
-import { pickStats } from '@shared/pickStats.js';
 
-/** The statistics block above the list of everyone's picks: winner split, average score and margin, most popular exact score, margin spread. Real picks only. */
-export default function PickStats({ rows, game }) {
+/** The statistics block (opened by the "Statistics" button of the game card): winner split, average score and margin, most popular exact score, margin spread. Real picks only. */
+export default function PickStats({ stats: s, game }) {
   const { t, lang } = useLang();
   const { teams } = useTeams();
-  const s = useMemo(() => pickStats(rows), [rows]);
   if (!s) return null;
   const nameOf = (abbr) => teams[abbr]?.[lang === 'he' ? 'shortHe' : 'shortEn'] || abbr;
   const homeName = nameOf(game.t1);
