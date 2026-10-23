@@ -7,6 +7,7 @@ import { useTournament } from '../hooks/useH2H.js';
 import { scoreGame } from '@shared/scoring.js';
 import { formatKeyDay } from '../utils/dates.js';
 import { MID_STAGES, MID_WINDOWS } from '@shared/midTournament.js';
+import { seasonMonths } from '@shared/monthly.js';
 import { DEFAULT_H2H_TIEBREAKERS } from '@shared/h2h.js';
 
 // Same look as the World Cup rules page. EVERY number comes from the live scoring settings (Admin -> Scoring), never hardcoded.
@@ -37,6 +38,8 @@ export default function RulesPage() {
   }, []);
   const s = useScoring();
   const tournament = useTournament();
+  const months = seasonMonths(); // Champion of the month: November - April
+  const monthName = (key) => new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(`${key}-15T12:00:00Z`));
   const { questions } = useBonus();
   // the ranking question's OWN points and penalty (set by the admin on the question); no ranking question = no ranking box
   const rankQ = questions.find((q) => q.type === 'ranking');
@@ -139,6 +142,18 @@ export default function RulesPage() {
         </Note>
         <Rule title={t('rules.tb.h2h.title')} sub={t('rules.tb.h2h.sub', { order: numbered(h2hTb, 'ah.tb.') })} value="⚖️" />
         <Rule title={t('rules.tb.board.title')} sub={t('rules.tb.board.sub', { order: numbered(s.tiebreakers, 'tb.') })} value="⚖️" />
+      </Section>
+
+      <Section title={t('rules.sec.month')} intro={t('rules.month.intro')}>
+        <Note tone="green">
+          <ul>
+            <li>{t('rules.month.b1', { from: monthName(months[0]), to: monthName(months[months.length - 1]) })}</li>
+            <li>{t('rules.month.b2')}</li>
+            <li>{t('rules.month.b3')}</li>
+            <li>{t('rules.month.b4')}</li>
+          </ul>
+        </Note>
+        <Note tone="teal">{t('rules.month.where')}</Note>
       </Section>
 
       <Section title={t('rules.sec.mid')} intro={t('rules.mid.intro')}>

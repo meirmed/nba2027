@@ -766,5 +766,12 @@
   "pred.err.denied": "You are not allowed to save here. Sign out and in again, or contact the admin.",
   "pred.err.login": "You were signed out. Sign in again.",
   "pred.err.network": "No connection to the server. Check your internet and try again.",
-  "rules.mid.joker": "The double points of the joker do not count in the mid-season tournament, in any stage. They count only in the main table."
+  "rules.mid.joker": "The double points of the joker do not count in the mid-season tournament, in any stage. They count only in the main table.",
+  "rules.sec.month": "🏆 Champion of the month",
+  "rules.month.intro": "Every month has its own table, starting from zero. The leader at the end of the month is the champion of the month.",
+  "rules.month.b1": "The months: from {from} to {to}. A month opens on the 1st; until then its tab is grey.",
+  "rules.month.b2": "Only game points count, no bonus questions. The joker doubles the points like in the main table.",
+  "rules.month.b3": "The month is decided by the date of the game in Israel.",
+  "rules.month.b4": "In a tie on points: more exact scores, then more unique hits. If that is equal too, the title is shared.",
+  "rules.month.where": "You can see it in the Leaderboard page, in the second row, in the “Champion of the month” tab."
 }
