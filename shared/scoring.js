@@ -23,7 +23,7 @@ const isNum = (n) => typeof n === 'number' && Number.isFinite(n);
  * ctx:    { round, joker, pickPct, isUniqueExact, isUniqueMargin, scoring }
  */
 export function scoreGame(pred, result, ctx = {}) {
-  const zero = { pts: 0, winnerCorrect: false, exact: false, diffPts: 0, riskPts: 0, uniquePts: 0 };
+  const zero = { pts: 0, ptsNoJoker: 0, winnerCorrect: false, exact: false, diffPts: 0, riskPts: 0, uniquePts: 0 };
   if (!pred || !result || result.status !== 'finished') return zero;
   if (![pred.s1, pred.s2, result.s1, result.s2].every(isNum)) return zero;
 
@@ -54,10 +54,11 @@ export function scoreGame(pred, result, ctx = {}) {
   }
 
   let pts = base * (sc.roundMultipliers[ctx.round] ?? 1);
+  let ptsNoJoker = pts; // the same game as if the joker had not been played (the mid-season tournament counts this: the joker only doubles the MAIN table)
   if (ctx.joker) pts *= sc.jokerMultiplier;
-  if (pred.autoFilled) pts = Math.floor(pts * sc.autoFillFactor);
+  if (pred.autoFilled) { pts = Math.floor(pts * sc.autoFillFactor); ptsNoJoker = Math.floor(ptsNoJoker * sc.autoFillFactor); }
 
-  return { pts, winnerCorrect, exact, diffPts, riskPts, uniquePts };
+  return { pts, ptsNoJoker, winnerCorrect, exact, diffPts, riskPts, uniquePts };
 }
 
 const norm = (v) => String(v).trim().toLowerCase();

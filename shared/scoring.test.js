@@ -104,3 +104,18 @@ describe('compareRows', () => {
     expect(rows.sort((x, y) => compareRows(x, y)).map((r) => r.id)).toEqual(['c', 'b', 'a']);
   });
 });
+
+describe('the points without the joker (used by the mid-season tournament)', () => {
+  it('the joker doubles pts (main table) but not ptsNoJoker', () => {
+    const plain = scoreGame({ s1: 110, s2: 100 }, fin(110, 100), { scoring: sc });
+    const joker = scoreGame({ s1: 110, s2: 100 }, fin(110, 100), { scoring: sc, joker: true });
+    expect(plain).toMatchObject({ pts: 10, ptsNoJoker: 10 });
+    expect(joker).toMatchObject({ pts: 20, ptsNoJoker: 10 }); // main table 20, tournament 10
+  });
+  it('the auto-fill factor and the round multiplier apply to both; a wrong winner is 0 for both', () => {
+    const auto = scoreGame({ s1: 110, s2: 100, autoFilled: true }, fin(110, 100), { scoring: sc });
+    expect(auto).toMatchObject({ pts: 5, ptsNoJoker: 5 });
+    expect(scoreGame({ s1: 90, s2: 100 }, fin(110, 100), { scoring: sc, joker: true })).toMatchObject({ pts: 0, ptsNoJoker: 0 });
+    expect(scoreGame(null, fin(110, 100), { scoring: sc }).ptsNoJoker).toBe(0);
+  });
+});

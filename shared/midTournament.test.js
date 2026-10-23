@@ -14,6 +14,10 @@ describe('window stats', () => {
     expect(windowStats(undefined, MID_WINDOWS.G)).toEqual({ pts: 0, winners: 0, exact: 0, unique: 0, total: 0 });
     expect(windowStats({ byDay: { '2026-11-10': [5, 0, 0] } }, MID_WINDOWS.G).winners).toBe(0); // an older day with only 3 numbers
   });
+  it('the JOKER doubling does not count: the 5th number of the day is used, an older day falls back to its points', () => {
+    const r = { byDay: { '2026-11-10': [44, 1, 1, 1, 22], '2026-11-11': [10, 0, 0, 1], '2026-11-12': [6, 0, 0, 0, 6] } };
+    expect(windowStats(r, MID_WINDOWS.G).pts).toBe(22 + 10 + 6); // not 44 + 10 + 6
+  });
   it('better = points; then correct winners, then exact hits, then unique hits, then the overall score in the main table', () => {
     const S = (pts, winners, exact, unique, total) => ({ pts, winners, exact, unique, total });
     expect(compareStats(S(5, 0, 0, 0, 0), S(4, 9, 9, 9, 999))).toBeLessThan(0); // points come first
@@ -163,5 +167,18 @@ describe('the whole tournament: 23 players, groups of 6 + 6 + 6 + 5', () => {
 describe('clean groups', () => {
   it('a player is kept once only, unknown groups are dropped', () => {
     expect(cleanGroups({ A: ['x', 'y', 'x'], B: ['y', 'z'], Z: ['q'] })).toEqual({ A: ['x', 'y'], B: ['z'], C: [], D: [] });
+  });
+});
+
+describe('the joker in the tournament: only the main table is doubled', () => {
+  it('a player with a joker is NOT ahead of a player with the same real points in a group', () => {
+    const rows = { a: { ...row('a'), total: 500, byDay: { '2026-11-20': [100, 0, 0, 3, 50] } }, b: { ...row('b'), total: 200, byDay: { '2026-11-20': [60, 0, 0, 3, 60] } } };
+    const { table } = groupTable({ members: ['a', 'b'], rowsByUid: rows, window: MID_WINDOWS.G });
+    expect(table.map((x) => [x.uid, x.pts])).toEqual([['b', 60], ['a', 50]]); // a: 100 in the main table, but only 50 here
+  });
+  it('a pair is decided by the points without the joker', () => {
+    const rows = { x: { ...row('x'), byDay: { '2026-12-09': [90, 0, 0, 2, 45] } }, y: { ...row('y'), byDay: { '2026-12-09': [50, 0, 0, 2, 50] } } };
+    const p = pairState({ aUid: 'x', bUid: 'y', rowsByUid: rows, window: MID_WINDOWS.QF, over: true });
+    expect(p.winner).toBe('y'); // 50 > 45, although x has 90 in the main table
   });
 });

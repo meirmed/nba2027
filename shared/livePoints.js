@@ -16,7 +16,7 @@ export function liveGameIds({ games, countedRounds = ['RS'], lastRecalcMs = 0, n
  * (undefined / null = the picks are not loaded / not published yet: that game is skipped). A live game that is TIED has no winner: not scored yet.
  * Adds, for every game in play: the provisional points to total + gamePts, the correct-winner / exact / unique hits, and a "no score" for players with 0 points
  * (or no pick). Returns NEW row objects (the input is not changed). Streaks and bonus stay official. byDay stays official too, unless trackDays is on
- * (the monthly table): then byDay[g.day] = [points, exact, unique, correct winners] also gets the provisional points (g.day = the Israel date of the tip-off).
+ * (the monthly table): then byDay[g.day] = [points, exact, unique, correct winners, points without the joker] also gets the provisional points (g.day = the Israel date of the tip-off).
  */
 export function applyLiveGames({ rows, games, picksByGame, scoring, countedRounds = ['RS'], lastRecalcMs = 0, nowMs = Date.now(), trackDays = false }) {
   const ids = new Set(liveGameIds({ games, countedRounds, lastRecalcMs, nowMs }));
@@ -38,11 +38,14 @@ export function applyLiveGames({ rows, games, picksByGame, scoring, countedRound
       if (sc.uniquePts > 0) out.uniqueHits = (out.uniqueHits ?? 0) + 1;
       if (sc.pts === 0) out.noScore = (out.noScore ?? 0) + 1;
       if (trackDays && g.day) { // the per-day cell of the monthly table: [game points, exact hits, unique hits]
-        const cell = [0, 1, 2, 3].map((i) => out.byDay?.[g.day]?.[i] ?? 0); // older saved days have only 3 numbers
+        const old = out.byDay?.[g.day] ?? [];
+        const cell = [0, 1, 2, 3].map((i) => old[i] ?? 0); // older saved days have fewer numbers
+        cell[4] = old[4] ?? old[0] ?? 0; // points without the joker (an old day without it: the same as the points)
         cell[0] = r2(cell[0] + sc.pts);
         if (sc.exact) cell[1] += 1;
         if (sc.uniquePts > 0) cell[2] += 1;
         if (sc.winnerCorrect) cell[3] += 1;
+        cell[4] = r2(cell[4] + sc.ptsNoJoker);
         out.byDay = { ...out.byDay, [g.day]: cell };
       }
     });

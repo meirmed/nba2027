@@ -80,8 +80,18 @@ describe('byDay (feeds Head to Head)', () => {
     const d2 = Date.parse('2026-10-30T23:30:00Z'); // 01:30 next day in Israel
     const games = [game('g1', d1, 110, 100), game('g2', d2, 110, 100)];
     const r = computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'Asia/Jerusalem' });
-    expect(r.A.byDay).toEqual({ '2026-10-30': [22, 1, 1, 1], '2026-10-31': [8, 0, 0, 1] }); // [points, exact, unique, correct winners]
-    expect(computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'UTC' }).A.byDay).toEqual({ '2026-10-30': [30, 1, 1, 2] }); // 22 + 8, two correct winners
+    expect(r.A.byDay).toEqual({ '2026-10-30': [22, 1, 1, 1, 22], '2026-10-31': [8, 0, 0, 1, 8] }); // [points, exact, unique, correct winners, points without the joker]
+    expect(computeAllPoints({ games, predictions: { A: { games: { g1: P(110, 100), g2: P(108, 100) } } }, uids: ['A'], scoring: sc, countedRounds: ['RS'], timezone: 'UTC' }).A.byDay).toEqual({ '2026-10-30': [30, 1, 1, 2, 30] }); // 22 + 8, two correct winners
+  });
+});
+
+describe('the joker and the per-day points', () => {
+  it('a joker doubles the game points and byDay[0] (main table) but NOT byDay[4] (the mid-season tournament)', () => {
+    const games = [game('g1', Date.parse('2026-10-30T20:00:00Z'), 110, 100)];
+    const r = run(games, { A: { games: { g1: P(110, 100) }, jokers: { g1: true } }, B: { games: { g1: P(108, 100) } } });
+    expect(r.A.gamePts).toBe(44); // 22 x 2 in the main table
+    expect(r.A.byDay['2026-10-30']).toEqual([44, 1, 1, 1, 22]); // ... but 22 for the tournament
+    expect(r.B.byDay['2026-10-30']).toEqual([8, 0, 0, 1, 8]); // no joker: both numbers are equal
   });
 });
 

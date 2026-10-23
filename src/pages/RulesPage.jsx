@@ -158,6 +158,7 @@ export default function RulesPage() {
             </tbody>
           </table>
         </div>
+        <Note tone="blue">🃏 {t('rules.mid.joker')}</Note>
         <Note tone="amber"><strong>{t('rules.mid.tb.title')}</strong><p>{t('rules.mid.tb.body')}</p></Note>
         <Note tone="teal">{t('rules.mid.where')}</Note>
       </Section>

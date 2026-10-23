@@ -29,6 +29,15 @@ describe('season dry run: points are internally consistent', () => {
       expect(r.winnerCorrect).toBeLessThanOrEqual(r.gamesPlayed);
     });
   });
+  it('the 5th per-day number = the points of the same season played without any joker', () => {
+    const noJokers = run({ ...season, predictions: Object.fromEntries(Object.entries(season.predictions).map(([u, p]) => [u, { ...p, jokers: {} }])) });
+    let someJoker = false;
+    season.uids.forEach((u) => {
+      expect(sum(res[u].byDay, (d) => d[4])).toBeCloseTo(noJokers[u].gamePts, 6);
+      if (res[u].gamePts !== noJokers[u].gamePts) someJoker = true;
+    });
+    expect(someJoker).toBe(true); // the season really contains jokers, so the check is meaningful
+  });
   it('is deterministic and independent of user order', () => {
     expect(run()).toEqual(res);
     const reversed = run(season, [...season.uids].reverse());

@@ -1,6 +1,7 @@
 // "Mid-season tournament" (טורניר אמצע): 4 groups assigned by the admin -> the top 2 of every group -> quarter finals -> semi finals -> final.
-// Everything is DERIVED from the per-day game points (points/{uid}.byDay[day] = [game points, exact hits, unique hits, correct winners], day = Israel date of the tip-off)
-// plus two things the admin stores: the groups, and decisions for REAL ties (overrides). Bonus points never count. Pure functions, unit-tested.
+// Everything is DERIVED from the per-day game points (points/{uid}.byDay[day] = [game points, exact hits, unique hits, correct winners, game points WITHOUT the joker doubling], day = Israel date of the tip-off)
+// plus two things the admin stores: the groups, and decisions for REAL ties (overrides). Bonus points never count and the JOKER's doubling does not count
+// either (it only counts for the main table): the tournament uses the 5th number of the day. Pure functions, unit-tested.
 
 /** The time window (Israel dates, inclusive) in which games count for each stage. */
 export const MID_WINDOWS = {
@@ -25,7 +26,13 @@ const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || '')
 /** Game points / correct winners / exact hits / unique hits of one player inside a window (day keys, inclusive), plus his overall total (the last tiebreaker). */
 export function windowStats(row, { lo, hi }) {
   let pts = 0; let exact = 0; let unique = 0; let winners = 0;
-  Object.entries(row?.byDay || {}).forEach(([day, c]) => { if (day >= lo && day <= hi) { pts += c[0] || 0; exact += c[1] || 0; unique += c[2] || 0; winners += c[3] || 0; } });
+  Object.entries(row?.byDay || {}).forEach(([day, c]) => {
+    if (day < lo || day > hi) return;
+    pts += c[4] ?? c[0] ?? 0; // the points WITHOUT the joker doubling (the 5th number); an older day without it: its points
+    exact += c[1] || 0;
+    unique += c[2] || 0;
+    winners += c[3] || 0;
+  });
   return { pts: r2(pts), winners, exact, unique, total: row?.total ?? 0 };
 }
 /**

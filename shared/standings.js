@@ -70,8 +70,8 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
       if (r.exact) u.exactHits += 1;
       if (r.uniquePts > 0) u.uniqueHits += 1;
       if (r.riskPts > 0) u.riskHits += 1;
-      const cell = (u.byDay[day] ||= [0, 0, 0, 0]); // [game points, exact hits, unique hits, correct winners] per Israel day
-      cell[0] += r.pts; if (r.exact) cell[1] += 1; if (r.uniquePts > 0) cell[2] += 1; if (r.winnerCorrect) cell[3] += 1;
+      const cell = (u.byDay[day] ||= [0, 0, 0, 0, 0]); // [game points, exact hits, unique hits, correct winners, game points WITHOUT the joker doubling] per Israel day
+      cell[0] += r.pts; if (r.exact) cell[1] += 1; if (r.uniquePts > 0) cell[2] += 1; if (r.winnerCorrect) cell[3] += 1; cell[4] += r.ptsNoJoker ?? r.pts;
       const pk = pickBy.get(uid);
       // pts/w/x/u/r/d = scoring flags; s1/s2/j/a = the pick itself (score, joker, auto-filled). Only FINISHED games are here, and those picks are public.
       u.byGame[g.id] = { pts: r.pts, w: r.winnerCorrect ? 1 : 0, x: r.exact ? 1 : 0, u: r.uniquePts > 0 ? 1 : 0, r: r.riskPts > 0 ? 1 : 0, d: r.diffPts, s1: pk.p.s1, s2: pk.p.s2, j: pk.joker ? 1 : 0, a: pk.p.autoFilled ? 1 : 0 };
