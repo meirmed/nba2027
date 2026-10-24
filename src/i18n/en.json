@@ -785,5 +785,8 @@
   "ps.spread": "Spread of the predicted margins (points)",
   "ps.button": "Statistics",
   "ps.hide": "Hide statistics",
-  "ps.none": "No real picks yet for the statistics."
+  "ps.none": "No real picks yet for the statistics.",
+  "rb.sub.others": "Other questions",
+  "rb.sub.ranking": "End-of-season ranking",
+  "rb.noRanking": "There is no ranking question yet."
 }

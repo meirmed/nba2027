@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useLang } from '../../contexts/LangContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useBonus } from '../../contexts/BonusContext.jsx';
@@ -57,6 +57,7 @@ function AllAnswers({ q, picks, ctx }) {
   const { t } = useLang();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [who, setWho] = useState(null); // a RANKING question: the player whose full ranking is open
   const answered = (q.answer || []).length > 0;
   const rows = Object.entries(picks || {}).map(([uid, p]) => ({ uid, ...p, pts: answered ? scoreBonus(q, p.answer).pts : null }))
     .sort((a, b) => ((b.pts ?? 0) - (a.pts ?? 0)) || (a.name || '').localeCompare(b.name || '', 'he'));
@@ -64,7 +65,24 @@ function AllAnswers({ q, picks, ctx }) {
   return (
     <div className="bonus-foot-wrap">
       <button className="bonus-foot" onClick={() => setOpen((o) => !o)}>{open ? '▲' : '▼'} {t('rb.allAnswers', { n: rows.length })}</button>
-      {open && (
+      {open && q.type === 'ranking' && (
+        <div className="rank-answers">
+          {rows.map((r) => {
+            const miss = answered ? missesOf(q, r.answer) : null;
+            return (
+              <Fragment key={r.uid}>
+                <button className={`rank-answer-head ${r.uid === user?.uid ? 'me' : ''}`} onClick={() => setWho(who === r.uid ? null : r.uid)}>
+                  <span dir="auto">{who === r.uid ? '▲' : '▼'} {r.name}{r.uid === user?.uid ? ` ${t('pred.you')}` : ''}</span>
+                  <span className="muted small">{miss !== null ? t('rk.missed', { n: miss }) : ''}</span>
+                  <strong dir="ltr" className={r.pts > 0 ? 'save-ok' : 'muted'}>{r.pts === null ? '' : r.pts}</strong>
+                </button>
+                {who === r.uid && <RankingTable order={r.answer} actual={answered ? q.answer : null} />}
+              </Fragment>
+            );
+          })}
+        </div>
+      )}
+      {open && q.type !== 'ranking' && (
         <div className="table-wrap">
           <table className="table"><tbody>
             {rows.map((r) => (
@@ -89,14 +107,22 @@ export default function BonusResultsTab() {
   const mine = useMyPredictions();
   const allPicks = useBonusPicks();
   const nowMs = useNow(1000);
-  const list = [...questions].filter((q) => q.type !== 'ranking').reverse(); // latest deadline first
+  const [sub, setSub] = useState('others'); // 'others' = every question except the ranking; 'ranking' = the end-of-season ranking question(s)
+  const all = [...questions].reverse(); // latest deadline first
+  const list = all.filter((q) => (sub === 'ranking') === (q.type === 'ranking'));
   const { byId: playersById } = usePlayers(list.some((q) => q.type === 'player'));
   const ctx = { lang, teams, playersById };
 
   if (loading) return <p className="muted">{t('common.loading')}</p>;
-  if (list.length === 0) return <p className="muted">{t('bq.empty')}</p>;
+  if (all.length === 0) return <p className="muted">{t('bq.empty')}</p>;
   return (
     <div>
+      <div className="tabs scroll sub-tabs" role="tablist">
+        {['others', 'ranking'].map((k) => (
+          <button key={k} role="tab" aria-selected={sub === k} className={`tab ${sub === k ? 'active' : ''}`} onClick={() => setSub(k)}>{t(`rb.sub.${k}`)}</button>
+        ))}
+      </div>
+      {list.length === 0 && <p className="muted">{t(sub === 'ranking' ? 'rb.noRanking' : 'bq.empty')}</p>}
       {list.map((q) => {
         const answered = (q.answer || []).length > 0;
         const closed = answered || nowMs >= q.deadlineMs;
@@ -114,7 +140,7 @@ export default function BonusResultsTab() {
                 <span className="pill-max">{t('rb.max', { n: maxBonusPoints(q) })}</span>
               </div>
             </div>
-            {closed && q.type === 'ranking' && <div className="bonus-body">{answered ? <RankingTable order={q.answer} /> : <span className="muted small">{t('rb.answeredCount', { n: stats.n })}</span>}</div>}
+            {closed && q.type === 'ranking' && !answered && <div className="bonus-body"><span className="muted small">{t('rb.answeredCount', { n: stats.n })}</span></div>}
             {closed && q.type !== 'ranking' && stats.n > 0 && <div className="bonus-body"><Distribution q={q} stats={stats} ctx={ctx} /></div>}
             {closed && q.type !== 'ranking' && stats.n === 0 && <div className="bonus-body muted small">{picks === undefined ? t('rb.soon') : t('rb.noAnswers')}</div>}
             {closed && (
