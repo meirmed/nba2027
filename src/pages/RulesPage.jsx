@@ -164,7 +164,7 @@ export default function RulesPage() {
           </ul>
         </Note>
         <div className="table-wrap">
-          <table className="table" dir={dir}>
+          <table className="table nowrap" dir={dir}>
             <thead><tr className="muted small"><th>{t('rules.mid.scheduleTitle')}</th><th /></tr></thead>
             <tbody>
               {MID_STAGES.map((k) => <tr key={k}><td><strong>{t(`mid.stage.${k}`)}</strong></td><td>{formatKeyDay(MID_WINDOWS[k].lo, lang)} – {formatKeyDay(MID_WINDOWS[k].hi, lang)}</td></tr>)}

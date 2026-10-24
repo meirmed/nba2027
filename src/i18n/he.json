@@ -788,5 +788,9 @@
   "ps.none": "אין עדיין ניחושים אמיתיים לסטטיסטיקה.",
   "rb.sub.others": "שאר השאלות",
   "rb.sub.ranking": "דירוג סוף עונה",
-  "rb.noRanking": "עדיין אין שאלת דירוג."
+  "rb.noRanking": "עדיין אין שאלת דירוג.",
+  "mid.col.pts": "נק׳",
+  "mid.col.winners": "כיוון",
+  "mid.col.exact": "מדויק",
+  "mid.col.unique": "ייחודי"
 }

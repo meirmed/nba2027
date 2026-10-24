@@ -403,3 +403,18 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .rank-answer-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; width: 100%; padding: .55rem .2rem; background: none; border: 0; border-bottom: 1px solid var(--line); color: inherit; cursor: pointer; text-align: start; font: inherit; }
 .rank-answer-head.me { font-weight: 700; color: var(--accent); }
 .rank-answer-head > span:first-child { flex: 1; }
+
+/* Mid-season tournament page: nothing overflows (cards, group tables) and the schedule rows stay on ONE line */
+.mid-grid > * { min-width: 0; }
+.mid-group { padding: .8rem .55rem; overflow: hidden; }
+.mid-table { table-layout: fixed; width: 100%; font-size: .85rem; }
+.mid-table col.c-rank { width: 1.7rem; }
+.mid-table col.c-num { width: 2.5rem; }
+.table.mid-table th, .table.mid-table td { padding: .35rem .15rem; white-space: nowrap; text-align: center; }
+.table.mid-table th { font-size: .72rem; }
+.table.mid-table th.lb-name, .table.mid-table td.lb-name { text-align: start; width: auto; overflow: hidden; text-overflow: ellipsis; }
+.mid-sched { display: flex; flex-direction: column; font-size: .85rem; }
+.mid-sched-row { display: flex; align-items: center; gap: .5rem; white-space: nowrap; padding: .45rem 0; border-bottom: 1px solid var(--line); }
+.mid-sched-row strong { min-width: 4.4rem; }
+.mid-sched-row .muted { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.table.nowrap td, .table.nowrap th { white-space: nowrap; }

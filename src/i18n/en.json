@@ -788,5 +788,9 @@
   "ps.none": "No real picks yet for the statistics.",
   "rb.sub.others": "Other questions",
   "rb.sub.ranking": "End-of-season ranking",
-  "rb.noRanking": "There is no ranking question yet."
+  "rb.noRanking": "There is no ranking question yet.",
+  "mid.col.pts": "Pts",
+  "mid.col.winners": "Win",
+  "mid.col.exact": "Exact",
+  "mid.col.unique": "Uniq."
 }

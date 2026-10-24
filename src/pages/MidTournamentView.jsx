@@ -39,17 +39,15 @@ export default function MidTournamentView() {
 
       <div className="card">
         <h4 className="bq-title">{t('mid.schedule')}</h4>
-        <table className="table" dir={dir}>
-          <tbody>
-            {MID_STAGES.map((k) => (
-              <tr key={k}>
-                <td><strong>{t(`mid.stage.${k}`)}</strong></td>
-                <td className="muted">{rangeLabel(MID_WINDOWS[k], lang)}</td>
-                <td><span className={`chip ${bracket.status[k] === 'live' ? 'chip-exact' : bracket.status[k] === 'over' ? 'chip-winner' : 'chip-diff'}`}>{t(`mid.status.${bracket.status[k]}`)}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="mid-sched">
+          {MID_STAGES.map((k) => (
+            <div key={k} className="mid-sched-row">
+              <strong>{t(`mid.stage.${k}`)}</strong>
+              <span className="muted">{rangeLabel(MID_WINDOWS[k], lang)}</span>
+              <span className={`chip ${bracket.status[k] === 'live' ? 'chip-exact' : bracket.status[k] === 'over' ? 'chip-winner' : 'chip-diff'}`}>{t(`mid.status.${bracket.status[k]}`)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <h3 className="bq-title">{t('mid.stage.G')}</h3>
@@ -60,8 +58,9 @@ export default function MidTournamentView() {
             <div key={g} className="card mid-group">
               <h4 className="bq-title">{t('mid.group', { g })}</h4>
               {groups[g].length === 0 ? <p className="muted">–</p> : (
-                <table className="table lb" dir={dir}>
-                  <thead><tr className="muted small"><th>#</th><th className="lb-name">{t('lb.name')}</th><th>{t('lb.gamePtsCol')}</th><th>{t('lb.winnerDir')}</th><th>{t('lb.exactHits')}</th><th>{t('lb.uniqueHits')}</th></tr></thead>
+                <table className="table lb mid-table" dir={dir}>
+                  <colgroup><col className="c-rank" /><col /><col className="c-num" /><col className="c-num" /><col className="c-num" /><col className="c-num" /></colgroup>
+                  <thead><tr className="muted small"><th>#</th><th className="lb-name">{t('lb.name')}</th><th title={t('lb.gamePtsCol')}>{t('mid.col.pts')}</th><th title={t('lb.winnerDir')}>{t('mid.col.winners')}</th><th title={t('lb.exactHits')}>{t('mid.col.exact')}</th><th title={t('lb.uniqueHits')}>{t('mid.col.unique')}</th></tr></thead>
                   <tbody>
                     {info.table.map((r) => (
                       <tr key={r.uid} className={`${r.qualified ? 'mid-qual' : ''} ${r.uid === user?.uid ? 'me' : ''}`}>
