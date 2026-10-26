@@ -29,7 +29,7 @@ const Note = ({ tone = 'green', children }) => <div className={`note ${tone}`}>{
 export const TAKANON_URL = '/takanon.pdf'; // the regulations PDF (Hebrew): put the file in the project's public folder under this name
 
 export default function RulesPage() {
-  const { t, lang, dir } = useLang();
+  const { t, lang } = useLang();
   const [hasPdf, setHasPdf] = useState(false); // show the link only when the file really exists (a missing file would otherwise open the app itself)
   useEffect(() => {
     let on = true;
@@ -163,13 +163,14 @@ export default function RulesPage() {
             <li>{t('rules.mid.groups.b3')}</li>
           </ul>
         </Note>
-        <div className="table-wrap">
-          <table className="table nowrap" dir={dir}>
-            <thead><tr className="muted small"><th>{t('rules.mid.scheduleTitle')}</th><th /></tr></thead>
-            <tbody>
-              {MID_STAGES.map((k) => <tr key={k}><td><strong>{t(`mid.stage.${k}`)}</strong></td><td>{formatKeyDay(MID_WINDOWS[k].lo, lang)} – {formatKeyDay(MID_WINDOWS[k].hi, lang)}</td></tr>)}
-            </tbody>
-          </table>
+        <div className="mid-sched">
+          <div className="muted small">{t('rules.mid.scheduleTitle')}</div>
+          {MID_STAGES.map((k) => (
+            <div key={k} className="mid-sched-row">
+              <strong>{t(`mid.stage.${k}`)}</strong>
+              <span className="muted">{formatKeyDay(MID_WINDOWS[k].lo, lang)} – {formatKeyDay(MID_WINDOWS[k].hi, lang)}</span>
+            </div>
+          ))}
         </div>
         <Note tone="blue">🃏 {t('rules.mid.joker')}</Note>
         <Note tone="amber"><strong>{t('rules.mid.tb.title')}</strong><p>{t('rules.mid.tb.body')}</p></Note>

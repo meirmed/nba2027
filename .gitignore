@@ -8,3 +8,9 @@ functions/node_modules
 firebase-debug.log
 *.local
 functions/.env
+
+# exports of the predictions tool (personal data) and service-account keys: never commit
+exports/
+*-key.json
+*serviceAccount*.json
+secrets/
