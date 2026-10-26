@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { MID_WINDOWS, buildBracket, cleanGroups, compareStats, groupTable, pairState, stageOver, windowStats } from './midTournament.js';
 
 // players u1..u23; every row has the points of ONE day in each window: byDay { day: [points, exact, unique] }
-const day = { G: '2026-11-20', QF: '2026-12-09', SF: '2026-12-16', F: '2026-12-23' };
+const day = { G: '2026-11-10', QF: '2026-11-24', SF: '2026-12-01', F: '2026-12-08' }; // a day inside each window
 const row = (uid, pts = {}) => ({ uid, name: uid, byDay: Object.fromEntries(Object.entries(pts).map(([st, v]) => [day[st], Array.isArray(v) ? v : [v, 0, 0]])) });
 const rowsOf = (list) => Object.fromEntries(list.map((r) => [r.uid, r]));
-const AFTER = { G: '2026-12-07', QF: '2026-12-14', SF: '2026-12-21', F: '2026-12-28' };
+const AFTER = { G: '2026-11-21', QF: '2026-11-28', SF: '2026-12-05', F: '2026-12-12' }; // the day after each window ends
 
 describe('window stats', () => {
   it('sums only the days of the window; the edges are inclusive; other days and the bonus do not count', () => {
-    const r = { total: 321, bonus: 99, byDay: { '2026-11-08': [50, 5, 5, 5], '2026-11-09': [10, 1, 0, 2], '2026-12-06': [7, 0, 1, 1], '2026-12-07': [100, 9, 9, 9] } };
+    const r = { total: 321, bonus: 99, byDay: { '2026-10-29': [50, 5, 5, 5], '2026-10-30': [10, 1, 0, 2], '2026-11-20': [7, 0, 1, 1], '2026-11-21': [100, 9, 9, 9] } };
     expect(windowStats(r, MID_WINDOWS.G)).toEqual({ pts: 17, winners: 3, exact: 1, unique: 1, total: 321 }); // total = the overall score, only for the last tiebreaker
     expect(windowStats(undefined, MID_WINDOWS.G)).toEqual({ pts: 0, winners: 0, exact: 0, unique: 0, total: 0 });
     expect(windowStats({ byDay: { '2026-11-10': [5, 0, 0] } }, MID_WINDOWS.G).winners).toBe(0); // an older day with only 3 numbers
@@ -72,10 +72,10 @@ describe('group table', () => {
 
 describe('stages end by the calendar and by the games', () => {
   it('not over until the last day has passed and no game of the window is waiting or live', () => {
-    expect(stageOver(MID_WINDOWS.G, '2026-12-06', [])).toBe(false);
-    expect(stageOver(MID_WINDOWS.G, '2026-12-07', [])).toBe(true);
-    expect(stageOver(MID_WINDOWS.G, '2026-12-07', [{ dayKey: '2026-12-06', status: 'live' }])).toBe(false);
-    expect(stageOver(MID_WINDOWS.G, '2026-12-07', [{ dayKey: '2026-12-06', status: 'finished' }, { dayKey: '2026-12-08', status: 'scheduled' }])).toBe(true); // a later stage's game does not matter
+    expect(stageOver(MID_WINDOWS.G, '2026-11-20', [])).toBe(false);
+    expect(stageOver(MID_WINDOWS.G, '2026-11-21', [])).toBe(true);
+    expect(stageOver(MID_WINDOWS.G, '2026-11-21', [{ dayKey: '2026-11-20', status: 'live' }])).toBe(false);
+    expect(stageOver(MID_WINDOWS.G, '2026-11-21', [{ dayKey: '2026-11-20', status: 'finished' }, { dayKey: '2026-11-24', status: 'scheduled' }])).toBe(true); // a later stage's game does not matter
   });
 });
 
@@ -110,7 +110,7 @@ describe('the whole tournament: 23 players, groups of 6 + 6 + 6 + 5', () => {
   const build = (todayKey, rs, overrides = {}) => buildBracket({ groups, rowsByUid: rs, overrides, todayKey, games: [] });
 
   it('before the group stage is over nothing is decided: no quarter-final players yet', () => {
-    const b = build('2026-11-25', rows());
+    const b = build('2026-11-15', rows());
     expect(b.over.G).toBe(false);
     expect(b.status.G).toBe('live');
     expect(b.pairs.QF1.a).toBeNull();
@@ -124,7 +124,7 @@ describe('the whole tournament: 23 players, groups of 6 + 6 + 6 + 5', () => {
     expect(names('QF3')).toEqual(['u13', 'u20']); // C1 - D2
     expect(names('QF4')).toEqual(['u19', 'u14']); // D1 - C2
     expect(b.status.QF).toBe('live'); // Dec 7 is the first day of the quarter-final window
-    expect(build('2026-12-06', rows()).status.QF).toBe('upcoming');
+    expect(build('2026-11-20', rows()).status.QF).toBe('upcoming'); // the last day of the group stage
   });
   it('semi finals = the winner of QF1 v the winner of QF3, and the winner of QF2 v the winner of QF4; then the final and the champion', () => {
     // QF: the first-named player of each pair wins (u1, u7, u13, u19); SF1: u1 beats u13; SF2: u7 beats u19; final: u7 beats u1
@@ -141,7 +141,7 @@ describe('the whole tournament: 23 players, groups of 6 + 6 + 6 + 5', () => {
   });
   it('the final is open (no champion) until its stage is over', () => {
     const rs = rows((u) => ({ u1: { QF: 50 }, u13: { QF: 50 }, u7: { QF: 50 }, u19: { QF: 50 } }[u] || {}));
-    const b = build('2026-12-24', rs); // inside the final week; the semi finals are over, the final is on
+    const b = build('2026-12-08', rs); // inside the final week; the semi finals are over, the final is on
     expect(b.status.F).toBe('live');
     expect(b.champion).toBeNull();
   });
@@ -172,12 +172,12 @@ describe('clean groups', () => {
 
 describe('the joker in the tournament: only the main table is doubled', () => {
   it('a player with a joker is NOT ahead of a player with the same real points in a group', () => {
-    const rows = { a: { ...row('a'), total: 500, byDay: { '2026-11-20': [100, 0, 0, 3, 50] } }, b: { ...row('b'), total: 200, byDay: { '2026-11-20': [60, 0, 0, 3, 60] } } };
+    const rows = { a: { ...row('a'), total: 500, byDay: { '2026-11-10': [100, 0, 0, 3, 50] } }, b: { ...row('b'), total: 200, byDay: { '2026-11-10': [60, 0, 0, 3, 60] } } };
     const { table } = groupTable({ members: ['a', 'b'], rowsByUid: rows, window: MID_WINDOWS.G });
     expect(table.map((x) => [x.uid, x.pts])).toEqual([['b', 60], ['a', 50]]); // a: 100 in the main table, but only 50 here
   });
   it('a pair is decided by the points without the joker', () => {
-    const rows = { x: { ...row('x'), byDay: { '2026-12-09': [90, 0, 0, 2, 45] } }, y: { ...row('y'), byDay: { '2026-12-09': [50, 0, 0, 2, 50] } } };
+    const rows = { x: { ...row('x'), byDay: { '2026-11-24': [90, 0, 0, 2, 45] } }, y: { ...row('y'), byDay: { '2026-11-24': [50, 0, 0, 2, 50] } } };
     const p = pairState({ aUid: 'x', bUid: 'y', rowsByUid: rows, window: MID_WINDOWS.QF, over: true });
     expect(p.winner).toBe('y'); // 50 > 45, although x has 90 in the main table
   });

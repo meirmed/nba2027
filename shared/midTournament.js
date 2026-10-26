@@ -5,10 +5,10 @@
 
 /** The time window (Israel dates, inclusive) in which games count for each stage. */
 export const MID_WINDOWS = {
-  G: { lo: '2026-11-09', hi: '2026-12-06' }, // group stage, 4 weeks
-  QF: { lo: '2026-12-07', hi: '2026-12-13' },
-  SF: { lo: '2026-12-14', hi: '2026-12-20' },
-  F: { lo: '2026-12-21', hi: '2026-12-27' },
+  G: { lo: '2026-10-30', hi: '2026-11-20' }, // group stage: Fri Oct 30 - Fri Nov 20 (22 days)
+  QF: { lo: '2026-11-21', hi: '2026-11-27' }, // Sat - Fri, a week each
+  SF: { lo: '2026-11-28', hi: '2026-12-04' },
+  F: { lo: '2026-12-05', hi: '2026-12-11' }, // the tournament ends on Fri Dec 11
 };
 export const MID_STAGES = ['G', 'QF', 'SF', 'F'];
 export const MID_GROUPS = ['A', 'B', 'C', 'D'];
