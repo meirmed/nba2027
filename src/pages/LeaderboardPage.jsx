@@ -167,11 +167,28 @@ function MonthTab() {
   );
 }
 
+/** A blinking "live" sign while a game is being played (the tables below move with it), or while the points of a game that just ended are being saved. */
+function LiveScoresChip() {
+  const { t } = useLang();
+  const settings = useSettings();
+  const { games } = useGames();
+  const { hasLive } = usePoints();
+  const live = games.filter((g) => g.status === 'live' && countsForStandings(g, settings.countedRounds)).length;
+  if (live === 0 && !hasLive) return null;
+  return (
+    <div className="live-note">
+      <span className="live-chip">{live > 0 ? t('lb.live.on') : t('lb.live.finishing')}</span>
+      {live > 0 && <span className="muted small">{t('lb.live.games', { n: live })}</span>}
+    </div>
+  );
+}
+
 export default function LeaderboardPage() {
   const { t } = useLang();
   const [tab, setTab] = useState('total'); // 'total' | 'games' | 'bonus' | 'jokers' | 'stats' | 'month' | 'mid' (= "Champion of the month": its months appear only after the click)
   return (
     <PageShell titleKey="nav.leaderboard">
+      {tab !== 'stats' && <LiveScoresChip />}{/* Statistics only changes when a game ends: no live sign there */}
       <div className="tabs scroll" role="tablist">
         {TABS.map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{t(`lb.tab.${k}`)}</button>

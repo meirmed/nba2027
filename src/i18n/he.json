@@ -794,5 +794,8 @@
   "mid.col.exact": "מדויק",
   "mid.col.unique": "ייחודי",
   "pred.myPick": "הניחוש שלי",
-  "pred.noMyPick": "לא ניחשתי"
+  "pred.noMyPick": "לא ניחשתי",
+  "lb.live.on": "חי · הנקודות מתעדכנות עכשיו",
+  "lb.live.games": "משחקים חיים: {n}",
+  "lb.live.finishing": "מעדכן את הנקודות הסופיות…"
 }

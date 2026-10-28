@@ -794,5 +794,8 @@
   "mid.col.exact": "Exact",
   "mid.col.unique": "Uniq.",
   "pred.myPick": "My pick",
-  "pred.noMyPick": "No pick"
+  "pred.noMyPick": "No pick",
+  "lb.live.on": "LIVE · the points are updating now",
+  "lb.live.games": "Live games: {n}",
+  "lb.live.finishing": "Updating the final points…"
 }
