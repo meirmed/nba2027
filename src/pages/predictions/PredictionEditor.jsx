@@ -8,10 +8,10 @@ import { saveErrorInfo } from '@shared/saveErrors.js';
 import { useGames } from '../../hooks/useGames.js';
 import { useMyPredictions } from '../../contexts/MyPredictionsContext.jsx';
 import { isActiveJokerGame, pickIssue } from '@shared/predictions.js';
+import { autosaveDelay, draftsAfterSave, jokerDraftsAfterSave } from '@shared/autosave.js';
 
 const isNum = (v) => v !== '' && v !== undefined && Number.isInteger(Number(v));
 const omit = (obj, ids) => Object.fromEntries(Object.entries(obj).filter(([k]) => !ids.includes(k)));
-const AUTOSAVE_MS = 800;
 const Ctx = createContext(null);
 
 /**
@@ -31,6 +31,7 @@ export function PredictionEditorProvider({ children }) {
   const [opt, setOpt] = useState({ games: {}, jokers: {} }); // just-saved values, shown until the Firestore snapshot catches up
   const [reasons, setReasons] = useState({}); // id -> server rejection reason
   const [busy, setBusy] = useState(false);
+  const [typing, setTyping] = useState(null); // the game whose score boxes have the cursor (null = none): decides how long the autosave waits
   const [msg, setMsg] = useState('');
   const savingRef = useRef(false);
   const saveRef = useRef(null);
@@ -88,8 +89,9 @@ export function PredictionEditorProvider({ children }) {
         games: { ...o.games, ...Object.fromEntries(r.saved.map((id) => [id, picks[id]])) },
         jokers: { ...o.jokers, ...Object.fromEntries([...r.jokersOn.map((id) => [id, true]), ...r.jokersOff.map((id) => [id, false])]) },
       }));
-      setDraft((d) => omit(d, r.saved));
-      setJokerDraft((j) => omit(j, [...r.jokersOn, ...r.jokersOff]));
+      // forget only what was really sent: a digit typed while the save was on its way stays in the draft and goes out next time
+      setDraft((d) => draftsAfterSave(d, picks, r.saved));
+      setJokerDraft((j) => jokerDraftsAfterSave(j, jokers, [...r.jokersOn, ...r.jokersOff]));
       setReasons(Object.fromEntries(r.rejected.map((x) => [x.id, x.reason])));
       setMsg(r.rejected.length ? t('pred.partial', { ok: r.saved.length + r.jokersOn.length + r.jokersOff.length, bad: r.rejected.length }) : `✓ ${t('pred.saved')}`);
     } catch (e) { console.error(e); const info = saveErrorInfo(e); setMsg(info.key === 'pred.saveFailed' ? `${t(info.key)} (${info.detail})` : t(info.key)); } // say WHY it failed
@@ -97,11 +99,14 @@ export function PredictionEditorProvider({ children }) {
   };
   saveRef.current = save;
 
-  useEffect(() => { // autosave: wait for the user to stop typing, then send everything valid in ONE call
-    if (pendingKey === '[[],[]]') return undefined;
-    const timer = setTimeout(() => saveRef.current?.(false), AUTOSAVE_MS);
+  // autosave: ONE call with everything valid. While the cursor is in the score boxes it waits 2 s after the last keystroke; once the player leaves the
+  // boxes it follows after a quarter of a second. It never starts while a save is running; when that one ends (busy -> false) this runs again, so what was
+  // typed in the meantime is sent too (before, the timer could fire during a save, be skipped, and the digit stayed unsaved).
+  useEffect(() => {
+    if (pendingKey === '[[],[]]' || busy) return undefined;
+    const timer = setTimeout(() => saveRef.current?.(false), autosaveDelay(typing));
     return () => clearTimeout(timer);
-  }, [pendingKey]);
+  }, [pendingKey, typing, busy]);
 
   const edit = (id, side, value) => {
     setReasons((r) => omit(r, [id]));
@@ -109,6 +114,13 @@ export function PredictionEditorProvider({ children }) {
       const cur = d[id] || { s1: savedOf(id) ? String(savedOf(id).s1) : '', s2: savedOf(id) ? String(savedOf(id).s2) : '' };
       return { ...d, [id]: { ...cur, [side]: value } };
     });
+  };
+  const onFocusScore = (id) => setTyping(id);
+  const onBlurScore = (id, e) => { // moving from one box of the game to the other is still typing; leaving the game's boxes is not
+    const to = e.relatedTarget;
+    const box = e.currentTarget.closest?.('.pred-inputs');
+    if (to && box && to.closest?.('.pred-inputs') === box) return;
+    setTyping((cur) => (cur === id ? null : cur));
   };
   const toggleJoker = (id) => { setReasons((r) => omit(r, [id])); setJokerDraft((j) => ({ ...j, [id]: !jokerIsOn(id) })); };
   const statusOf = (id) => {
@@ -119,7 +131,7 @@ export function PredictionEditorProvider({ children }) {
 
   /** Everything a GameCard needs about ONE game's editing state. */
   const cardProps = (g) => ({
-    saved: savedOf(g.id), draft: draft[g.id], onEdit: (side, v) => edit(g.id, side, v),
+    saved: savedOf(g.id), draft: draft[g.id], onEdit: (side, v) => edit(g.id, side, v), onFocusScore: () => onFocusScore(g.id), onBlurScore: (e) => onBlurScore(g.id, e),
     jokerOn: jokerIsOn(g.id), jokerDisabled: !hasPick(g.id) || (!jokerIsOn(g.id) && jokersLeft <= 0), onJoker: () => toggleJoker(g.id),
     reason: reasons[g.id] || issueOf(g.id), status: statusOf(g.id),
   });

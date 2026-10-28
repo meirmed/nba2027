@@ -6,7 +6,9 @@ import { useSettings, useScoring } from '../../contexts/SettingsContext.jsx';
 import { formatCountdown, formatTime } from '../../utils/dates.js';
 
 /** One game. Display only: all state lives in GamesTab (draft values, joker draft, rejection reasons). */
-export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, jokerDisabled, onJoker, reason, status }) {
+const enterLeaves = (e) => { if (e.key === 'Enter') e.currentTarget.blur(); }; // Enter / Done on the phone keyboard = finished typing: the save follows at once
+
+export default function GameCard({ game, nowMs, saved, draft, onEdit, onFocusScore, onBlurScore, jokerOn, jokerDisabled, onJoker, reason, status }) {
   const { t, lang } = useLang();
   const { timezone } = useSettings();
   const { jokerMultiplier } = useScoring();
@@ -43,9 +45,9 @@ export default function GameCard({ game, nowMs, saved, draft, onEdit, jokerOn, j
           </div>
         ) : (
           <div className="pred-inputs">
-            <input className="input num" dir="ltr" type="number" inputMode="numeric" min="0" max="200" value={v1} aria-label={t('pred.home')} onChange={(e) => onEdit('s1', e.target.value)} />
+            <input className="input num" dir="ltr" type="number" inputMode="numeric" min="0" max="200" value={v1} aria-label={t('pred.home')} onChange={(e) => onEdit('s1', e.target.value)} onFocus={onFocusScore} onBlur={onBlurScore} onKeyDown={enterLeaves} />
             <span>–</span>
-            <input className="input num" dir="ltr" type="number" inputMode="numeric" min="0" max="200" value={v2} aria-label={t('pred.away')} onChange={(e) => onEdit('s2', e.target.value)} />
+            <input className="input num" dir="ltr" type="number" inputMode="numeric" min="0" max="200" value={v2} aria-label={t('pred.away')} onChange={(e) => onEdit('s2', e.target.value)} onFocus={onFocusScore} onBlur={onBlurScore} onKeyDown={enterLeaves} />
           </div>
         )}
         <div className="pred-team"><TeamBadge abbr={game.t2} /><small className="muted">{t('pred.away')}</small></div>

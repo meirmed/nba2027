@@ -251,3 +251,8 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 107: "My pick" box is lower
 - `.my-pick`: padding .45rem -> .15rem, line-height 1.25, smaller font, thinner glow, and `align-self: center` (the flex row stretched the box to the height of the two buttons, so the padding alone would not have helped). CSS only.
+
+## Update 108: smarter autosave on the Predictions page (owner's choice) + two lost-digit bugs
+- **When it saves** (`shared/autosave.js`, `autosaveDelay`): while the cursor is inside the score boxes of a game it waits **2 s** after the last keystroke (`AUTOSAVE_TYPING_MS`); once the player leaves the boxes (tap elsewhere, next game, Enter / Done which blurs the box, joker button) it saves after **250 ms** (`AUTOSAVE_IDLE_MS`). Moving between the two boxes of the same game is still typing (`onBlurScore` checks `relatedTarget`). Before: a fixed 800 ms.
+- **Bug 1 (the "12 instead of 123" case)**: after a save the draft of every saved game was deleted, so a digit typed while the save was on its way was swallowed and the field fell back to the saved value. `draftsAfterSave` / `jokerDraftsAfterSave` now forget only what was really SENT.
+- **Bug 2**: the autosave timer could fire while a save was running, be skipped (`savingRef`), and never run again if the pending value did not change. The effect now also depends on `busy` and runs again when a save ends. Server and rules unchanged. 292 tests (6 new, with the regression). Not tried in a real browser (no browser in the sandbox): test with F12 -> Network -> Slow 3G. App-only.
