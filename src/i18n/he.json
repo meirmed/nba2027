@@ -792,5 +792,7 @@
   "mid.col.pts": "נק׳",
   "mid.col.winners": "כיוון",
   "mid.col.exact": "מדויק",
-  "mid.col.unique": "ייחודי"
+  "mid.col.unique": "ייחודי",
+  "pred.myPick": "הניחוש שלי",
+  "pred.noMyPick": "לא ניחשתי"
 }

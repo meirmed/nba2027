@@ -3,6 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useMyPredictions } from '../contexts/MyPredictionsContext.jsx';
 import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { scoreGamePicks } from '@shared/standings.js';
 import { countsForStandings } from '@shared/games.js';
@@ -11,9 +12,12 @@ import PickStats from './PickStats.jsx';
 import { pickStats } from '@shared/pickStats.js';
 
 /** Reads picks/{gameId} (written by lockGamePicks at tip-off). Doesn't exist before lock, so nothing leaks early. */
-export default function EveryonesPicks({ gameId, result }) {
+export default function EveryonesPicks({ gameId, result, showMine = false }) {
   const { t, dir } = useLang();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const mine = useMyPredictions();
+  const my = mine.games?.[gameId]; // my own pick of this game (shown on the Results page, next to the two buttons)
+  const hasMy = my && Number.isInteger(my.s1) && Number.isInteger(my.s2);
   const settings = useSettings();
   const scoring = useScoring();
   const [open, setOpen] = useState(false); // the list of everyone's picks
@@ -66,6 +70,9 @@ export default function EveryonesPicks({ gameId, result }) {
       <div className="everyone-actions">
         <button className="btn ghost" onClick={toggle}>{open ? t('pred.hide') : t('pred.everyone')}</button>
         <button className="btn ghost" onClick={toggleStats}>📊 {statsOpen ? t('ps.hide') : t('ps.button')}</button>
+        {showMine && !isAdmin && !mine.loading && (hasMy
+          ? <span className="my-pick"><span className="muted small">{t('pred.myPick')}</span> <Score a={my.s1} b={my.s2} />{mine.jokers?.[gameId] ? ' ⭐' : ''}{my.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</span>
+          : <span className="my-pick muted">{t('pred.noMyPick')}</span>)}
       </div>
       {(open || statsOpen) && data === undefined && <p className="muted">{t('common.loading')}</p>}
       {(open || statsOpen) && data === null && <p className="muted">{t('pred.picksSoon')}</p>}

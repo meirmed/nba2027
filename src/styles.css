@@ -418,3 +418,6 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .mid-sched-row strong { min-width: 4.4rem; }
 .mid-sched-row .muted { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .table.nowrap td, .table.nowrap th { white-space: nowrap; }
+
+/* Results: my own pick of the game, in the row of the card's buttons (after "Everyone's picks" and "Statistics") */
+.my-pick { display: inline-flex; align-items: center; gap: .4rem; padding: .45rem .7rem; border: 1px dashed var(--line); border-radius: var(--radius); font-size: .9rem; white-space: nowrap; }

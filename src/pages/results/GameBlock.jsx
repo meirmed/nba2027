@@ -22,7 +22,7 @@ export default function GameBlock({ g, nowMs }) {
         </span>
         <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span>
       </div>
-      {started && g.status !== 'cancelled' && <EveryonesPicks gameId={g.id} result={g} />}
+      {started && g.status !== 'cancelled' && <EveryonesPicks gameId={g.id} result={g} showMine />}
     </div>
   );
 }

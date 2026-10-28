@@ -792,5 +792,7 @@
   "mid.col.pts": "Pts",
   "mid.col.winners": "Win",
   "mid.col.exact": "Exact",
-  "mid.col.unique": "Uniq."
+  "mid.col.unique": "Uniq.",
+  "pred.myPick": "My pick",
+  "pred.noMyPick": "No pick"
 }
