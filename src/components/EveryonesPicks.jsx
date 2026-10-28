@@ -71,8 +71,8 @@ export default function EveryonesPicks({ gameId, result, showMine = false }) {
         <button className="btn ghost" onClick={toggle}>{open ? t('pred.hide') : t('pred.everyone')}</button>
         <button className="btn ghost" onClick={toggleStats}>📊 {statsOpen ? t('ps.hide') : t('ps.button')}</button>
         {showMine && !isAdmin && !mine.loading && (hasMy
-          ? <span className="my-pick"><span className="muted small">{t('pred.myPick')}</span> <Score a={my.s1} b={my.s2} />{mine.jokers?.[gameId] ? ' ⭐' : ''}{my.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</span>
-          : <span className="my-pick muted">{t('pred.noMyPick')}</span>)}
+          ? <span className="my-pick"><span className="my-pick-label">{t('pred.myPick')}</span> <Score a={my.s1} b={my.s2} />{mine.jokers?.[gameId] ? ' ⭐' : ''}{my.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</span>
+          : <span className="my-pick none">{t('pred.noMyPick')}</span>)}
       </div>
       {(open || statsOpen) && data === undefined && <p className="muted">{t('common.loading')}</p>}
       {(open || statsOpen) && data === null && <p className="muted">{t('pred.picksSoon')}</p>}

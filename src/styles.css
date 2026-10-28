@@ -420,4 +420,7 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .table.nowrap td, .table.nowrap th { white-space: nowrap; }
 
 /* Results: my own pick of the game, in the row of the card's buttons (after "Everyone's picks" and "Statistics") */
-.my-pick { display: inline-flex; align-items: center; gap: .4rem; padding: .45rem .7rem; border: 1px dashed var(--line); border-radius: var(--radius); font-size: .9rem; white-space: nowrap; }
+.my-pick { display: inline-flex; align-items: center; gap: .4rem; padding: .45rem .75rem; border: 1.5px solid var(--accent); border-radius: var(--radius); font-size: .92rem; font-weight: 700; white-space: nowrap;
+  background: color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
+.my-pick-label { color: var(--accent); font-weight: 800; }
+.my-pick.none { border-style: dashed; border-color: color-mix(in srgb, #ef4444 70%, transparent); background: color-mix(in srgb, #ef4444 10%, transparent); box-shadow: none; font-weight: 600; }

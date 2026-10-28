@@ -245,3 +245,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 105: my own pick on the Results page card
 - `EveryonesPicks` got `showMine` (set only by the Results page `GameBlock`): after "Everyone's picks" and "Statistics" a third item in the same row shows MY pick of the game ("הניחוש שלי 108-100", ⭐ joker, 🎲 auto-filled), read from `MyPredictionsContext` (my own doc, no extra reads), or "לא ניחשתי" when I have none; hidden for admins (not players). The Predictions page is unchanged (its card already shows the pick in the inputs). The row wraps on a narrow phone if the three items do not fit. App-only.
+
+## Update 106: "My pick" box highlighted
+- The box on the Results card is now filled with a tint of the accent colour, with a solid accent border and a soft glow, bold text and an accent-coloured label; "I did not predict" (`.my-pick.none`) is a dashed red-tinted box so a missing pick also stands out. CSS only (+ two class names in `EveryonesPicks`).
