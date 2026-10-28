@@ -248,3 +248,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 106: "My pick" box highlighted
 - The box on the Results card is now filled with a tint of the accent colour, with a solid accent border and a soft glow, bold text and an accent-coloured label; "I did not predict" (`.my-pick.none`) is a dashed red-tinted box so a missing pick also stands out. CSS only (+ two class names in `EveryonesPicks`).
+
+## Update 107: "My pick" box is lower
+- `.my-pick`: padding .45rem -> .15rem, line-height 1.25, smaller font, thinner glow, and `align-self: center` (the flex row stretched the box to the height of the two buttons, so the padding alone would not have helped). CSS only.
