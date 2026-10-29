@@ -420,10 +420,15 @@ button.chip.chip-on { background: var(--accent); color: #111; border-color: var(
 .table.nowrap td, .table.nowrap th { white-space: nowrap; }
 
 /* Results: my own pick of the game, in the row of the card's buttons (after "Everyone's picks" and "Statistics") */
-.my-pick { display: inline-flex; align-items: center; align-self: center; gap: .35rem; padding: .15rem .6rem; line-height: 1.25; border: 1.5px solid var(--accent); border-radius: var(--radius); font-size: .88rem; font-weight: 700; white-space: nowrap;
-  background: color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent); } /* align-self: the row would otherwise stretch the box to the height of the buttons */
+.my-pick { display: inline-flex; align-items: center; align-self: center; flex-wrap: wrap; gap: .1rem .4rem; max-width: 100%; padding: .15rem .6rem; line-height: 1.25; border: 1.5px solid var(--accent); border-radius: var(--radius); font-size: .88rem; font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent); } /* orange (the accent) = no points; align-self: the row would stretch the box to the height of the buttons */
 .my-pick-label { color: var(--accent); font-weight: 800; }
-.my-pick.none { border-style: dashed; border-color: color-mix(in srgb, #ef4444 70%, transparent); background: color-mix(in srgb, #ef4444 10%, transparent); box-shadow: none; font-weight: 600; }
+.my-pick-kind { font-weight: 600; }
+.my-pick.pts { border-color: #22c55e; background: color-mix(in srgb, #22c55e 18%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, #22c55e 14%, transparent); } /* points = green */
+.my-pick.pts .my-pick-label, .my-pick.pts .my-pick-pts { color: #22c55e; }
+.my-pick.pending { border-color: var(--line); background: transparent; box-shadow: none; } /* cannot be scored yet = grey */
+.my-pick.pending .my-pick-label { color: var(--muted); }
+.my-pick.none { border-style: dashed; box-shadow: none; font-weight: 600; } /* I did not predict */
 
 /* Leaderboard: the blinking "live" sign */
 .live-note { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }

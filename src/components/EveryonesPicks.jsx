@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useLang } from '../contexts/LangContext.jsx';
@@ -10,6 +10,9 @@ import { countsForStandings } from '@shared/games.js';
 import Score from './Score.jsx';
 import PickStats from './PickStats.jsx';
 import { pickStats } from '@shared/pickStats.js';
+import { myPickState } from '@shared/myPick.js';
+
+const picksCache = new Map(); // the published picks of a game never change after tip-off: one read per game per session, shared by the card's label and its list
 
 /** Reads picks/{gameId} (written by lockGamePicks at tip-off). Doesn't exist before lock, so nothing leaks early. */
 export default function EveryonesPicks({ gameId, result, showMine = false }) {
@@ -26,8 +29,16 @@ export default function EveryonesPicks({ gameId, result, showMine = false }) {
 
   const load = async () => {
     if (data) return;
-    try { const s = await getDoc(doc(db, 'picks', gameId)); setData(s.exists() ? s.data() : null); } catch { setData(null); }
+    if (picksCache.has(gameId)) { setData(picksCache.get(gameId)); return; }
+    try {
+      const s = await getDoc(doc(db, 'picks', gameId));
+      const d = s.exists() ? s.data() : null;
+      if (d) picksCache.set(gameId, d);
+      setData(d);
+    } catch { setData(null); }
   };
+  // the "my pick" label shows my points and the kind of score, so the published picks are loaded for the card right away (not only on a click)
+  useEffect(() => { if (showMine && !isAdmin) load(); }, [showMine, isAdmin, gameId]); // eslint-disable-line react-hooks/exhaustive-deps
   // the list and the statistics are two separate views: opening one closes the other (the list never shows the statistics block)
   const toggle = () => { const next = !open; setOpen(next); if (next) { setStatsOpen(false); load(); } };
   const toggleStats = () => { const next = !statsOpen; setStatsOpen(next); if (next) { setOpen(false); load(); } };
@@ -62,6 +73,10 @@ export default function EveryonesPicks({ gameId, result, showMine = false }) {
     if (sc.winnerCorrect) return ['winner', t('ev.winner')];
     return ['miss', t('ev.miss')];
   };
+  // "my pick": my points and the kind of score (the same as in the list), green with points, orange without, grey while it cannot be scored
+  const myScored = user ? scored[user.uid] : undefined;
+  const myKind = hasMy && myScored ? kind({ uid: user.uid, s1: my.s1, s2: my.s2 }) : null;
+  const myState = myPickState({ hasPick: !!hasMy, scoredPts: myScored?.pts, canScore: Object.keys(scored).length > 0 });
   // while the game is on / after it: the best score first (then by name)
   const shown = useMemo(() => (Object.keys(scored).length ? [...rows].sort((a, b) => ((scored[b.uid]?.pts ?? 0) - (scored[a.uid]?.pts ?? 0)) || (a.name || '').localeCompare(b.name || '', 'he')) : rows), [rows, scored]);
 
@@ -70,9 +85,14 @@ export default function EveryonesPicks({ gameId, result, showMine = false }) {
       <div className="everyone-actions">
         <button className="btn ghost" onClick={toggle}>{open ? t('pred.hide') : t('pred.everyone')}</button>
         <button className="btn ghost" onClick={toggleStats}>📊 {statsOpen ? t('ps.hide') : t('ps.button')}</button>
-        {showMine && !isAdmin && !mine.loading && (hasMy
-          ? <span className="my-pick"><span className="my-pick-label">{t('pred.myPick')}</span> <Score a={my.s1} b={my.s2} />{mine.jokers?.[gameId] ? ' ⭐' : ''}{my.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</span>
-          : <span className="my-pick none">{t('pred.noMyPick')}</span>)}
+        {showMine && !isAdmin && !mine.loading && (
+          <span className={`my-pick ${myState.state}${hasMy ? '' : ' none'}`}>
+            <span className="my-pick-label">{hasMy ? t('pred.myPick') : t('pred.noMyPick')}</span>
+            {hasMy && <span><Score a={my.s1} b={my.s2} />{mine.jokers?.[gameId] ? ' ⭐' : ''}{my.autoFilled ? <span title={t('bd.auto')}> 🎲</span> : ''}</span>}
+            {myKind ? <span className="my-pick-kind">{myKind[1]}{myScored?.riskPts > 0 ? ' 💪' : ''}</span> : (hasMy && tiedNow ? <span className="my-pick-kind">{t('ev.tiedKind')}</span> : null)}
+            {myState.pts !== null && <strong className="my-pick-pts">{myState.pts} {t(live ? 'ev.colPtsLive' : 'ev.colPts')}</strong>}
+          </span>
+        )}
       </div>
       {(open || statsOpen) && data === undefined && <p className="muted">{t('common.loading')}</p>}
       {(open || statsOpen) && data === null && <p className="muted">{t('pred.picksSoon')}</p>}
