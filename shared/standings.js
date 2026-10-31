@@ -96,6 +96,11 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
  * Sorts by the tiebreakers and numbers the rows 1..N: every player gets his OWN number, even when two players are equal on every tiebreaker.
  * Players still tied after all the tiebreakers are ordered by name (then uid), so the order is stable and never jumps around on refresh.
  */
+/** The Statistics tab: accuracy = correct winners / games played (0 for a player who has not played). It is the initial order of that tab. */
+export const withAccuracy = (rows) => rows.map((r) => ({ ...r, accuracy: (r.gamesPlayed ?? 0) > 0 ? (r.winnerCorrect ?? 0) / r.gamesPlayed : 0 }));
+/** Order of the Statistics tab: accuracy first; equal accuracy -> more correct winners (more games behind the same %), then exact, unique, the overall total. */
+export const STATS_TIEBREAKERS = ['accuracy', 'winnerCorrect', 'exactHits', 'uniqueHits', 'total'];
+
 export function rankRows(rows, tiebreakers) {
   const byName = (r) => String(r.name || '');
   const sorted = [...rows].sort((a, b) => compareRows(a, b, tiebreakers) || byName(a).localeCompare(byName(b), 'he') || String(a.uid || '').localeCompare(String(b.uid || '')));

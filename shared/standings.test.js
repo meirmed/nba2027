@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeAllPoints, rankRows, scoreGamePicks } from './standings.js';
+import { computeAllPoints, rankRows, scoreGamePicks, STATS_TIEBREAKERS, withAccuracy } from './standings.js';
 
 const sc = { winner: 5, diffExact: 6, exact: 6, uniqueDiff: 5, diffBonus: [{ maxErr: 1, pts: 4 }, { maxErr: 2, pts: 3 }, { maxErr: 3, pts: 2 }, { maxErr: 4, pts: 1 }],
   risk: { maxPickPct: 10, pts: 2 }, unique: 5, roundMultipliers: { RS: 1 }, jokerMultiplier: 2, autoFillFactor: 0.5 };
@@ -183,5 +183,24 @@ describe('diffHits: games with the margin bonus of an error of 1-4', () => {
     const r = run(games, { A: { games: picks } });
     expect(r.A.diffHits).toBe(2);
     expect(r.A.winnerCorrect).toBe(5);
+  });
+});
+
+describe('Statistics tab: the initial order is by accuracy', () => {
+  const P1 = (id, winnerCorrect, gamesPlayed, extra = {}) => ({ id, uid: id, name: id, winnerCorrect, gamesPlayed, exactHits: 0, uniqueHits: 0, total: 0, ...extra });
+  it('accuracy = correct winners / games played; a player with no games has 0', () => {
+    const r = withAccuracy([P1('a', 6, 10), P1('b', 0, 0)]);
+    expect(r[0].accuracy).toBeCloseTo(0.6, 9);
+    expect(r[1].accuracy).toBe(0);
+  });
+  it('the table is ordered by that accuracy, best first, ranked 1..N', () => {
+    const rows = withAccuracy([P1('low', 3, 10), P1('high', 9, 10), P1('mid', 6, 10), P1('none', 0, 0)]);
+    const ranked = rankRows(rows, STATS_TIEBREAKERS);
+    expect(ranked.map((x) => x.id)).toEqual(['high', 'mid', 'low', 'none']);
+    expect(ranked.map((x) => x.rank)).toEqual([1, 2, 3, 4]);
+  });
+  it('the same accuracy: more correct winners first (more games behind the same percentage), then exact hits, then the overall total', () => {
+    const rows = withAccuracy([P1('few', 3, 5), P1('many', 6, 10), P1('manyExact', 6, 10, { exactHits: 2 }), P1('manyExactTotal', 6, 10, { exactHits: 2, total: 50 })]);
+    expect(rankRows(rows, STATS_TIEBREAKERS).map((x) => x.id)).toEqual(['manyExactTotal', 'manyExact', 'many', 'few']);
   });
 });

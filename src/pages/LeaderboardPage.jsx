@@ -11,7 +11,7 @@ import { useLang } from '../contexts/LangContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useScoring, useSettings } from '../contexts/SettingsContext.jsx';
 import { usePoints } from '../contexts/PointsContext.jsx';
-import { rankRows } from '@shared/standings.js';
+import { rankRows, STATS_TIEBREAKERS, withAccuracy } from '@shared/standings.js';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
 
@@ -92,8 +92,8 @@ function Board({ tab }) {
   // 'games' tab ranks by game points only; the others use the configured tiebreakers (total first).
   const ranked = useMemo(
     () => rankRows(
-      tab === 'jokers' ? rows.map((r) => ({ ...r, jokersLeft: Math.max(0, scoring.jokersPerSeason - (r.jokersUsed ?? 0)) })) : rows,
-      tab === 'games' ? ['gamePts', 'exactHits', 'uniqueHits'] : tab === 'bonus' ? ['bonus', 'total'] : tab === 'jokers' ? ['jokersLeft', 'total'] : scoring.tiebreakers,
+      tab === 'jokers' ? rows.map((r) => ({ ...r, jokersLeft: Math.max(0, scoring.jokersPerSeason - (r.jokersUsed ?? 0)) })) : tab === 'stats' ? withAccuracy(rows) : rows,
+      tab === 'games' ? ['gamePts', 'exactHits', 'uniqueHits'] : tab === 'bonus' ? ['bonus', 'total'] : tab === 'jokers' ? ['jokersLeft', 'total'] : tab === 'stats' ? STATS_TIEBREAKERS : scoring.tiebreakers,
     ),
     [rows, tab, scoring.tiebreakers, scoring.jokersPerSeason],
   );
