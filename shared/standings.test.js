@@ -173,3 +173,15 @@ describe('rankRows: every player gets a unique number 1..N', () => {
     expect(b.map((x) => x.id)).toEqual(a.map((x) => x.id));
   });
 });
+
+describe('diffHits: games with the margin bonus of an error of 1-4', () => {
+  it('counts only those games (not an exact score, not the exact margin, not a far miss, not a wrong winner)', () => {
+    const at = (n) => Date.parse(`2026-10-${10 + n}T20:00:00Z`);
+    const games = [1, 2, 3, 4, 5, 6].map((n) => game(`g${n}`, at(n), 110, 100)); // every game ends 110-100 (margin 10)
+    const picks = { g1: P(110, 100), g2: P(105, 95), g3: P(108, 100), g4: P(101, 100), g5: P(90, 100), g6: P(107, 100) };
+    // g1 exact score, g2 exact margin (error 0), g3 margin 8 = error 2 (counts), g4 margin 1 = error 9 (no tier), g5 wrong winner, g6 margin 7 = error 3 (counts)
+    const r = run(games, { A: { games: picks } });
+    expect(r.A.diffHits).toBe(2);
+    expect(r.A.winnerCorrect).toBe(5);
+  });
+});

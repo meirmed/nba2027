@@ -104,14 +104,13 @@ function Board({ tab }) {
 
   return (
     <div className="table-wrap">
-      <table className="table lb" dir={dir}>
+      <table className={`table lb${stats ? ' lb-stats' : ''}`} dir={dir}>
         <thead>
           <tr className="muted small">
             <th>#</th><th className="lb-name">{t('lb.name')}</th>
             {stats ? (
               <>
-                <th>{t('lb.exact')}</th><th>{t('lb.winners')}</th><th>{t('lb.unique')}</th><th>{t('lb.risk')}</th>
-                <th>{t('lb.played')}</th><th>{t('lb.accuracy')}</th><th>{t('lb.bestStreak')}</th><th>{t('lb.points')}</th>
+                <th>{t('lbs.accuracy')}</th><th>{t('lbs.winners')}</th><th>{t('lbs.diff')}</th><th>{t('lbs.unique')}</th><th>{t('lbs.exact')}</th><th>{t('lbs.risk')}</th><th>{t('lbs.streak')}</th><th>{t('lb.points')}</th>
               </>
             ) : COLS[tab].map(([h]) => <th key={h}>{t(h)}</th>)}
             {tab === 'total' && <th>{t('lb.streak')}</th>}
@@ -124,8 +123,7 @@ function Board({ tab }) {
               <td className="lb-name"><Link className="lb-link" to={r.uid === user?.uid ? '/my-points' : `/player/${r.uid}`}><Avatar name={r.name} url={r.photoURL} size={24} /><span dir="auto">{r.name}{r.uid === user?.uid ? ` ${t('lb.you')}` : ''}</span></Link></td>
               {stats ? (
                 <>
-                  <td>{r.exactHits ?? 0}</td><td>{r.winnerCorrect ?? 0}</td><td>{r.uniqueHits ?? 0}</td><td>{r.riskHits ?? 0}</td>
-                  <td>{r.gamesPlayed ?? 0}</td><td>{pct(r.winnerCorrect ?? 0, r.gamesPlayed ?? 0)}</td><td>{r.bestStreak ?? 0}</td>
+                  <td>{pct(r.winnerCorrect ?? 0, r.gamesPlayed ?? 0)}</td><td>{r.winnerCorrect ?? 0}</td><td>{r.diffHits ?? 0}</td><td>{r.uniqueHits ?? 0}</td><td>{r.exactHits ?? 0}</td><td>{r.riskHits ?? 0}</td><td>{r.bestStreak ?? 0}</td>
                   <td><strong>{r.total ?? 0}</strong></td>
                 </>
               ) : COLS[tab].map(([h, f, cls]) => <td key={h}><strong className={cls}>{r[f] ?? 0}</strong></td>)}

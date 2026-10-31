@@ -797,5 +797,12 @@
   "pred.noMyPick": "לא ניחשתי",
   "lb.live.on": "חי · הנקודות מתעדכנות עכשיו",
   "lb.live.games": "משחקים חיים: {n}",
-  "lb.live.finishing": "מעדכן את הנקודות הסופיות…"
+  "lb.live.finishing": "מעדכן את הנקודות הסופיות…",
+  "lbs.accuracy": "דיוק",
+  "lbs.winners": "כיוון נכון",
+  "lbs.diff": "בונוס הפרש",
+  "lbs.unique": "תוצאה ייחודית",
+  "lbs.exact": "תוצאה מדויקת",
+  "lbs.risk": "בונוס סיכון",
+  "lbs.streak": "רצף שיא"
 }

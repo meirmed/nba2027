@@ -797,5 +797,12 @@
   "pred.noMyPick": "No pick",
   "lb.live.on": "LIVE · the points are updating now",
   "lb.live.games": "Live games: {n}",
-  "lb.live.finishing": "Updating the final points…"
+  "lb.live.finishing": "Updating the final points…",
+  "lbs.accuracy": "Accuracy",
+  "lbs.winners": "Correct winner",
+  "lbs.diff": "Margin bonus",
+  "lbs.unique": "Unique score",
+  "lbs.exact": "Exact score",
+  "lbs.risk": "Risk bonus",
+  "lbs.streak": "Best streak"
 }

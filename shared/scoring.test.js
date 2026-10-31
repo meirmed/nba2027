@@ -119,3 +119,15 @@ describe('the points without the joker (used by the mid-season tournament)', () 
     expect(scoreGame(null, fin(110, 100), { scoring: sc }).ptsNoJoker).toBe(0);
   });
 });
+
+describe('diffTier: the margin bonus of an error of 1-4 (the Statistics column "margin bonus")', () => {
+  it('paid for an error inside a tier; not for the exact margin, an exact score, a far miss or a wrong winner', () => {
+    const f = fin(110, 100); // margin 10; this test config has one tier: error <= 3
+    expect(scoreGame({ s1: 107, s2: 100 }, f, { scoring: sc }).diffTier).toBe(true); // margin 7: error 3
+    expect(scoreGame({ s1: 109, s2: 100 }, f, { scoring: sc }).diffTier).toBe(true); // margin 9: error 1
+    expect(scoreGame({ s1: 105, s2: 95 }, f, { scoring: sc }).diffTier).toBe(false); // exact margin (error 0)
+    expect(scoreGame({ s1: 110, s2: 100 }, f, { scoring: sc }).diffTier).toBe(false); // exact score
+    expect(scoreGame({ s1: 102, s2: 100 }, f, { scoring: sc }).diffTier).toBe(false); // error 8: no tier
+    expect(scoreGame({ s1: 90, s2: 100 }, f, { scoring: sc }).diffTier).toBe(false); // wrong winner
+  });
+});
