@@ -188,7 +188,6 @@ export default function LeaderboardPage() {
   const [tab, setTab] = useState('total'); // 'total' | 'games' | 'bonus' | 'jokers' | 'stats' | 'month' | 'mid' (= "Champion of the month": its months appear only after the click)
   return (
     <PageShell titleKey="nav.leaderboard">
-      {tab !== 'stats' && <LiveScoresChip />}{/* Statistics only changes when a game ends: no live sign there */}
       <div className="tabs scroll" role="tablist">
         {TABS.map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{t(`lb.tab.${k}`)}</button>
@@ -199,6 +198,7 @@ export default function LeaderboardPage() {
         <button role="tab" aria-selected={tab === 'mid'} className={`tab ${tab === 'mid' ? 'active' : ''}`} onClick={() => setTab('mid')}>{t('lb.tab.mid')}</button>
         <button role="tab" aria-selected={tab === 'stats'} className={`tab ${tab === 'stats' ? 'active' : ''}`} onClick={() => setTab('stats')}>{t('lb.tab.stats')}</button>
       </div>
+      {tab !== 'stats' && <LiveScoresChip />}{/* below the second row of tabs; it is there only while a game is live. Statistics only changes when a game ends: no live sign there */}
       <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab === 'month' ? <MonthTab /> : tab === 'mid' ? <MidTournamentView /> : <Board tab={tab} />}</ErrorBoundary>
     </PageShell>
   );
