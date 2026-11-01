@@ -272,3 +272,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 113: Statistics tab ordered by accuracy
 - The initial order of the Statistics tab is by **accuracy** (correct winners / games played; `withAccuracy`, `STATS_TIEBREAKERS` in shared/standings.js: accuracy, correct winners, exact, unique, total), ranked 1..N; a player with no games is last. 301 tests. App-only. Clicking a header to sort by another column was NOT built (offered).
+
+## Update 114: the "today's games" box was removed from the Home page (owner)
+- Removed the heading "משחקי היום / המשחקים הבאים · <date>" and the list of game rows (time, teams, my pick, result, status) from `HomePage`; the data only that box used and the texts `home.today`, `home.nextGames`, `home.noGames`, `home.noPick` were deleted. The rest of the Home page (hero with the next game and countdown, missing predictions, star of the night, top 5, ...) is unchanged. App-only.

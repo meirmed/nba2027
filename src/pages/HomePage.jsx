@@ -13,7 +13,7 @@ import { useGames } from '../hooks/useGames.js';
 import { useNow } from '../hooks/useNow.js';
 import { useProfile } from '../hooks/useProfile.js';
 import { useStarOfNight } from '../hooks/useStarOfNight.js';
-import { dayKey, formatCountdown, formatDay, formatTime } from '../utils/dates.js';
+import { formatCountdown, formatTime } from '../utils/dates.js';
 import { countsForStandings } from '@shared/games.js';
 import { rankRows } from '@shared/standings.js';
 import { bonusClosedReason } from '@shared/bonus.js';
@@ -43,11 +43,6 @@ export default function HomePage() {
   const open = counted.filter((g) => g.status === 'scheduled' && g.t1 && g.t2 && tip(g) > nowMs);
   const next = open[0];
   const liveCount = counted.filter((g) => g.status === 'live').length;
-
-  const todayKey = dayKey(new Date(nowMs), tz);
-  const firstShown = counted.find((g) => dayKey(g.tipoff, tz) >= todayKey);
-  const shownKey = firstShown ? dayKey(firstShown.tipoff, tz) : null;
-  const shown = shownKey ? counted.filter((g) => dayKey(g.tipoff, tz) === shownKey) : [];
 
   // what is still missing in the next 3 days (admins don't play)
   const unpaid = !isAdmin && profile?.paid === false; // registered, waiting for the admin to tick "paid"
@@ -141,22 +136,6 @@ export default function HomePage() {
           ))}
         </div>
       )}
-
-      <h3 className="bq-title">{shownKey === todayKey ? t('home.today') : t('home.nextGames')}{shown[0] ? <span className="muted small"> · {formatDay(shown[0].tipoff, lang, tz)}</span> : null}</h3>
-      {shown.length === 0 && <p className="muted">{t('home.noGames')}</p>}
-      {shown.map((g) => {
-        const p = mine.games[g.id];
-        const result = g.status === 'finished' || g.status === 'live';
-        return (
-          <div key={g.id} className="game-row">
-            <span className="muted time" dir="ltr">{formatTime(g.tipoff, lang, tz)}</span>
-            <span className="teams"><TeamBadge abbr={g.t1} /> <span className="muted">–</span> <TeamBadge abbr={g.t2} /></span>
-            {!isAdmin && <span className="res-score">{p ? <Score a={p.s1} b={p.s2} /> : <small className={g.status === 'scheduled' ? 'error' : 'muted'}>{t('home.noPick')}</small>}</span>}
-            {result && <span className="res-score"><Score a={g.s1 ?? 0} b={g.s2 ?? 0} /></span>}
-            <span className={`badge ${g.status}`}>{t(`status.${g.status}`)}</span>
-          </div>
-        );
-      })}
 
       {ranked.length > 0 && (
         <>
