@@ -102,8 +102,9 @@ describe('facts from the games of the week', () => {
   });
 
   describe('the text', () => {
-    it('3-4 paragraphs and at most 150 words, whatever the version (seed)', () => {
-      for (let seed = 0; seed < 25; seed += 1) {
+    it('3-4 paragraphs and at most 300 words, whatever the version (seed)', () => {
+      expect(MAX_WORDS).toBe(300);
+      for (let seed = 0; seed < 40; seed += 1) {
         const w = writeSummary(facts, { seed });
         expect(w.paragraphs.length).toBeGreaterThanOrEqual(3);
         expect(w.paragraphs.length).toBeLessThanOrEqual(4);
@@ -111,9 +112,28 @@ describe('facts from the games of the week', () => {
         expect(w.words).toBeLessThanOrEqual(MAX_WORDS);
       }
     });
-    it('the same seed gives the same text, another seed another version', () => {
+    it('the text is about twice as long as before (the first version was ~75 words for four facts): 4 facts give 130+ words, many facts 200+', () => {
+      const four = writeSummary(facts.slice(0, 4), { seed: 0 });
+      expect(four.facts).toHaveLength(4);
+      expect(four.words).toBeGreaterThanOrEqual(130);
+      const many = writeSummary(facts, { seed: 0 });
+      expect(many.facts.length).toBeGreaterThanOrEqual(6);
+      expect(many.words).toBeGreaterThanOrEqual(200);
+    });
+    it('with more than four facts they are shared between four paragraphs (the strongest ones get two)', () => {
+      const w = writeSummary(facts, { seed: 0 });
+      expect(w.facts.length).toBeGreaterThan(4);
+      expect(w.paragraphs).toHaveLength(4);
+    });
+    it('the same seed gives the same text; every "another version" is a new mix of sentences, not a short cycle', () => {
       expect(writeSummary(facts, { seed: 3 }).paragraphs).toEqual(writeSummary(facts, { seed: 3 }).paragraphs);
-      expect(writeSummary(facts, { seed: 0 }).paragraphs.join('|')).not.toBe(writeSummary(facts, { seed: 1 }).paragraphs.join('|'));
+      const texts = Array.from({ length: 30 }, (_, s) => writeSummary(facts, { seed: s }).paragraphs.join('|'));
+      expect(new Set(texts).size).toBe(30); // thirty clicks, thirty different texts
+      expect(texts[0]).not.toBe(texts[1]);
+    });
+    it('the facts stay the same in every version (only the sentences change)', () => {
+      const ids = (s) => writeSummary(facts, { seed: s }).facts.map((f) => `${f.type}:${f.name}`).join(',');
+      expect(ids(0)).toBe(ids(7));
     });
     it('a quiet week: one short paragraph; two facts: two paragraphs', () => {
       expect(writeSummary([]).paragraphs).toHaveLength(1);
@@ -121,20 +141,23 @@ describe('facts from the games of the week', () => {
     });
     it('the names of the facts are in the text', () => {
       const w = writeSummary(facts, { seed: 0 });
-      w.facts.forEach((f, i) => expect(w.paragraphs[i]).toContain(f.name));
+      const all = w.paragraphs.join(' ');
+      w.facts.forEach((f) => expect(all).toContain(f.name));
     });
-    it('a person is never in more than two paragraphs', () => {
+    it('a person is never in more than three facts', () => {
       const same = Array.from({ length: 6 }, (_, i) => ({ type: 'mvp', score: 90 - i, name: 'X', pts: 9 }));
-      expect(selectFacts(same, 4)).toHaveLength(2);
+      expect(selectFacts(same, 8)).toHaveLength(3);
     });
-    it('a Hebrew prefix letter is attached to a Hebrew name ("לדן") and hyphenated to a Latin one ("ל-Nir")', () => {
-      const heb = writeSummary([{ type: 'leaderChange', score: 100, name: 'דן כהן', prev: 'מאיה לוי' }], { seed: 2 }).paragraphs[0];
-      expect(heb).toContain('ולמאיה'.slice(1)); // "למאיה"
+    it('a Hebrew prefix letter is attached to a Hebrew name ("לדן") and hyphenated to a Latin one ("ל-Nir"), in every version', () => {
+      const all = (name, prev) => Array.from({ length: 30 }, (_, s) => writeSummary([{ type: 'leaderChange', score: 100, name, prev }], { seed: s }).paragraphs.join(' ')).join(' ');
+      const heb = all('דן כהן', 'מאיה לוי');
+      expect(heb).not.toMatch(/[לו]-[\u0590-\u05FF]/); // never "ל-מאיה"
+      expect(heb).toContain('למאיה לוי');
       expect(heb).toContain('ודן כהן');
-      expect(heb).not.toMatch(/[לו]-[\u0590-\u05FF]/);
-      const lat = writeSummary([{ type: 'leaderChange', score: 100, name: 'Nir Moalem', prev: 'Arik Safran' }], { seed: 2 }).paragraphs[0];
-      expect(lat).toContain('ו-Nir Moalem');
+      const lat = all('Nir Moalem', 'Arik Safran');
+      expect(lat).not.toMatch(/[לו][A-Za-z]/); // never "לArik"
       expect(lat).toContain('ל-Arik Safran');
+      expect(lat).toContain('ו-Nir Moalem');
     });
     it('the paragraph of a month leader shows the month name', () => {
       const w = writeSummary([{ type: 'monthLeader', score: 70, name: 'B', prev: 'A', month: '2026-11' }], { monthName: () => 'נובמבר' });
@@ -145,7 +168,7 @@ describe('facts from the games of the week', () => {
   it('the lines of the facts and the prompt for Claude', () => {
     expect(factLine(get('hotStreak'))).toContain('5');
     const p = claudePrompt(facts);
-    expect(p).toContain('150');
+    expect(p).toContain(String(MAX_WORDS));
     expect(p).toContain(factLine(get('hardGame')));
     expect(claudePrompt([])).toContain('שבוע שקט');
   });

@@ -812,7 +812,7 @@
   "ws.copied": "Copied",
   "ws.another": "Another version",
   "ws.prompt": "Copy a prompt for Claude",
-  "ws.promptHint": "For a fresher text: paste the prompt into Claude. It has the same facts and the same rules (up to 150 words, funny, metaphors from different worlds).",
+  "ws.promptHint": "For a fresher text: paste the prompt into Claude. It has the same facts and the same rules (up to 300 words, funny, metaphors from different worlds).",
   "ws.facts": "The facts found in this week ({n})",
   "ws.noFacts": "Nothing special was found in this week.",
   "ws.gamesInWeek": "finished games in this week"

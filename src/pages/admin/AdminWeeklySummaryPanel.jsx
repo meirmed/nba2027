@@ -74,7 +74,7 @@ export default function AdminWeeklySummaryPanel() {
 
       {loading ? <p className="muted">{t('common.loading')}</p> : (
         <>
-          <textarea className="input ws-text" dir="auto" rows={9} value={text} onChange={(e) => { setText(e.target.value); setEdited(true); }} />
+          <textarea className="input ws-text" dir="auto" rows={15} value={text} onChange={(e) => { setText(e.target.value); setEdited(true); }} />
           <div className={`small ${words > MAX_WORDS ? 'error' : 'muted'}`}>{t('ws.words', { n: words, max: MAX_WORDS })}</div>
           <div className="everyone-actions">
             <button className="btn" onClick={() => copy('text', text)}>{copied === 'text' ? `✓ ${t('ws.copied')}` : t('ws.copy')}</button>

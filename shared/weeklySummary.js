@@ -1,10 +1,10 @@
 // "Weekly summary" (admin): the interesting things that happened in a week of the game, found in the data, and a short funny text about them
-// (at most 150 words, 3-4 paragraphs, metaphors from different worlds). Pure functions: the screen only loads the data. The facts are computed from
+// (at most 300 words, 3-4 paragraphs, metaphors from different worlds). Pure functions: the screen only loads the data. The facts are computed from
 // points/{uid}.byDay (rank changes, leaders), the published picks of the week's games (streaks, hard games, jokers, exact / unique hits) and the scoring.
 import { addDaysToKey, dayKeyOfMs } from './daykeys.js';
 import { scoreGamePicks } from './standings.js';
 
-export const MAX_WORDS = 150;
+export const MAX_WORDS = 300;
 const r2 = (x) => Math.round(x * 100) / 100;
 const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'he') || String(a.uid).localeCompare(String(b.uid));
 export const wordCount = (text) => String(text || '').trim().split(/\s+/).filter(Boolean).length;
@@ -140,14 +140,14 @@ export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi
   return facts.sort((a, b) => b.score - a.score);
 }
 
-/** Up to `max` facts: the best ones, and nobody in more than two of them (so the text is not about one person only). */
-export function selectFacts(facts, max = 4) {
+/** Up to `max` facts (8): the best ones, and nobody in more than three of them (so the text is not about one person only). */
+export function selectFacts(facts, max = 8) {
   const used = {};
   const out = [];
   facts.forEach((f) => {
     if (out.length >= max) return;
     const names = [f.name, f.prev].filter(Boolean);
-    if (names.some((n) => (used[n] || 0) >= 2)) return;
+    if (names.some((n) => (used[n] || 0) >= 3)) return;
     names.forEach((n) => { used[n] = (used[n] || 0) + 1; });
     out.push(f);
   });
@@ -216,21 +216,70 @@ const T = {
     (f) => `${f.n} פגיעות ייחודיות אצל ${f.name}: מי שהולך לבד מגיע לפעמים ראשון, ולפעמים לבד.`,
   ],
 };
+// a second sentence for every fact (any variant of the first sentence can be followed by any of these): the text is about twice as long as with the first sentence only
+const E = {
+  climber: ['בינתיים בתחתית מסתכלים למעלה ושואלים אם יש שם עוד מקום, או לפחות חדר עם נוף.', 'אם זה היה פורמולה 1, כבר היו בודקים מי החליף את המנוע באמצע המירוץ.', 'בעמדות האחוריות כבר מתחילים לתכנן מבצע שחזור: איך עושים בדיוק את זה.'],
+  faller: ['כל נדנדה עולה ויורדת, והשאלה היא רק מתי תתהפך הכף.', 'בשוק ההון מציעים דרך חזרה אחת: לקנות בנמוך ולנחש בגבוה.', 'ימים כאלה הם החימום לקאמבק, והמרק של הקאמבק עוד על האש.'],
+  leaderChange: ['בכתר הזה אין ביטוח, אין חגורה ואין תקופת הסתגלות.', 'היסטוריונים כבר מתעדים את התקופה, והאופוזיציה כבר מנסחת עצומה.', 'מי שישב פעם על כס יודע שהוא חם, בעיקר כשנשמעים מאחור צעדים.'],
+  monthLeader: ['החודש עוד ארוך, והמרתון הזה לא מוכרע בקילומטר הראשון.', 'עוד לפנינו מהמורות, כולל כמה משחקי הפתעה שאף אחד לא הזמין.', 'אצל המתחרים כבר מכינים תוכנית פעולה, תוכנית חלופית וקפה.'],
+  mvp: ['אפשר להתחיל לפנות מקום על המדף: הגביע הזה כבר מרגיש בבית.', 'המתחרים מבקשים בדיקת סמים, וגוגל מבקש הסבר.', 'השאלה היא לא אם זה מזל, אלא איזה סוג של מזל.'],
+  ghost: ['בינתיים אין סיבה להיסחף: גם לירח יש צד אפל, והוא נראה מצוין בשבוע הבא.', 'מי שמצפה לקאמבק מוזמן להתחיל לתכנן אותו מוקדם.', 'הטבלה זוכרת הכול, אבל לפחות היא סלחנית.'],
+  hotStreak: ['הניחושים עובדים כמו שעון, ועוד לא ברור איזה שעון.', 'הקהל עוצר נשימה ובודק אם אפשר להזמין את אותו הדבר.', 'ברצף כזה אסור להתעטש, ולבדוק את הנעליים מומלץ.'],
+  coldStreak: ['ברוח הספורט, שבועות כאלה בונים אופי, בעיקר כשהטבלה צופה.', 'אין מה לדאוג: גם הטיטניק התחיל כשיט מפואר.', 'זה הזמן להחליף שיטה, כובע, או לפחות מזל.'],
+  hardGame: ['השאר התפזרו בבלבול, ובטבלה נפתח פער מכובד.', 'זה מהמקרים שבהם אפילו האנליסטים באולפן שותקים לרגע.', 'המחשב הרשמי מחכה לעוד נתונים לפני שיכריז אם זה כישרון או מזל.'],
+  jokerFail: ['ככה זה בקזינו: הכפלה של כלום נשארת כלום, גם כשעושים אותה בהתלהבות.', 'הג׳וקר שמר על ההבטחה: הוא אכן הכפיל, בדיוק את מה שהיה.', 'נותר לקוות שהג׳וקר הבא יגיע עם חוברת הוראות.'],
+  jokerWin: ['אחרי רווח כזה, הבנקים כבר שוקלים להציע משכנתא.', 'בבורסה זה נקרא "כניסה מושלמת", ובשולחן הקלפים: "ידיים טובות".', 'המתחרים התחילו לקרוא ספרות על ניהול סיכונים.'],
+  exactKing: ['כדאי לבדוק את הטבלה, ואולי גם את הכוכבים.', 'מדויקות כזאת מעוררת קנאה, ובקרוב גם בקשות להסבר.', 'הדיוק הזה הוא כבר סוג של מקצוע.'],
+  loneWolf: ['בטבלה אומרים: מי שפונה שמאלה כשכולם פונים ימינה, או מנצח או מגלה דרך חדשה.', 'בעולם הטבע זאב בודד מקבל פרק משלו, ובטבלה הוא מקבל נקודות.', 'העדר ימשיך ללכת, והזאב ימשיך לשמוע מוזיקה אחרת.'],
+};
+// and a closing line (a third sentence): together with the fact and the second sentence the text is about twice as long as the first version
+const C = {
+  climber: ['הדרך למעלה זרועה בניחושים טובים, וההרשמה למסלול עדיין פתוחה.', 'בקצב כזה, האוויר בפסגה כבר מתחיל להיות מוכר.', 'מהנדסי הפיזיקה מתלבטים אם זה כוח משיכה הפוך או פשוט מזל מתוחכם.'],
+  faller: ['בינתיים מומלץ לאחוז בחגורה ולא לעצור לצלם.', 'כוח המשיכה פועל בכל מקרה, אבל הנחיתה עוד לא נקבעה.', 'גם סלע שמתגלגל מהר מגיע בסוף לעמק, ושם יש נוף יפה.'],
+  leaderChange: ['בחדשות קוראים לזה שינוי כיוון, ובטבלה קוראים לזה שבוע.', 'הפרשנים כבר ציינו שהקרב על הכס רק התחיל ואין לו שופט אחד.', 'מי שעוד לא התאושש יכול להתנחם בכך שכל כס הוא זמני, כמו חניה בתל אביב.'],
+  monthLeader: ['ברמת המרתון, עוד לא עברו את תחנת המים הראשונה.', 'כל נקודה חשובה, וגם כל ניחוש שנשכח להזין.', 'כדאי לקרוא את החוקים, ולא רק את הטבלה.'],
+  mvp: ['בכדורסל אמיתי כבר היו תולים חולצה בתקרה, כאן מסתפקים בכמה לייקים.', 'הטבלה מתייפחת מהתרגשות, והמחשבון עדיין מנסה לעכל.', 'כשכולם רק מנחשים, כאן נראה שיש תוכנית עבודה ומחברת.'],
+  ghost: ['זה לא סוף העולם, זה בסך הכול סוף שבוע.', 'בית הקפה עדיין פתוח, והטבלה עדיין זמינה.', 'מי שרוצה לעודד מוזמן לשלוח ניחוש או שניים לעזרה ראשונה.'],
+  hotStreak: ['הבורסה מדווחת על ביקוש גבוה למניה הזאת ועל חוסר בהסברים.', 'בפורמולה 1 קוראים לזה "פול פוזישן", כאן קוראים לזה "שבוע טוב".', 'כל מי שמסתכל על הנתונים כבר שוקל לשנות את שיטת הניחושים שלו.'],
+  coldStreak: ['הקהל מעודד מהיציע, ולפעמים אפילו מנסה לשלוח הוראות מהספה.', 'כל קבוצה חזקה מכירה את המשחק שאחרי השבוע הרע, והוא תמיד טוב יותר.', 'בינתיים הטבלה ממשיכה לצחוק בקול נמוך, כמו בספרייה.'],
+  hardGame: ['ככה נראה ניחוש שמגיע מהבטן ולא מהאקסל.', 'הרוב צדק על הנייר, והמציאות החליטה אחרת.', 'עיתונאי הספורט עדיין כותבים את הכותרת, והיא נראית כמו סימן שאלה.'],
+  jokerFail: ['המסקנה: ג׳וקר הוא כלי חזק, אבל הוא פועל רק עם חומר גלם.', 'אפילו בסיפורי אגדות הקסם עובד רק כשיש מה לקסום.', 'בהצלחה לג׳וקר הבא, שיבוא עם ביטוח.'],
+  jokerWin: ['ככה נראה חשבון בנק אחרי הימור נכון, גם אם החשבון הוא נקודות.', 'המתחרים בוחנים ברצינות להחזיק ג׳וקר בכיס האחורי לעוד שבוע.', 'המזל מעיר שהוא רק הגיע לביקור, והמיומנות מעירה שהיא גרה כאן.'],
+  exactKing: ['האם יש לזה הסבר מדעי? כנראה. האם הוא מעניין? פחות.', 'השופט נראה מוטרד, והכדור נראה מבולבל.', 'בקצב כזה כדאי לבדוק שמפתחות המכונית לא נעלמים.'],
+  loneWolf: ['העדר כבר שואל אם אפשר להיות מאושרים בלי להסכים עם כולם.', 'ההליכה לבד הולכת טוב, בעיקר כשהמפה נמצאת בכיס.', 'יש מי שמכנה את זה אינדיבידואליזם, ויש מי שקורא לזה פשוט מזל.'],
+};
 const QUIET = 'שבוע שקט בטבלה: כל המשתתפים התקדמו בקצב של תור בסניף הדואר. נחכה לשבוע הבא, שבטח יהיה סוער יותר.';
 
+// a deterministic "random" choice: the same seed always gives the same text, and a new seed gives a new mix (not a short cycle)
+function rnd(seed, salt) {
+  let x = (Math.imul(seed + 1, 2654435761) ^ Math.imul(salt + 7, 40503)) >>> 0;
+  x = Math.imul(x ^ (x >>> 15), 2246822519) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 3266489917) >>> 0;
+  return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+}
+const pick = (list, seed, salt) => list[Math.floor(rnd(seed, salt) * list.length)];
+
+/** n texts into paragraphs: up to 4 facts = a paragraph each; more = 4 paragraphs, the strongest ones get two facts. */
+function toParagraphs(parts) {
+  if (parts.length <= 4) return parts;
+  const extra = parts.length - 4;
+  const out = [];
+  let i = 0;
+  for (let p = 0; p < 4; p += 1) { const size = p < extra ? 2 : 1; out.push(parts.slice(i, i + size).join(' ')); i += size; }
+  return out;
+}
+
 /**
- * The summary: one paragraph per fact (3-4 when there are enough facts, fewer when the week was quiet), at most 150 words in all.
- * seed picks one of the variants of every text (a different seed = another version of the same facts).
+ * The summary: a text for every fact (the fact + a second sentence + a closing line), up to 8 facts in 3-4 paragraphs (fewer paragraphs when the week was quiet),
+ * at most 300 words in all (the weakest fact is dropped if it is longer). seed picks the variants: a different seed = another version of the same facts.
  */
 export function writeSummary(facts, { seed = 0, monthName = (k) => k } = {}) {
-  const chosen = selectFacts(facts, 4);
-  if (chosen.length === 0) return { paragraphs: [QUIET], words: wordCount(QUIET), facts: [] };
-  let paragraphs = chosen.map((f, i) => {
-    const list = T[f.type];
-    return list[(Math.abs(seed) + i) % list.length]({ ...f, monthName: f.month ? monthName(f.month) : '' });
-  });
-  let used = chosen;
-  while (paragraphs.length > 1 && wordCount(paragraphs.join(' ')) > MAX_WORDS) { paragraphs = paragraphs.slice(0, -1); used = used.slice(0, -1); } // drop the weakest
+  let used = selectFacts(facts, 8);
+  if (used.length === 0) return { paragraphs: [QUIET], words: wordCount(QUIET), facts: [] };
+  const sd = Math.abs(Math.trunc(seed));
+  const parts = used.map((f, i) => `${pick(T[f.type], sd, i * 3)({ ...f, monthName: f.month ? monthName(f.month) : '' })} ${pick(E[f.type], sd, i * 3 + 1)} ${pick(C[f.type], sd, i * 3 + 2)}`);
+  let paragraphs = toParagraphs(parts);
+  while (used.length > 1 && wordCount(paragraphs.join(' ')) > MAX_WORDS) { used = used.slice(0, -1); paragraphs = toParagraphs(parts.slice(0, used.length)); } // drop the weakest
   return { paragraphs, words: wordCount(paragraphs.join(' ')), facts: used };
 }
 
