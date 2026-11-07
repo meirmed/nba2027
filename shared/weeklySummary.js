@@ -1,16 +1,21 @@
 // "Weekly summary" (admin): the interesting things that happened in a week of the game, found in the data, and a short funny text about them
-// (at most 300 words, 3-4 paragraphs, metaphors from different worlds). Pure functions: the screen only loads the data. The facts are computed from
+// (at most 380 words, 3-4 paragraphs, metaphors from different worlds). Pure functions: the screen only loads the data. The facts are computed from
 // points/{uid}.byDay (rank changes, leaders), the published picks of the week's games (streaks, hard games, jokers, exact / unique hits) and the scoring.
 import { addDaysToKey, dayKeyOfMs } from './daykeys.js';
 import { scoreGamePicks } from './standings.js';
+import { buildBracket } from './midTournament.js';
+import { rankGroup, windowStats as h2hWindow } from './h2h.js';
 
-export const MAX_WORDS = 300;
+export const MAX_WORDS = 380;
 const r2 = (x) => Math.round(x * 100) / 100;
 const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'he') || String(a.uid).localeCompare(String(b.uid));
 export const wordCount = (text) => String(text || '').trim().split(/\s+/).filter(Boolean).length;
 
 // a Hebrew prefix letter on a name: "לדן" with a Hebrew name, "ל-Nir" with a Latin one
 const pre = (letter, name) => (/^[\u0590-\u05FF]/.test(String(name)) ? `${letter}${name}` : `${letter}-${name}`);
+
+// the name of a competition inside a sentence ("ראש בראש" is itself an expression, so it is quoted: ב״ראש בראש״)
+const cn = (c) => (c === 'ראש בראש' ? '״ראש בראש״' : c);
 
 const dow = (key) => new Date(`${key}T12:00:00Z`).getUTCDay(); // 0 = Sunday (the Israeli week starts on Sunday)
 
@@ -46,6 +51,94 @@ function monthLeaderAt(rows, monthKey, uptoDay) {
   return topOf(list);
 }
 
+export const MID_COMP = 'טורניר אמצע';
+export const H2H_COMP = 'ראש בראש';
+const STAGE_LABEL = { QF: 'רבע הגמר', SF: 'חצי הגמר', F: 'הגמר' };
+
+/** The rows as they were at the end of `day`: only the game points of the days up to it. */
+function rowsAt(rows, day) {
+  return Object.fromEntries(rows.map((r) => [r.uid, { ...r, byDay: Object.fromEntries(Object.entries(r.byDay || {}).filter(([d]) => d <= day)) }]));
+}
+const clearLeader = (table) => (table.length >= 2 && table[0].pts > table[1].pts ? table[0] : null);
+
+/** The leader of a group changed, and the closest fight for the last place that qualifies. table = ranked rows [{uid, name, pts}]. */
+function groupFacts({ comp, group, before, after, advance }) {
+  const out = [];
+  const la = clearLeader(after);
+  const lb = clearLeader(before);
+  if (la && lb && la.uid !== lb.uid) out.push({ type: 'groupLeader', score: 60 + Math.min(10, la.pts - after[1].pts), comp, group, name: la.name, prev: lb.name });
+  if (after.length > advance && after[advance - 1].pts > 0) {
+    const gap = after[advance - 1].pts - after[advance].pts;
+    if (gap <= 3) out.push({ type: 'bubble', score: 52 + (3 - Math.max(0, gap)) * 3, comp, group, name2: after[advance - 1].name, name3: after[advance].name, gap: Math.round(gap * 100) / 100 });
+  }
+  return out;
+}
+const best1 = (arr) => [...arr].sort((a, b) => b.score - a.score)[0];
+
+/** Mid-season tournament: group leaders and the bubble while the group stage runs, who qualified, the stages that ended, the champion, a close pair. */
+function midFacts({ mid, rows, bracketGames, weekLo, weekHi }) {
+  const out = [];
+  if (!mid?.groups || Object.values(mid.groups).flat().length === 0) return out;
+  const dayBefore = addDaysToKey(weekLo, -1);
+  const build = (day) => buildBracket({ groups: mid.groups, rowsByUid: rowsAt(rows, day), overrides: mid.overrides || {}, todayKey: day, games: bracketGames });
+  const A = build(weekHi);
+  const B = build(dayBefore);
+  if (A.status.G === 'live') {
+    const gs = Object.keys(A.tables).filter((g) => A.tables[g].table.length >= 2).flatMap((g) => groupFacts({ comp: MID_COMP, group: g, before: B.tables[g].table, after: A.tables[g].table, advance: 2 }));
+    ['groupLeader', 'bubble'].forEach((ty) => { const f = best1(gs.filter((x) => x.type === ty)); if (f) out.push(f); });
+  }
+  if (A.over.G && !B.over.G) out.push({ type: 'qualified', score: 95, comp: MID_COMP, names: Object.keys(A.tables).flatMap((g) => A.tables[g].table.slice(0, 2).map((r) => r.name)).join(', ') });
+  ['QF', 'SF', 'F'].forEach((s) => {
+    const ps = Object.values(A.pairs).filter((x) => x.stage === s && x.a && x.b);
+    if (A.over[s] && !B.over[s] && ps.length && ps.every((x) => x.winner)) {
+      const info = ps.map((x) => { const w = x.winner === x.a.uid ? x.a : x.b; const l = w === x.a ? x.b : x.a; return { winner: w.name, loser: l.name, margin: Math.round(Math.abs(x.a.pts - x.b.pts) * 100) / 100 }; });
+      const closest = [...info].sort((a, b) => a.margin - b.margin)[0];
+      if (s === 'F') out.push({ type: 'champion', score: 100, comp: MID_COMP, name: closest.winner, runner: closest.loser, margin: closest.margin });
+      else out.push({ type: 'stageDone', score: 85, comp: MID_COMP, stage: STAGE_LABEL[s], winners: info.map((i) => i.winner).join(', '), closest });
+    } else if (A.status[s] === 'live' && ps.length) {
+      const c = [...ps].filter((x) => x.a.pts + x.b.pts > 0).map((x) => ({ a: x.a.name, b: x.b.name, margin: Math.round(Math.abs(x.a.pts - x.b.pts) * 100) / 100 })).sort((a, b) => a.margin - b.margin)[0];
+      if (c && c.margin <= 3) out.push({ type: 'pairLive', score: 55 + (3 - c.margin) * 2, comp: MID_COMP, stage: STAGE_LABEL[s], a: c.a, b: c.b, margin: c.margin });
+    }
+  });
+  return out;
+}
+
+/** Head to Head (the league of groups, then the knockout stages): the same kinds of facts from h2hTournament/main. Nothing before it is set up. */
+function h2hFacts({ h2h, rows, weekLo, weekHi }) {
+  const out = [];
+  if (!h2h?.league?.groups) return out;
+  const dayBefore = addDaysToKey(weekLo, -1);
+  const nameOf = Object.fromEntries(rows.map((r) => [r.uid, r.name]));
+  const at = rowsAt(rows, weekHi);
+  const bef = rowsAt(rows, dayBefore);
+  const lg = h2h.league;
+  const table = (members, byUid) => rankGroup(members, (uid) => ({ ...h2hWindow(byUid[uid]?.byDay, lg.startDay, lg.endDay ?? null), total: byUid[uid]?.total ?? 0 }), (u) => nameOf[u]).map((r) => ({ ...r, name: nameOf[r.uid] || '' }));
+  const leagueOpen = !lg.endDay || lg.endDay >= weekHi;
+  if (leagueOpen && lg.startDay && lg.startDay <= weekHi) {
+    const advance = h2h.advancePerGroup || 2;
+    const gs = Object.entries(lg.groups).filter(([, g]) => (g.members || []).length >= 2).flatMap(([id, g]) => groupFacts({ comp: H2H_COMP, group: id, before: table(g.members, bef), after: table(g.members, at), advance }));
+    ['groupLeader', 'bubble'].forEach((ty) => { const f = best1(gs.filter((x) => x.type === ty)); if (f) out.push(f); });
+  }
+  const pairScore = (stage, pid, p, byUid) => {
+    const sc = (uid, adv) => Math.round(((h2hWindow(byUid[uid]?.byDay, stage.startDay, stage.endDay ?? null).pts) + (adv || 0)) * 100) / 100;
+    return { a: sc(p.a, p.advA), b: sc(p.b, p.advB), pid };
+  };
+  Object.values(h2h.stages || {}).forEach((stage) => {
+    const entries = Object.entries(stage.pairs || {}).filter(([, p]) => p.a && p.b);
+    if (entries.length === 0) return;
+    if (stage.endDay && stage.endDay >= weekLo && stage.endDay <= weekHi && entries.every(([, p]) => p.winner)) {
+      const info = entries.map(([pid, p]) => { const s = pairScore(stage, pid, p, at); const wUid = p.winner; const lUid = wUid === p.a ? p.b : p.a; return { winner: nameOf[wUid] || '', loser: nameOf[lUid] || '', margin: Math.round(Math.abs(s.a - s.b) * 100) / 100 }; });
+      const closest = [...info].sort((a, b) => a.margin - b.margin)[0];
+      if (entries.length === 1 && h2h.status === 'finished') out.push({ type: 'champion', score: 100, comp: H2H_COMP, name: closest.winner, runner: closest.loser, margin: closest.margin });
+      else out.push({ type: 'stageDone', score: 85, comp: H2H_COMP, stage: `שלב ${stage.stageNum}`, winners: info.map((i) => i.winner).join(', '), closest });
+    } else if (!stage.endDay && stage.startDay && stage.startDay <= weekHi) {
+      const c = entries.map(([pid, p]) => { const s = pairScore(stage, pid, p, at); return { a: nameOf[p.a] || '', b: nameOf[p.b] || '', sum: s.a + s.b, margin: Math.round(Math.abs(s.a - s.b) * 100) / 100 }; }).filter((x) => x.sum > 0).sort((a, b) => a.margin - b.margin)[0];
+      if (c && c.margin <= 3) out.push({ type: 'pairLive', score: 55 + (3 - c.margin) * 2, comp: H2H_COMP, stage: `שלב ${stage.stageNum}`, a: c.a, b: c.b, margin: c.margin });
+    }
+  });
+  return out;
+}
+
 const KIND_RANK = { exact: 3, exactMargin: 2, tier: 1, winner: 0 };
 const KIND_NOUN = { exact: 'תוצאה מדויקת', exactMargin: 'הפרש מדויק', tier: 'הפרש קרוב מאוד', winner: 'ניחוש נכון' };
 const kindOf = (s) => (s.exact ? 'exact' : s.exactMargin ? 'exactMargin' : s.diffTier ? 'tier' : 'winner');
@@ -54,9 +147,11 @@ const kindOf = (s) => (s.exact ? 'exact' : s.exactMargin ? 'exactMargin' : s.dif
  * The facts of the week, best first: [{type, score, ...data}].
  * rows: points docs ({uid, name, byDay, bonus, adjust}); games: [{id, status, t1, t2, s1, s2, tipoffMs}] (counted games);
  * picksByGame: {gameId: {uid: {s1, s2, joker, autoFilled}}}; weekLo / weekHi = Israel day keys (inclusive).
+ * mid = midTournament/main, h2h = h2hTournament/main (null = not set up: no facts about it), bracketGames = counted games [{dayKey, status}] (to know when a stage is over).
  */
-export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi, teamName = (a) => a }) {
+export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi, teamName = (a) => a, mid = null, h2h = null, bracketGames = [] }) {
   const facts = [];
+  facts.push(...midFacts({ mid, rows, bracketGames, weekLo, weekHi }), ...h2hFacts({ h2h, rows, weekLo, weekHi }));
 
   // ---- ranks: who climbed, who fell, who took the lead ----
   const before = rankAt(rows, addDaysToKey(weekLo, -1));
@@ -140,18 +235,24 @@ export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi
   return facts.sort((a, b) => b.score - a.score);
 }
 
-/** Up to `max` facts (8): the best ones, and nobody in more than three of them (so the text is not about one person only). */
-export function selectFacts(facts, max = 8) {
+/** Up to `max` facts (10): the best ones, nobody in more than three of them (so the text is not about one person only); the mid-season tournament and Head to Head are
+ *  always mentioned when there is something to say about them (the best fact of each first, at most two facts of each). */
+export function selectFacts(facts, max = 10) {
   const used = {};
   const out = [];
-  facts.forEach((f) => {
-    if (out.length >= max) return;
+  const take = (f) => {
     const names = [f.name, f.prev].filter(Boolean);
     if (names.some((n) => (used[n] || 0) >= 3)) return;
     names.forEach((n) => { used[n] = (used[n] || 0) + 1; });
     out.push(f);
+  };
+  [MID_COMP, H2H_COMP].forEach((c) => { const f = facts.find((x) => x.comp === c); if (f) take(f); });
+  facts.forEach((f) => {
+    if (out.length >= max || out.includes(f)) return;
+    if (f.comp && out.filter((x) => x.comp === f.comp).length >= 2) return;
+    take(f);
   });
-  return out;
+  return out.sort((a, b) => b.score - a.score);
 }
 
 // ---- the texts: metaphors from different worlds; no verb is about a person (the app does not know who is a he or a she) ----
@@ -248,6 +349,55 @@ const C = {
   exactKing: ['האם יש לזה הסבר מדעי? כנראה. האם הוא מעניין? פחות.', 'השופט נראה מוטרד, והכדור נראה מבולבל.', 'בקצב כזה כדאי לבדוק שמפתחות המכונית לא נעלמים.'],
   loneWolf: ['העדר כבר שואל אם אפשר להיות מאושרים בלי להסכים עם כולם.', 'ההליכה לבד הולכת טוב, בעיקר כשהמפה נמצאת בכיס.', 'יש מי שמכנה את זה אינדיבידואליזם, ויש מי שקורא לזה פשוט מזל.'],
 };
+// the two tournaments (f.comp = "טורניר אמצע" / "ראש בראש"; the same sentences serve both)
+Object.assign(T, {
+  groupLeader: [
+    (f) => `${cn(f.comp)}, בית ${f.group}: חילופי שלטון, ${pre('ו', f.name)} בראש הטבלה. אצל ${f.prev} בודקים איפה נשאר המושב הקדמי.`,
+    (f) => `בית ${f.group} ב${cn(f.comp)} החליף מנהיג: ${f.name} במקום הראשון, ואצל ${f.prev} שוב מתחילים לרדוף.`,
+    (f) => `סערה בבית ${f.group} (${cn(f.comp)}): ${f.name} בצמרת, ${pre('ו', f.prev)} בצל. כך נראה פלייאוף שעוד רק התחיל להתחמם.`,
+  ],
+  bubble: [
+    (f) => `בבית ${f.group} ב${cn(f.comp)} המאבק על הכרטיס האחרון: ${f.name2} על הקו, ${pre('ו', f.name3)} ממש בעקבותיו, ${f.gap} נקודות ביניהם.`,
+    (f) => `${f.gap} נקודות מפרידות בבית ${f.group} (${cn(f.comp)}) בין מי שעולה לבין מי שנשאר בחוץ: ${f.name2} ו${f.name3}.`,
+    (f) => `בית ${f.group}: ${f.name2} מול ${f.name3} על המקום האחרון בנוקאאוט של ${cn(f.comp)}, פער של ${f.gap} נקודות.`,
+  ],
+  qualified: [
+    (f) => `${cn(f.comp)}: שלב הבתים נגמר, והעולים לרבע הגמר הם ${f.names}. מי שנשאר בחוץ מוזמן לראות את הנוקאאוט מהיציע, עם פופקורן.`,
+    (f) => `נחתם שלב הבתים ב${cn(f.comp)}, ולרבע הגמר מגיעים: ${f.names}. שמונה שמות, שמונה ביטחונות, ואיש לא יודע מי יתפרק ראשון.`,
+    (f) => `השמונה שעלו מהבתים ב${cn(f.comp)}: ${f.names}. לשאר שמור כבוד, ולפעמים גם תקווה לשנה הבאה.`,
+  ],
+  stageDone: [
+    (f) => `${f.stage} ב${cn(f.comp)} הסתיים. המעפילים: ${f.winners}. ההכרעה הצמודה ביותר: ${f.closest.winner} מול ${f.closest.loser}, הפרש של ${f.closest.margin} נקודות.`,
+    (f) => `נסגר ${f.stage} ב${cn(f.comp)}. עוברים הלאה: ${f.winners}. הצמוד מכולם: ${f.closest.winner} על ${f.closest.loser}, ${f.closest.margin} נקודות.`,
+    (f) => `הדלת של ${f.stage} ב${cn(f.comp)} נסגרה אחרי ${f.winners}. בין ${f.closest.winner} לבין ${f.closest.loser} החליטו ${f.closest.margin} נקודות בלבד.`,
+  ],
+  champion: [
+    (f) => `אלוף ${cn(f.comp)} הוא ${f.name}, אחרי גמר מול ${f.runner} שהוכרע בהפרש של ${f.margin} נקודות.`,
+    (f) => `הכתר של ${cn(f.comp)} עבר ${pre('ל', f.name)}, אחרי גמר מול ${f.runner} שהסתיים ב-${f.margin} נקודות הפרש.`,
+    (f) => `${cn(f.comp)}: ${f.name} הוא האלוף. ${f.runner} במקום השני, והפער ${f.margin} נקודות, שאפשר לתלות בסלון או לשכוח.`,
+  ],
+  pairLive: [
+    (f) => `${f.stage} ב${cn(f.comp)}: ${f.a} מול ${f.b}, והפער ${f.margin} נקודות בלבד. זה צמוד כמו בגד אחרי כביסה.`,
+    (f) => `קרב צמוד ב${cn(f.comp)} (${f.stage}): ${f.a} ${pre('ו', f.b)} מופרדים ב-${f.margin} נקודות.`,
+    (f) => `${f.margin} נקודות מפרידות בין ${f.a} לבין ${f.b} ב${f.stage} של ${cn(f.comp)}.`,
+  ],
+});
+Object.assign(E, {
+  groupLeader: ['בבית הזה כל נקודה שווה כמו כרטיס נסיעה בשעת עומס.', 'הקרב על שתי המשבצות הראשונות כבר נראה כמו משחק כיסאות מוזיקליים.', 'יש כבר מי שחושב על התרחיש הגרוע: להיות שלישי בשבוע הלא נכון.'],
+  bubble: ['זה בדיוק המצב שבו כל ניחוש הופך לפרק בסדרה דרמטית.', 'בשוק ההון קוראים לזה "שוויון קרוב", ובשולחן הפוקר: "הכול על הקלף האחרון".', 'על גבול כזה, גם משחק של הדקות האחרונות יכול לשנות את המפה.'],
+  qualified: ['מכאן והלאה אין טעויות מוקדמות, יש רק יציאות מהירות.', 'הנוקאאוט הוא כמו רמזור: מי שמהסס מחכה לשנה הבאה.', 'הנוקאאוט לא סולח, והוא גם לא שוכח מי טעה.'],
+  stageDone: ['אין כמו נוקאאוט כדי להבין שכל נקודה היא קרוב משפחה.', 'בשלב הזה אפילו המזל צריך לעבוד בשביל הכסף.', 'בין הנופלים לבין העולים עומדים ניחוש או שניים, ואולי כוס קפה.'],
+  champion: ['החוגגים מוזמנים להרים כוס, והמנוצחים להרים גבה.', 'זה הרגע שבו הגביע מקבל כתובת חדשה, לפחות עד התחרות הבאה.', 'אפשר להתחיל להכין נאום, ובעיקר להודות לניחושים שהסתדרו.'],
+  pairLive: ['כל ניחוש הוא מטבע שנזרק באוויר, ושני הצדדים עוקבים אחריו.', 'זה קרב שכבר רושמים בספר ההיסטוריה, בלי עט ובלי דיו.', 'בקרב כזה אפילו נשימה לא נכונה יכולה לשנות את התוצאה.'],
+});
+Object.assign(C, {
+  groupLeader: ['צריך לזכור שמי שמוביל באמצע המרוץ לא תמיד חוצה ראשון את הקו.', 'בשלב הבתים עוד אין ביטחון, יש רק קפה חזק ועצבים בריאים.', 'השאלה היא לא מי מוביל היום, אלא מי נושם לפני הסיום.'],
+  bubble: ['מי שישן עכשיו ישן על הקו, אבל בלי כרית.', 'עוד כמה ניחושים, ושני הצדדים יחשבו אם לצחוק או לבכות.', 'זה הרגע לקחת נשימה עמוקה ולהזין את הניחושים בזמן.'],
+  qualified: ['הפער בין גיבור למעידה הוא ניחוש אחד טוב או רע.', 'בפלייאוף הכול מתחיל מאפס, וגם מי שהיה ראשון בבית צריך להוכיח.', 'הדרך לגמר קצרה, אבל כל צעד בה הוא על חבל.'],
+  stageDone: ['השלב הבא מתחיל מאפס, והניחושים הישנים נמחקים מהטבלה, אבל לא מהזיכרון של החברים.', 'מי שהעפיל מוזמן לנוח לרגע, ולא יותר.', 'כאן מתחילה האמת, או לפחות הצגה טובה.'],
+  champion: ['מי שרוצה להתעמת, שיעשה זאת בתחרות הבאה.', 'הגמר נגמר, אבל הסיפורים ימשיכו להתגלגל בקבוצה עוד כמה ימים.', 'תודה לכל מי ששיחק, ובעיקר לכל מי ששמר על שפיות.'],
+  pairLive: ['הדקות האחרונות יהיו שוות שתי כוסות קפה והרבה סבלנות.', 'מי שמצליח עכשיו לישון מוזמן ללמד קורס בשליטה.', 'ובינתיים הקהל במחאה שקטה: אנחנו רוצים עוד משחק אחד.'],
+});
 const QUIET = 'שבוע שקט בטבלה: כל המשתתפים התקדמו בקצב של תור בסניף הדואר. נחכה לשבוע הבא, שבטח יהיה סוער יותר.';
 
 // a deterministic "random" choice: the same seed always gives the same text, and a new seed gives a new mix (not a short cycle)
@@ -259,22 +409,23 @@ function rnd(seed, salt) {
 }
 const pick = (list, seed, salt) => list[Math.floor(rnd(seed, salt) * list.length)];
 
-/** n texts into paragraphs: up to 4 facts = a paragraph each; more = 4 paragraphs, the strongest ones get two facts. */
+/** n texts into paragraphs: up to 4 = a paragraph each; more = 4 paragraphs, shared as evenly as possible (the strongest ones get the extra facts). */
 function toParagraphs(parts) {
   if (parts.length <= 4) return parts;
-  const extra = parts.length - 4;
+  const base = Math.floor(parts.length / 4);
+  const extra = parts.length % 4;
   const out = [];
   let i = 0;
-  for (let p = 0; p < 4; p += 1) { const size = p < extra ? 2 : 1; out.push(parts.slice(i, i + size).join(' ')); i += size; }
+  for (let p = 0; p < 4; p += 1) { const size = base + (p < extra ? 1 : 0); out.push(parts.slice(i, i + size).join(' ')); i += size; }
   return out;
 }
 
 /**
- * The summary: a text for every fact (the fact + a second sentence + a closing line), up to 8 facts in 3-4 paragraphs (fewer paragraphs when the week was quiet),
+ * The summary: a text for every fact (the fact + a second sentence + a closing line), up to 10 facts in 3-4 paragraphs (fewer paragraphs when the week was quiet),
  * at most 300 words in all (the weakest fact is dropped if it is longer). seed picks the variants: a different seed = another version of the same facts.
  */
 export function writeSummary(facts, { seed = 0, monthName = (k) => k } = {}) {
-  let used = selectFacts(facts, 8);
+  let used = selectFacts(facts, 10);
   if (used.length === 0) return { paragraphs: [QUIET], words: wordCount(QUIET), facts: [] };
   const sd = Math.abs(Math.trunc(seed));
   const parts = used.map((f, i) => `${pick(T[f.type], sd, i * 3)({ ...f, monthName: f.month ? monthName(f.month) : '' })} ${pick(E[f.type], sd, i * 3 + 1)} ${pick(C[f.type], sd, i * 3 + 2)}`);
@@ -299,6 +450,12 @@ export function factLine(f) {
     case 'jokerWin': return `${f.name} קיבל ${f.pts} נקודות מג׳וקר על ${f.game}`;
     case 'exactKing': return `${f.name} פגע ב-${f.n} תוצאות מדויקות השבוע`;
     case 'loneWolf': return `${f.name} פגע ב-${f.n} תוצאות ייחודיות (רק הוא פגע) השבוע`;
+    case 'groupLeader': return `${f.comp}, בית ${f.group}: ${f.name} תפס את ראש הטבלה במקום ${f.prev}`;
+    case 'bubble': return `${f.comp}, בית ${f.group}: ${f.gap} נקודות בין ${f.name2} (המקום האחרון שעולה) לבין ${f.name3}`;
+    case 'qualified': return `${f.comp}: שלב הבתים הסתיים. העולים: ${f.names}`;
+    case 'stageDone': return `${f.comp}: ${f.stage} הסתיים. המעפילים: ${f.winners}. הצמוד ביותר: ${f.closest.winner} על ${f.closest.loser}, ${f.closest.margin} נקודות`;
+    case 'champion': return `${f.comp}: ${f.name} הוא האלוף, מול ${f.runner}, בהפרש ${f.margin} נקודות`;
+    case 'pairLive': return `${f.comp}, ${f.stage}: ${f.a} מול ${f.b}, פער של ${f.margin} נקודות`;
     default: return JSON.stringify(f);
   }
 }

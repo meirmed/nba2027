@@ -6,6 +6,8 @@ import { useSettings, useScoring } from '../../contexts/SettingsContext.jsx';
 import { useTeams } from '../../contexts/TeamsContext.jsx';
 import { usePoints } from '../../contexts/PointsContext.jsx';
 import { useGames } from '../../hooks/useGames.js';
+import { useMidTournament } from '../../hooks/useMidTournament.js';
+import { useTournament } from '../../hooks/useH2H.js';
 import { countsForStandings } from '@shared/games.js';
 import { MAX_WORDS, claudePrompt, computeFacts, factLine, weekOptions, wordCount, writeSummary } from '@shared/weeklySummary.js';
 import { dayKey, formatKeyDay } from '../../utils/dates.js';
@@ -18,6 +20,8 @@ export default function AdminWeeklySummaryPanel() {
   const { teams } = useTeams();
   const { baseRows } = usePoints();
   const { games } = useGames();
+  const { data: mid } = useMidTournament(); // the mid-season tournament and Head to Head: their facts appear once they are set up
+  const h2h = useTournament();
   const tz = settings.timezone;
 
   const weeks = useMemo(() => weekOptions(dayKey(new Date(), tz)), [tz]);
@@ -44,12 +48,13 @@ export default function AdminWeeklySummaryPanel() {
     return () => { alive = false; };
   }, [weekGames]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const bracketGames = useMemo(() => games.filter((g) => g.tipoff && countsForStandings(g, settings.countedRounds)).map((g) => ({ dayKey: dayKey(g.tipoff, tz), status: g.status })), [games, settings.countedRounds, tz]);
   const teamName = (abbr) => teams[abbr]?.[lang === 'he' ? 'shortHe' : 'shortEn'] || abbr;
   const monthName = (key) => new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(`${key}-15T12:00:00Z`));
   const facts = useMemo(() => (loading ? [] : computeFacts({
-    rows: baseRows, scoring, weekLo: w.lo, weekHi: w.hi, picksByGame: picks, teamName,
+    rows: baseRows, scoring, weekLo: w.lo, weekHi: w.hi, picksByGame: picks, teamName, mid: mid ?? null, h2h: h2h ?? null, bracketGames,
     games: weekGames.map((g) => ({ id: g.id, round: g.round, status: g.status, t1: g.t1, t2: g.t2, s1: g.s1, s2: g.s2, tipoffMs: g.tipoff.toMillis() })),
-  })), [loading, baseRows, scoring, w, picks, weekGames, teams, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  })), [loading, baseRows, scoring, w, picks, weekGames, teams, lang, mid, h2h, bracketGames]); // eslint-disable-line react-hooks/exhaustive-deps
   const summary = useMemo(() => writeSummary(facts, { seed, monthName }), [facts, seed, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (!edited) setText(summary.paragraphs.join('\n\n')); }, [summary, edited]);
