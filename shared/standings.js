@@ -8,7 +8,7 @@ const sideOf = (a, b) => (a > b ? 1 : a < b ? 2 : 0);
 const validPick = (p) => p && Number.isInteger(p.s1) && Number.isInteger(p.s2) && p.s1 !== p.s2;
 
 export const emptyStats = () => ({
-  gamePts: 0, gamePtsByRound: {}, gameHits: 0, exactHits: 0, winnerCorrect: 0, uniqueHits: 0, riskHits: 0, diffHits: 0, noScore: 0, jokersUsed: 0,
+  gamePts: 0, gamePtsByRound: {}, gameHits: 0, exactHits: 0, winnerCorrect: 0, uniqueHits: 0, riskHits: 0, diffHits: 0, marginHits: 0, noScore: 0, jokersUsed: 0,
   gamesPlayed: 0, bestStreak: 0, curStreak: 0, bestMiss: 0, curMiss: 0,
 });
 
@@ -70,6 +70,7 @@ export function computeAllPoints({ games, predictions, uids, scoring, countedRou
       if (r.exact) u.exactHits += 1;
       if (r.uniquePts > 0) u.uniqueHits += 1;
       if (r.riskPts > 0) u.riskHits += 1;
+      if (r.exactMargin) u.marginHits += 1; // games with the exact margin but not the exact score
       if (r.diffTier) u.diffHits += 1; // games in which the player also got the margin bonus (an error of 1, 2, 3 or 4)
       const cell = (u.byDay[day] ||= [0, 0, 0, 0, 0]); // [game points, exact hits, unique hits, correct winners, game points WITHOUT the joker doubling] per Israel day
       cell[0] += r.pts; if (r.exact) cell[1] += 1; if (r.uniquePts > 0) cell[2] += 1; if (r.winnerCorrect) cell[3] += 1; cell[4] += r.ptsNoJoker ?? r.pts;

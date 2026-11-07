@@ -23,7 +23,7 @@ const isNum = (n) => typeof n === 'number' && Number.isFinite(n);
  * ctx:    { round, joker, pickPct, isUniqueExact, isUniqueMargin, scoring }
  */
 export function scoreGame(pred, result, ctx = {}) {
-  const zero = { pts: 0, ptsNoJoker: 0, winnerCorrect: false, exact: false, diffTier: false, diffPts: 0, riskPts: 0, uniquePts: 0 };
+  const zero = { pts: 0, ptsNoJoker: 0, winnerCorrect: false, exact: false, diffTier: false, exactMargin: false, diffPts: 0, riskPts: 0, uniquePts: 0 };
   if (!pred || !result || result.status !== 'finished') return zero;
   if (![pred.s1, pred.s2, result.s1, result.s2].every(isNum)) return zero;
 
@@ -35,6 +35,7 @@ export function scoreGame(pred, result, ctx = {}) {
 
   let base = 0;
   let diffPts = 0;
+  let exactMargin = false; // the exact margin (error 0) WITHOUT the exact score (an exact score has its own counter)
   let diffTier = false; // the margin bonus of an error of 1-4 (a tier) was paid; the EXACT margin (error 0) is not a tier
   let riskPts = 0;
   let uniquePts = 0;
@@ -42,7 +43,7 @@ export function scoreGame(pred, result, ctx = {}) {
   if (winnerCorrect) {
     base += sc.winner;
     const err = Math.abs(predMargin - realMargin); // the margin pays for EVERY right winner, an exact score has an exact margin too
-    if (err === 0) diffPts = sc.diffExact;
+    if (err === 0) { diffPts = sc.diffExact; exactMargin = !exact; }
     else { const tier = [...sc.diffBonus].sort((a, b) => a.maxErr - b.maxErr).find((t) => err <= t.maxErr); if (tier) { diffPts = tier.pts; diffTier = true; } }
     base += diffPts;
     // the ONLY player with the exact margin (no exact score): a unique bonus too. With an exact score the exact-score unique bonus below applies instead.
@@ -59,7 +60,7 @@ export function scoreGame(pred, result, ctx = {}) {
   if (ctx.joker) pts *= sc.jokerMultiplier;
   if (pred.autoFilled) { pts = Math.floor(pts * sc.autoFillFactor); ptsNoJoker = Math.floor(ptsNoJoker * sc.autoFillFactor); }
 
-  return { pts, ptsNoJoker, winnerCorrect, exact, diffTier, diffPts, riskPts, uniquePts };
+  return { pts, ptsNoJoker, winnerCorrect, exact, diffTier, exactMargin, diffPts, riskPts, uniquePts };
 }
 
 const norm = (v) => String(v).trim().toLowerCase();

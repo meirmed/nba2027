@@ -131,3 +131,15 @@ describe('diffTier: the margin bonus of an error of 1-4 (the Statistics column "
     expect(scoreGame({ s1: 90, s2: 100 }, f, { scoring: sc }).diffTier).toBe(false); // wrong winner
   });
 });
+
+describe('exactMargin: the exact margin WITHOUT the exact score (the Statistics column "exact margin")', () => {
+  it('true for the exact margin only; not for an exact score, a tier, a far miss or a wrong winner', () => {
+    const f = fin(110, 100); // margin 10
+    expect(scoreGame({ s1: 105, s2: 95 }, f, { scoring: sc }).exactMargin).toBe(true);
+    expect(scoreGame({ s1: 120, s2: 110 }, f, { scoring: sc }).exactMargin).toBe(true);
+    expect(scoreGame({ s1: 110, s2: 100 }, f, { scoring: sc }).exactMargin).toBe(false); // exact score
+    expect(scoreGame({ s1: 107, s2: 100 }, f, { scoring: sc }).exactMargin).toBe(false); // error 3
+    expect(scoreGame({ s1: 102, s2: 100 }, f, { scoring: sc }).exactMargin).toBe(false); // far miss
+    expect(scoreGame({ s1: 95, s2: 105 }, f, { scoring: sc }).exactMargin).toBe(false); // the right size, the WRONG winner
+  });
+});

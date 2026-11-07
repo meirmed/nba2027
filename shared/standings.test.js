@@ -182,6 +182,7 @@ describe('diffHits: games with the margin bonus of an error of 1-4', () => {
     // g1 exact score, g2 exact margin (error 0), g3 margin 8 = error 2 (counts), g4 margin 1 = error 9 (no tier), g5 wrong winner, g6 margin 7 = error 3 (counts)
     const r = run(games, { A: { games: picks } });
     expect(r.A.diffHits).toBe(2);
+    expect(r.A.marginHits).toBe(1); // g2 only: the exact margin without the exact score (g1 is an exact score)
     expect(r.A.winnerCorrect).toBe(5);
   });
 });

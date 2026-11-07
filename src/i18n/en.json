@@ -800,5 +800,6 @@
   "lbs.unique": "Unique score",
   "lbs.exact": "Exact score",
   "lbs.risk": "Risk bonus",
-  "lbs.streak": "Best streak"
+  "lbs.streak": "Best streak",
+  "lbs.margin": "Exact margin"
 }
