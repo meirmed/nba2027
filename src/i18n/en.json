@@ -801,5 +801,19 @@
   "lbs.exact": "Exact score",
   "lbs.risk": "Risk bonus",
   "lbs.streak": "Best streak",
-  "lbs.margin": "Exact margin"
+  "lbs.margin": "Exact margin",
+  "admin.weekly": "Weekly summary",
+  "ws.title": "Weekly summary",
+  "ws.intro": "The interesting things that happened in a week of the game (climbs and falls, streaks, hard games, jokers, exact hits), with a short funny text about them. You can edit the text before you copy it.",
+  "ws.week": "Week",
+  "ws.sofar": "so far",
+  "ws.words": "{n} / {max} words",
+  "ws.copy": "Copy the text",
+  "ws.copied": "Copied",
+  "ws.another": "Another version",
+  "ws.prompt": "Copy a prompt for Claude",
+  "ws.promptHint": "For a fresher text: paste the prompt into Claude. It has the same facts and the same rules (up to 150 words, funny, metaphors from different worlds).",
+  "ws.facts": "The facts found in this week ({n})",
+  "ws.noFacts": "Nothing special was found in this week.",
+  "ws.gamesInWeek": "finished games in this week"
 }
