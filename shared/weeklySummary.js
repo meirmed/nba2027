@@ -147,9 +147,10 @@ const kindOf = (s) => (s.exact ? 'exact' : s.exactMargin ? 'exactMargin' : s.dif
  * The facts of the week, best first: [{type, score, ...data}].
  * rows: points docs ({uid, name, byDay, bonus, adjust}); games: [{id, status, t1, t2, s1, s2, tipoffMs}] (counted games);
  * picksByGame: {gameId: {uid: {s1, s2, joker, autoFilled}}}; weekLo / weekHi = Israel day keys (inclusive).
+ * unfinishedDays = day keys of the week that still have a game waiting / being played (no "star of the day" for them).
  * mid = midTournament/main, h2h = h2hTournament/main (null = not set up: no facts about it), bracketGames = counted games [{dayKey, status}] (to know when a stage is over).
  */
-export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi, teamName = (a) => a, mid = null, h2h = null, bracketGames = [] }) {
+export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi, teamName = (a) => a, mid = null, h2h = null, bracketGames = [], unfinishedDays = [] }) {
   const facts = [];
   facts.push(...midFacts({ mid, rows, bracketGames, weekLo, weekHi }), ...h2hFacts({ h2h, rows, weekLo, weekHi }));
 
@@ -182,6 +183,8 @@ export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi
   const per = {}; // uid -> {pts, manual, exact, unique, seq: [true/false...]}
   const hardCandidates = [];
   const jokers = [];
+  const dayTable = {}; // day -> uid -> {pts, exact, unique, games: [{id, pts, joker, winnerCorrect}]}
+  const gameMeta = {}; // gameId -> {label, pct, k, n}
   week.forEach((g) => {
     const picks = Object.entries(picksByGame[g.id]).map(([uid, p]) => ({ uid, p, joker: !!p.joker }));
     const res = scoreGamePicks({ game: { ...g, status: 'finished' }, picks, scoring });
@@ -189,9 +192,14 @@ export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi
     const correct = real.filter(({ uid }) => res[uid]?.winnerCorrect);
     const pct = real.length ? correct.length / real.length : 1;
     const label = `${teamName(g.t1)} נגד ${teamName(g.t2)}`;
+    const day = dayKeyOfMs(g.tipoffMs);
+    gameMeta[g.id] = { label, pct, k: correct.length, n: real.length };
     picks.forEach(({ uid, p, joker }) => {
       const s = res[uid];
       if (!s) return;
+      const dd = ((dayTable[day] ||= {})[uid] ||= { pts: 0, exact: 0, unique: 0, games: [] });
+      dd.pts += s.pts; if (s.exact) dd.exact += 1; if (s.uniquePts > 0) dd.unique += 1;
+      dd.games.push({ id: g.id, pts: s.pts, joker, winnerCorrect: !!s.winnerCorrect });
       const x = (per[uid] ||= { pts: 0, manual: 0, exact: 0, unique: 0, seq: [] });
       x.pts += s.pts;
       if (!p.autoFilled) {
@@ -209,6 +217,34 @@ export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi
   });
   const best = (arr) => [...arr].sort((a, b) => b.score - a.score)[0];
   if (hardCandidates.length) facts.push(best(hardCandidates));
+
+  // ---- the star of every (calendar) day: a clear winner of the day's points ----
+  const open = new Set(unfinishedDays);
+  const dayNameOf = (d) => new Intl.DateTimeFormat('he-IL', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`));
+  const stars = Object.entries(dayTable).filter(([d]) => !open.has(d)).map(([day, byUid]) => {
+    const list = Object.entries(byUid).map(([uid, x]) => ({ uid, ...x })).filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts || String(a.uid).localeCompare(String(b.uid)));
+    if (list.length === 0 || (list[1] && list[1].pts === list[0].pts)) return null; // a tie at the top: no single star
+    return { day, uid: list[0].uid, name: nameOf[list[0].uid] || '', pts: r2(list[0].pts), lead: r2(list[0].pts - (list[1]?.pts ?? 0)) };
+  }).filter(Boolean);
+  const specialOf = (s) => { // a joker that paid, or a hit in a hard game, behind the star's day
+    const mine = dayTable[s.day][s.uid].games;
+    const jk = mine.filter((x) => x.joker && x.pts > 0).sort((a, b) => b.pts - a.pts)[0];
+    const hd = mine.filter((x) => x.winnerCorrect && gameMeta[x.id].n >= 6 && gameMeta[x.id].pct <= 0.4).sort((a, b) => gameMeta[a.id].pct - gameMeta[b.id].pct)[0];
+    if (!jk && !hd) return null;
+    const jt = jk ? `ג׳וקר של ${r2(jk.pts)} נקודות על ${gameMeta[jk.id].label}` : '';
+    const ht = hd ? `פגיעה במשחק הקשה ${gameMeta[hd.id].label} (${gameMeta[hd.id].k} מתוך ${gameMeta[hd.id].n} צדקו)` : '';
+    return { kind: jk && hd ? 'both' : jk ? 'joker' : 'hard', reason: jk && hd ? `${jt} ו${ht}` : jt || ht };
+  };
+  if (stars.length) {
+    const record = [...stars].sort((a, b) => b.pts - a.pts || b.lead - a.lead || a.day.localeCompare(b.day))[0];
+    if (record.pts >= 10) facts.push({ type: 'nightRecord', score: 62 + Math.min(10, Math.round(record.lead / 3)), name: record.name, pts: record.pts, lead: record.lead, dayName: dayNameOf(record.day), day: record.day, reason: specialOf(record)?.reason || '' });
+    const other = stars.filter((s) => s.day !== record.day).map((s) => ({ s, sp: specialOf(s) })).filter((x) => x.sp).sort((a, b) => b.s.pts - a.s.pts)[0];
+    if (other) facts.push({ type: 'starSpecial', score: 58 + (other.sp.kind === 'both' ? 6 : 0), name: other.s.name, pts: other.s.pts, dayName: dayNameOf(other.s.day), day: other.s.day, kind: other.sp.kind, reason: other.sp.reason });
+    const byStar = {};
+    stars.forEach((s) => { (byStar[s.uid] ||= []).push(s); });
+    const rep = Object.values(byStar).filter((a) => a.length >= 2).sort((a, b) => b.length - a.length || b.reduce((x, s) => x + s.pts, 0) - a.reduce((x, s) => x + s.pts, 0))[0];
+    if (rep) facts.push({ type: 'repeatStar', score: 50 + rep.length * 8, name: rep[0].name, n: rep.length, dayNames: rep.map((s) => dayNameOf(s.day)).join(', ') });
+  }
 
   const people = Object.entries(per).map(([uid, x]) => ({ uid, name: nameOf[uid] || '', ...x }));
   const mvp = [...people].sort((a, b) => b.pts - a.pts || byName(a, b))[0];
@@ -398,6 +434,34 @@ Object.assign(C, {
   champion: ['מי שרוצה להתעמת, שיעשה זאת בתחרות הבאה.', 'הגמר נגמר, אבל הסיפורים ימשיכו להתגלגל בקבוצה עוד כמה ימים.', 'תודה לכל מי ששיחק, ובעיקר לכל מי ששמר על שפיות.'],
   pairLive: ['הדקות האחרונות יהיו שוות שתי כוסות קפה והרבה סבלנות.', 'מי שמצליח עכשיו לישון מוזמן ללמד קורס בשליטה.', 'ובינתיים הקהל במחאה שקטה: אנחנו רוצים עוד משחק אחד.'],
 });
+// the stars of the nights
+Object.assign(T, {
+  nightRecord: [
+    (f) => `כוכב הלילה של השבוע: ${f.name}, ${f.pts} נקודות ב${f.dayName}, ויתרון של ${f.lead} על המקום השני${f.reason ? `, בזכות ${f.reason}` : ''}.`,
+    (f) => `לילה אחד, שם אחד: ${f.name} עם ${f.pts} נקודות ב${f.dayName}, ${f.lead} לפני הרודף הקרוב${f.reason ? ` (${f.reason})` : ''}.`,
+    (f) => `${f.pts} נקודות בלילה אחד של ${f.name} (${f.dayName}), ופער של ${f.lead} מהשני${f.reason ? `: ${f.reason}` : ''}. בנאס"א היו מבקשים תעודת זהות.`,
+  ],
+  repeatStar: [
+    (f) => `כוכב שחוזר: ${f.n} לילות השבוע ש${f.name} בראש (${f.dayNames}). זה כבר לא מקרה, זה הרגל.`,
+    (f) => `${f.name}: ${f.n} כוכבי לילה בשבוע אחד (${f.dayNames}). בשמיים קוראים לזה מערכת כוכבים, בטבלה קוראים לזה משמרת קבועה.`,
+    (f) => `${f.n} פעמים השבוע התואר הלילי הלך אל ${f.name} (${f.dayNames}). פעם שנייה היא מקרה, פעם שלישית היא מסורת.`,
+  ],
+  starSpecial: [
+    (f) => `כוכב ${f.dayName}: ${f.name} עם ${f.pts} נקודות, בזכות ${f.reason}.`,
+    (f) => `מאחורי ${f.pts} הנקודות של ${f.name} ב${f.dayName} עומדת ${f.reason}. כוכבים לא נולדים סתם, לפעמים הם נולדים מניחוש.`,
+    (f) => `${f.dayName}: ${f.name} כוכב הלילה, ${f.pts} נקודות. הסוד: ${f.reason}.`,
+  ],
+});
+Object.assign(E, {
+  nightRecord: ['זה סוג הלילה שבו הטלוויזיה מבקשת הפסקת פרסומות כדי להתאושש.', 'במחשבון של הטבלה כבר שמעו מישהו אומר "וואו" בקול.', 'ככה נראה לילה שבו כל פיסת מזל יושבת במקום הנכון.'],
+  repeatStar: ['אצל המתחרים כבר מחפשים שעון מעורר כדי לעקוב.', 'היסטוריונים של ניחושים קוראים לזה שושלת, גם אם היא באורך שבוע.', 'בשמיים הכוכבים מתחלפים, ופה הם נשארים בעמדה כמו שומרי ראש.'],
+  starSpecial: ['הקהל בבית מחא כפיים, והקהל באולפן ביקש עוד כוס מים.', 'זה בדיוק ההבדל בין לצפות מהיציע לבין לשחק במגרש.', 'בבורסה זה נקרא תזמון מושלם, בכדורסל: שליפה מהמותן.'],
+});
+Object.assign(C, {
+  nightRecord: ['השאר חזרו הביתה עם עיפרון ביד ומחשבות בראש.', 'אם היו מחלקים מדליות על ניחושים, הערב הזה היה מזכה בשני סטים.', 'לילות כאלה נשארים בזיכרון הקבוצתי עד העונה הבאה.'],
+  repeatStar: ['מי שלא מצליח לעקוף מוזמן להצטרף.', 'הלילה הבא יגלה אם זה שגרה או הפסקה.', 'ובינתיים הקהל מצביע ברגליים, ועם הרבה סקרנות.'],
+  starSpecial: ['הסיפור הזה ממשיך לעניין את מי שבחר אחרת.', 'מי שנתן עדיפות לביטחון קיבל שיעור בהימור.', 'בפעם הבאה, גם המסורתיים יסתכלו בעיניים אחרות על הטבלה.'],
+});
 const QUIET = 'שבוע שקט בטבלה: כל המשתתפים התקדמו בקצב של תור בסניף הדואר. נחכה לשבוע הבא, שבטח יהיה סוער יותר.';
 
 // a deterministic "random" choice: the same seed always gives the same text, and a new seed gives a new mix (not a short cycle)
@@ -434,28 +498,31 @@ export function writeSummary(facts, { seed = 0, monthName = (k) => k } = {}) {
   return { paragraphs, words: wordCount(paragraphs.join(' ')), facts: used };
 }
 
-/** A line per fact, for the admin to check and for the prompt. */
+/** A line per fact, for the admin to check and for the prompt. No verb is about a person (the app does not know who is a he or a she). */
 export function factLine(f) {
   switch (f.type) {
-    case 'climber': return `${f.name} עלה ${f.delta} מקומות בטבלה (מהמקום ${f.from} ל-${f.to})`;
-    case 'faller': return `${f.name} ירד ${f.drop} מקומות בטבלה (מהמקום ${f.from} ל-${f.to})`;
-    case 'leaderChange': return `${f.name} תפס את ראש הטבלה במקום ${f.prev}`;
-    case 'monthLeader': return `${f.name} הוביל את אלוף החודש (${f.month}) במקום ${f.prev}`;
-    case 'mvp': return `${f.name} צבר הכי הרבה נקודות השבוע: ${f.pts}`;
-    case 'ghost': return `${f.name} צבר הכי מעט נקודות השבוע (מבין מי שניחשו): ${f.pts}`;
-    case 'hotStreak': return `${f.name} פגע ב-${f.n} מנצחים נכונים ברצף`;
-    case 'coldStreak': return `${f.name} החטיא ${f.n} מנצחים ברצף`;
-    case 'hardGame': return `במשחק ${f.game} רק ${f.k} מתוך ${f.n} ניחשו את המנצח, ו${f.name} פגע עם ${f.kindNoun}`;
-    case 'jokerFail': return `${f.name} הניח ג׳וקר על ${f.game} וקיבל 0 נקודות`;
-    case 'jokerWin': return `${f.name} קיבל ${f.pts} נקודות מג׳וקר על ${f.game}`;
-    case 'exactKing': return `${f.name} פגע ב-${f.n} תוצאות מדויקות השבוע`;
-    case 'loneWolf': return `${f.name} פגע ב-${f.n} תוצאות ייחודיות (רק הוא פגע) השבוע`;
-    case 'groupLeader': return `${f.comp}, בית ${f.group}: ${f.name} תפס את ראש הטבלה במקום ${f.prev}`;
+    case 'climber': return `${f.name}: עלייה של ${f.delta} מקומות בטבלה (מהמקום ${f.from} ל-${f.to})`;
+    case 'faller': return `${f.name}: ירידה של ${f.drop} מקומות בטבלה (מהמקום ${f.from} ל-${f.to})`;
+    case 'leaderChange': return `ראש הטבלה עבר ${pre('מ', f.prev)} ${pre('ל', f.name)}`;
+    case 'monthLeader': return `אלוף החודש (${f.month}): ${f.name} בראש הטבלה החודשית, במקום ${f.prev}`;
+    case 'mvp': return `הכי הרבה נקודות השבוע: ${f.name} (${f.pts})`;
+    case 'ghost': return `הכי מעט נקודות השבוע (מבין מי שניחשו): ${f.name} (${f.pts})`;
+    case 'hotStreak': return `רצף של ${f.n} מנצחים נכונים: ${f.name}`;
+    case 'coldStreak': return `רצף של ${f.n} החטאות מנצח: ${f.name}`;
+    case 'hardGame': return `משחק קשה, ${f.game}: רק ${f.k} מתוך ${f.n} ניחשו את המנצח. בין הפוגעים: ${f.name}, עם ${f.kindNoun}`;
+    case 'jokerFail': return `הג׳וקר של ${f.name} על ${f.game}: 0 נקודות`;
+    case 'jokerWin': return `הג׳וקר של ${f.name} על ${f.game}: ${f.pts} נקודות`;
+    case 'exactKing': return `${f.n} תוצאות מדויקות השבוע: ${f.name}`;
+    case 'loneWolf': return `${f.n} תוצאות ייחודיות (רק אחד ניחש כך) השבוע: ${f.name}`;
+    case 'groupLeader': return `${f.comp}, בית ${f.group}: ראש הטבלה עבר ${pre('מ', f.prev)} ${pre('ל', f.name)}`;
     case 'bubble': return `${f.comp}, בית ${f.group}: ${f.gap} נקודות בין ${f.name2} (המקום האחרון שעולה) לבין ${f.name3}`;
     case 'qualified': return `${f.comp}: שלב הבתים הסתיים. העולים: ${f.names}`;
     case 'stageDone': return `${f.comp}: ${f.stage} הסתיים. המעפילים: ${f.winners}. הצמוד ביותר: ${f.closest.winner} על ${f.closest.loser}, ${f.closest.margin} נקודות`;
-    case 'champion': return `${f.comp}: ${f.name} הוא האלוף, מול ${f.runner}, בהפרש ${f.margin} נקודות`;
+    case 'champion': return `${f.comp}: האלוף ${f.name}, מול ${f.runner}, בהפרש ${f.margin} נקודות`;
     case 'pairLive': return `${f.comp}, ${f.stage}: ${f.a} מול ${f.b}, פער של ${f.margin} נקודות`;
+    case 'nightRecord': return `הניקוד הלילי הגבוה ביותר של השבוע: ${f.name}, ${f.pts} נקודות ב${f.dayName}, ${f.lead} נקודות לפני השני${f.reason ? ` (${f.reason})` : ''}`;
+    case 'repeatStar': return `כוכב הלילה ${f.n} פעמים השבוע: ${f.name} (${f.dayNames})`;
+    case 'starSpecial': return `כוכב ${f.dayName}: ${f.name} (${f.pts} נקודות), בזכות ${f.reason}`;
     default: return JSON.stringify(f);
   }
 }

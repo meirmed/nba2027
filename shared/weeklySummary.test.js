@@ -96,6 +96,16 @@ describe('facts from the games of the week', () => {
     expect(f.find((x) => x.type === 'hotStreak')?.name).not.toBe('p1');
     expect(computeFacts({ rows, games, picksByGame, weekLo: '2026-11-15', weekHi: '2026-11-21' }).find((x) => x.type === 'mvp')).toBeUndefined();
   });
+  it('star of the night: the record of the week, with the joker and the hard game behind it; a tie at the top is not a star', () => {
+    const r = get('nightRecord');
+    expect(r).toMatchObject({ name: 'p1', day: '2026-11-09', dayName: 'יום שני' });
+    expect(r.pts).toBeGreaterThanOrEqual(40);
+    expect(r.lead).toBeGreaterThan(0);
+    expect(r.reason).toContain('ג׳וקר');
+    expect(r.reason).toContain('הקשה');
+    expect(get('repeatStar')).toBeUndefined(); // the other four days: everybody who was right has the same points, so there is no star
+    expect(get('starSpecial')).toBeUndefined();
+  });
   it('facts are sorted by their interest, best first', () => {
     const s = facts.map((f) => f.score);
     expect([...s].sort((a, b) => b - a)).toEqual(s);
@@ -288,5 +298,58 @@ describe('the summary mentions both tournaments', () => {
       expect(factLine(f)).not.toContain('{');
     });
     for (let seed = 0; seed < 20; seed += 1) expect(writeSummary(all, { seed }).words).toBeLessThanOrEqual(MAX_WORDS);
+  });
+});
+
+
+describe('stars of the nights (calendar days)', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const rows = ids.map((x) => row(x, {}));
+  const G = (id, day) => ({ id, round: 'RS', status: 'finished', t1: 'BOS', t2: 'NYK', s1: 110, s2: 100, tipoffMs: Date.parse(`2026-11-${day}T18:00:00Z`) });
+  const games = [G('g1', '09'), G('g2', '10'), G('g3', '11'), G('g4', '12')];
+  const P = (s1, s2, extra = {}) => ({ s1, s2, ...extra });
+  const away = P(90, 100);
+  const base = {
+    g1: { a: P(110, 100), b: P(108, 100), c: P(107, 100), d: away }, // a: the only exact score = 22 points
+    g2: { a: P(108, 100), b: P(110, 100), c: away }, // b: 22
+    g3: { a: P(110, 100), b: P(108, 100) }, // a: 22
+    g4: { a: away, b: away, c: P(105, 95), d: away, e: away, f: away }, // a HARD game: only c (1 of 6) picked the winner, with the exact margin
+  };
+  const run = (extra = {}, picksByGame = base) => computeFacts({ rows, games, picksByGame, weekLo: '2026-11-08', weekHi: '2026-11-14', teamName: (x) => x, ...extra });
+  const get = (f, t) => f.find((x) => x.type === t);
+
+  it('the record: the highest nightly score of the week and the lead over the second place', () => {
+    expect(get(run(), 'nightRecord')).toMatchObject({ name: 'a', pts: 22, lead: 14, day: '2026-11-09', dayName: 'יום שני', reason: '' });
+  });
+  it('a star who repeats: a was the star of two nights', () => {
+    expect(get(run(), 'repeatStar')).toMatchObject({ name: 'a', n: 2, dayNames: 'יום שני, יום רביעי' });
+  });
+  it('a star of another night with a hard game behind it', () => {
+    const f = get(run(), 'starSpecial');
+    expect(f).toMatchObject({ name: 'c', kind: 'hard', dayName: 'יום חמישי', pts: 16 });
+    expect(f.reason).toContain('1 מתוך 6');
+  });
+  it('a joker that paid is the reason of the star (the record night)', () => {
+    const joker = { ...base, g1: { ...base.g1, a: P(110, 100, { joker: true }) } };
+    const r = get(run({}, joker), 'nightRecord');
+    expect(r).toMatchObject({ name: 'a', pts: 44, lead: 36 });
+    expect(r.reason).toBe('ג׳וקר של 44 נקודות על BOS נגד NYK');
+  });
+  it('a day that still has a game waiting or being played has no star', () => {
+    const f = run({ unfinishedDays: ['2026-11-09'] });
+    expect(get(f, 'nightRecord')).toMatchObject({ name: 'b', day: '2026-11-10' });
+    expect(get(f, 'repeatStar')).toBeUndefined(); // a was the star of one night only
+  });
+  it('the texts of the three star facts', () => {
+    const facts = [get(run(), 'nightRecord'), get(run(), 'repeatStar'), get(run(), 'starSpecial')];
+    for (let seed = 0; seed < 20; seed += 1) {
+      const w = writeSummary(facts, { seed });
+      const all = w.paragraphs.join(' ');
+      expect(all).not.toContain('undefined');
+      expect(all).toContain('a');
+      expect(w.paragraphs).toHaveLength(3);
+      expect(w.words).toBeLessThanOrEqual(MAX_WORDS);
+    }
+    facts.forEach((f) => expect(factLine(f)).toContain(f.name));
   });
 });

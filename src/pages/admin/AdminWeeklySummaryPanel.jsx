@@ -49,12 +49,14 @@ export default function AdminWeeklySummaryPanel() {
   }, [weekGames]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bracketGames = useMemo(() => games.filter((g) => g.tipoff && countsForStandings(g, settings.countedRounds)).map((g) => ({ dayKey: dayKey(g.tipoff, tz), status: g.status })), [games, settings.countedRounds, tz]);
+  const unfinishedDays = useMemo(() => [...new Set(games.filter((g) => g.tipoff && countsForStandings(g, settings.countedRounds) && (g.status === 'scheduled' || g.status === 'live')
+    && dayKey(g.tipoff, tz) >= w.lo && dayKey(g.tipoff, tz) <= w.hi).map((g) => dayKey(g.tipoff, tz)))], [games, settings.countedRounds, tz, w]);
   const teamName = (abbr) => teams[abbr]?.[lang === 'he' ? 'shortHe' : 'shortEn'] || abbr;
   const monthName = (key) => new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(`${key}-15T12:00:00Z`));
   const facts = useMemo(() => (loading ? [] : computeFacts({
-    rows: baseRows, scoring, weekLo: w.lo, weekHi: w.hi, picksByGame: picks, teamName, mid: mid ?? null, h2h: h2h ?? null, bracketGames,
+    rows: baseRows, scoring, weekLo: w.lo, weekHi: w.hi, picksByGame: picks, teamName, mid: mid ?? null, h2h: h2h ?? null, bracketGames, unfinishedDays,
     games: weekGames.map((g) => ({ id: g.id, round: g.round, status: g.status, t1: g.t1, t2: g.t2, s1: g.s1, s2: g.s2, tipoffMs: g.tipoff.toMillis() })),
-  })), [loading, baseRows, scoring, w, picks, weekGames, teams, lang, mid, h2h, bracketGames]); // eslint-disable-line react-hooks/exhaustive-deps
+  })), [loading, baseRows, scoring, w, picks, weekGames, teams, lang, mid, h2h, bracketGames, unfinishedDays]); // eslint-disable-line react-hooks/exhaustive-deps
   const summary = useMemo(() => writeSummary(facts, { seed, monthName }), [facts, seed, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (!edited) setText(summary.paragraphs.join('\n\n')); }, [summary, edited]);
