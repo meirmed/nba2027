@@ -287,7 +287,7 @@ export const savePredictions = onCall(async (request) => {
 
 /**
  * Every minute, for games that tipped off in the last 30 min and aren't published yet:
- *  1) AUTO-FILL: every player without a pick gets a random pick (20-99, margin 1-30, flagged autoFilled -> 50% points, never unique)
+ *  1) AUTO-FILL: every player without a pick gets a random pick (90-120, margin 1-30, flagged autoFilled -> 50% points, never unique)
  *     if features.autoFill is on, the round counts and both teams are set;
  *  2) publish everyone's picks to picks/{gameId} (readable by all signed-in users). Before tip-off nobody can see other people's picks.
  * Idempotent: a retry sees the already auto-filled picks as picks.

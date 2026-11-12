@@ -62,7 +62,7 @@ inside its day window; the admin closes a stage to create the next one (winners 
 Everything is computed live from `points/{uid}.byDay`; run "Recalculate all points" once after deploying this version so `byDay` exists.
 
 ## Auto-fill, profile, avatars (Phase 7a)
-`lockGamePicks` (every minute) auto-fills players who made no pick when a game tips off: random scores 20-99, margin 1-30, flagged `autoFilled`
+`lockGamePicks` (every minute) auto-fills players who made no pick when a game tips off: random scores 90-120, margin 1-30, flagged `autoFilled`
 (50% points, floored; never the unique bonus), then publishes everyone's picks. Switch: Admin -> Settings. Avatars live in Firebase Storage `avatars/{uid}.jpg`
 (enable Storage once in the console, then `firebase deploy --only storage`). Names can only be changed by the admin (Admin -> Users -> Rename).
 

@@ -1,6 +1,6 @@
-// Auto-fill for a player who made no pick: both scores 20..99 and the margin between 1 and 30 (owner-approved).
+// Auto-fill for a player who made no pick: both scores 90..120 (owner, changed from 20..99) and the margin between 1 and 30 (owner-approved).
 // Scored at the auto-fill factor (50%, floored) and NEVER eligible for the unique bonus (see scoring.js).
-export const AUTOFILL = { min: 20, max: 99, minDiff: 1, maxDiff: 30 };
+export const AUTOFILL = { min: 90, max: 120, minDiff: 1, maxDiff: 30 }; // max - min must be >= maxDiff (here exactly 30)
 
 /** -> {s1, s2} (home, away). rng injectable for tests. Never a tie. */
 export function makeAutoPick(rng = Math.random, cfg = AUTOFILL) {
