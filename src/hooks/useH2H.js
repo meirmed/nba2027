@@ -3,7 +3,7 @@ import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { usePoints } from '../contexts/PointsContext.jsx';
-import { windowStats } from '@shared/h2h.js';
+import { windowStats, funPairResult } from '@shared/h2h.js';
 
 /** h2hTournament/main. undefined = loading, null = not set up yet. */
 export function useTournament() {
@@ -43,5 +43,6 @@ export function usePlayerStats() {
   }, [allRows, dayRows]);
   const nameOf = (uid) => byUid[uid]?.name || '…';
   const statsOf = (uid, from = null, to = null) => ({ ...windowStats(byUid[uid]?.byDay, from, to), total: byUid[uid]?.total ?? 0 });
-  return { rows, byUid, nameOf, statsOf };
+  const funResult = (p) => funPairResult(byUid[p.user1], byUid[p.user2], p.from || null, p.to || null); // a pair for fun: WITH the joker
+  return { rows, byUid, nameOf, statsOf, funResult };
 }

@@ -12,7 +12,7 @@ export default function FunPairsManager() {
   const { t } = useLang();
   const { user } = useAuth();
   const pairs = useFunPairs();
-  const { rows, nameOf, statsOf } = usePlayerStats();
+  const { rows, nameOf, funResult } = usePlayerStats();
   const players = [...rows].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
   const [f, setF] = useState({ user1: '', user2: '', label: '', from: '', to: '' });
   const [msg, setMsg] = useState('');
@@ -64,11 +64,10 @@ export default function FunPairsManager() {
       {pairs === undefined && <p className="muted">{t('common.loading')}</p>}
       {pairs && pairs.length === 0 && <p className="muted">{t('h2h.noPairs')}</p>}
       {(pairs || []).map((p) => {
-        const a = statsOf(p.user1, p.from || null, p.to || null).pts;
-        const b = statsOf(p.user2, p.from || null, p.to || null).pts;
+        const { a, b, winner } = funResult(p);
         return (
           <div key={p.id}>
-            <VsRow nameA={nameOf(p.user1)} scoreA={a} nameB={nameOf(p.user2)} scoreB={b} winner={a === b ? null : a > b ? 'a' : 'b'}
+            <VsRow nameA={nameOf(p.user1)} scoreA={a} nameB={nameOf(p.user2)} scoreB={b} winner={winner}
               note={[p.label, p.from || p.to ? `${p.from || '…'} → ${p.to || '…'}` : ''].filter(Boolean).join(' · ')} />
             <button className="btn ghost" onClick={() => remove(p)}>{t('common.delete')}</button>
           </div>

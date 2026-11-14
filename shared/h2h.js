@@ -12,19 +12,31 @@ export const DEFAULT_H2H_TIEBREAKERS = H2H_TIEBREAKERS;
 
 /**
  * A player's stats inside [from, to] from points.byDay = {day: [points, exact, unique, correct winners, points WITHOUT the joker doubling]}. null = open end.
- * pts = the points without the joker (the 5th number; an older day without it: its points). `total` (the overall main-table score) is added by the caller.
+ * pts = the points WITHOUT the joker (the 5th number; an older day without it: its points): the rule of the league, the knockout and the mid-season tournament.
+ * { joker: true } = the points WITH the joker doubling (the 1st number, as in the main table): the rule of the "pairs for fun". `total` is added by the caller.
  */
-export function windowStats(byDay, from = null, to = null) {
+export function windowStats(byDay, from = null, to = null, { joker = false } = {}) {
   let pts = 0; let exactHits = 0; let uniqueHits = 0; let winners = 0;
   Object.entries(byDay || {}).forEach(([day, v]) => {
     if ((from && day < from) || (to && day > to)) return;
     const c = Array.isArray(v) ? v : [];
-    pts += c[4] ?? c[0] ?? 0;
+    pts += joker ? (c[0] ?? 0) : (c[4] ?? c[0] ?? 0);
     exactHits += c[1] || 0;
     uniqueHits += c[2] || 0;
     winners += c[3] || 0;
   });
   return { pts: Math.round(pts * 100) / 100, winners, exactHits, uniqueHits };
+}
+
+/**
+ * A "pair for fun" (an admin-made duel between two friends, optionally in a window of days): each player's game points in the window WITH the joker's doubling
+ * (like the main table; no bonus points), live. The league, the knockout and the mid-season tournament do NOT count the joker (see windowStats).
+ * rowA / rowB: the points rows ({byDay}). -> {a, b, winner: 'a' | 'b' | null (a draw)}
+ */
+export function funPairResult(rowA, rowB, from = null, to = null) {
+  const a = windowStats(rowA?.byDay, from, to, { joker: true }).pts;
+  const b = windowStats(rowB?.byDay, from, to, { joker: true }).pts;
+  return { a, b, winner: a === b ? null : a > b ? 'a' : 'b' };
 }
 
 /**

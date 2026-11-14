@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { windowStats, decideMatch, resolvePair, rankGroup, drawGroups, seedQualifiers, pairSeeds, closeStagePatch, activeStageId, prevDayKey, DEFAULT_H2H_TIEBREAKERS } from './h2h.js';
+import fs from 'node:fs';
+import { windowStats, decideMatch, resolvePair, rankGroup, drawGroups, seedQualifiers, pairSeeds, closeStagePatch, activeStageId, prevDayKey, DEFAULT_H2H_TIEBREAKERS, funPairResult } from './h2h.js';
 
 const side = (pts, exactHits = 0, uniqueHits = 0, seed = null, adv = 0, winners = 0, total = 0) => ({ stats: { pts, winners, exactHits, uniqueHits, total }, seed, adv });
 
@@ -113,5 +114,64 @@ describe('closeStagePatch', () => {
     expect(activeStageId({ K1: { stageNum: 1, endDay: '2026-11-07' } })).toBeNull();
     expect(prevDayKey('2026-11-01')).toBe('2026-10-31');
     expect(DEFAULT_H2H_TIEBREAKERS).toEqual(['winners', 'exactHits', 'uniqueHits', 'total']);
+  });
+});
+
+
+// ---------------------------------------------------------------- the joker: "pairs for fun" count it, every other competition does not
+describe('the joker in Head to Head', () => {
+  // a day with a joker: 44 points with it, 22 without (the 5th number); a day without a joker; an old day without the 5th number
+  const byDay = { '2026-11-10': [44, 1, 1, 1, 22], '2026-11-11': [10, 0, 0, 1, 10], '2026-11-12': [6, 0, 0, 2] };
+  it('windowStats: without the joker by default (league, knockout), with it on request (pairs for fun)', () => {
+    expect(windowStats(byDay).pts).toBe(22 + 10 + 6);
+    expect(windowStats(byDay, null, null, { joker: true }).pts).toBe(44 + 10 + 6);
+    expect(windowStats(byDay, null, null, { joker: false }).pts).toBe(38);
+  });
+  it('the other numbers do not depend on the joker, and the window still applies', () => {
+    const a = windowStats(byDay, '2026-11-11', null);
+    const b = windowStats(byDay, '2026-11-11', null, { joker: true });
+    expect(b).toEqual(a); // no joker on those days: the same
+    expect({ ...windowStats(byDay), pts: 0 }).toEqual({ ...windowStats(byDay, null, null, { joker: true }), pts: 0 });
+    expect(windowStats(byDay, '2026-11-10', '2026-11-10', { joker: true }).pts).toBe(44);
+  });
+  it('an older day without the 5th number counts the same either way', () => {
+    expect(windowStats({ d: [9, 0, 0, 1] }, null, null, { joker: true }).pts).toBe(9);
+    expect(windowStats({ d: [9, 0, 0, 1] }).pts).toBe(9);
+  });
+
+  const A = { byDay: { '2026-11-10': [44, 1, 1, 1, 22] } }; // the joker doubled a good game
+  const B = { byDay: { '2026-11-10': [30, 0, 0, 1, 30] } };
+  it('a pair for fun counts the joker: A (44 with the joker) beats B (30)', () => {
+    expect(funPairResult(A, B)).toEqual({ a: 44, b: 30, winner: 'a' });
+  });
+  it('the SAME two players in the league / knockout (no joker): B (30) is ahead of A (22)', () => {
+    const a = windowStats(A.byDay).pts; const b = windowStats(B.byDay).pts;
+    expect([a, b]).toEqual([22, 30]);
+    const table = rankGroup(['A', 'B'], (u) => windowStats({ A: A.byDay, B: B.byDay }[u]), (u) => u);
+    expect(table.map((r) => r.uid)).toEqual(['B', 'A']);
+  });
+  it('a pair for fun: the window of days, a draw, and a player without a points row', () => {
+    const two = { byDay: { '2026-11-10': [10, 0, 0, 1, 5], '2026-11-20': [8, 0, 0, 1, 8] } };
+    expect(funPairResult(two, A, '2026-11-15', null)).toEqual({ a: 8, b: 0, winner: 'a' });
+    expect(funPairResult({ byDay: { d: [10] } }, { byDay: { d: [10] } })).toEqual({ a: 10, b: 10, winner: null });
+    expect(funPairResult(undefined, undefined)).toEqual({ a: 0, b: 0, winner: null });
+    expect(funPairResult(undefined, B)).toEqual({ a: 0, b: 30, winner: 'b' });
+  });
+  it('no bonus points: only the days of the games count', () => {
+    expect(funPairResult({ byDay: {}, bonus: 100, total: 500 }, { byDay: { d: [1] } })).toEqual({ a: 0, b: 1, winner: 'b' });
+  });
+
+  // a guard on the screens: only the two screens of the pairs for fun use funResult; the league and the knockout never ask for the joker
+  const src = (f) => fs.readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8');
+  it('the pairs for fun screens (players and admin) use funResult', () => {
+    ['pages/h2h/FunTab.jsx', 'pages/admin/FunPairsManager.jsx'].forEach((f) => { expect(src(f)).toContain('funResult'); expect(src(f)).not.toContain('statsOf('); });
+  });
+  it('the league, the knockout and the admin tournament never count the joker', () => {
+    ['pages/h2h/LeagueTab.jsx', 'pages/h2h/KnockoutTab.jsx', 'pages/admin/TournamentManager.jsx'].forEach((f) => { expect(src(f)).not.toContain('funResult'); expect(src(f)).not.toMatch(/joker:\s*true/); });
+  });
+  it('the mid-season tournament has its own windowStats and never counts the joker', () => {
+    const mid = fs.readFileSync(new URL('./midTournament.js', import.meta.url), 'utf8');
+    expect(mid).not.toMatch(/joker:\s*true/);
+    expect(mid).not.toContain('funPairResult');
   });
 });
