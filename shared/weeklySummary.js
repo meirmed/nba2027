@@ -4,6 +4,8 @@
 import { addDaysToKey, dayKeyOfMs } from './daykeys.js';
 import { scoreGamePicks } from './standings.js';
 import { buildBracket } from './midTournament.js';
+import { rankAt } from './rankMoves.js';
+export { rankAt }; // (the tests import it from here)
 import { rankGroup, windowStats as h2hWindow } from './h2h.js';
 
 export const MAX_WORDS = 380;
@@ -25,19 +27,6 @@ export function weekOptions(todayKey, completed = 5) {
   const out = [{ lo: sunday, hi: todayKey, current: true }];
   for (let i = 1; i <= completed; i += 1) { const lo = addDaysToKey(sunday, -7 * i); out.push({ lo, hi: addDaysToKey(lo, 6), current: false }); }
   return out;
-}
-
-/**
- * The table as it was at the end of `uptoDay`: the game points of the days up to it (byDay, with the joker) + the bonus and adjustments as they are now.
- * rank = 1 + the number of players with MORE points (equal points share a rank, so a tie at the start of the season is not a "move").
- */
-export function rankAt(rows, uptoDay) {
-  const list = rows.map((r) => {
-    let g = 0;
-    Object.entries(r.byDay || {}).forEach(([day, c]) => { if (day <= uptoDay) g += c[0] || 0; });
-    return { uid: r.uid, name: r.name, pts: r2(g + (r.bonus ?? 0) + (r.adjust ?? 0)) };
-  }).sort((a, b) => b.pts - a.pts || byName(a, b));
-  return list.map((x) => ({ ...x, rank: 1 + list.filter((y) => y.pts > x.pts).length }));
 }
 
 const topOf = (list) => (list.length && list[0].pts > 0 && (list.length === 1 || list[0].pts > list[1].pts) ? list[0] : null); // a clear leader only

@@ -815,5 +815,6 @@
   "ws.promptHint": "For a fresher text: paste the prompt into Claude. It has the same facts and the same rules (up to 380 words, funny, metaphors from different worlds).",
   "ws.facts": "The facts found in this week ({n})",
   "ws.noFacts": "Nothing special was found in this week.",
-  "ws.gamesInWeek": "finished games in this week"
+  "ws.gamesInWeek": "finished games in this week",
+  "home.moveTip": "Places gained or lost since the previous game day"
 }

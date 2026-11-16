@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSettings, useScoring } from '../contexts/SettingsContext.jsx';
 import { useMyPredictions } from '../contexts/MyPredictionsContext.jsx';
 import { usePoints } from '../contexts/PointsContext.jsx';
+import { rankMoves } from '@shared/rankMoves.js';
 import { useBonus } from '../contexts/BonusContext.jsx';
 import { useGames } from '../hooks/useGames.js';
 import { useNow } from '../hooks/useNow.js';
@@ -22,6 +23,12 @@ const DAY = 86400000;
 const WINDOW_DAYS = 3; // "missing predictions" looks this many days ahead
 const MEDALS = ['🥇', '🥈', '🥉'];
 
+/** ▲2 (green) / ▼1 (red): the places a player gained or lost over the latest game day. Nothing when he did not move. */
+function MoveBadge({ delta, title }) {
+  if (!delta) return null;
+  return <span className={`lb-move ${delta > 0 ? 'up' : 'down'}`} title={title} dir="ltr">{delta > 0 ? '▲' : '▼'}{Math.abs(delta)}</span>;
+}
+
 export default function HomePage() {
   const { t, lang } = useLang();
   const { user, isAdmin } = useAuth();
@@ -29,7 +36,7 @@ export default function HomePage() {
   const { tiebreakers } = useScoring();
   const { games } = useGames();
   const mine = useMyPredictions();
-  const { rows } = usePoints();
+  const { rows, dayRows } = usePoints();
   const { questions } = useBonus();
   const profile = useProfile();
   const star = useStarOfNight();
@@ -51,7 +58,7 @@ export default function HomePage() {
 
   const ranked = useMemo(() => rankRows(rows, tiebreakers), [rows, tiebreakers]);
   const me = ranked.find((r) => r.uid === user?.uid);
-  const leader = ranked[0]?.total || 0;
+  const { moves } = useMemo(() => rankMoves(dayRows), [dayRows]); // places gained / lost over the latest game day
   const announcement = (settings.announcement?.[lang] || '').trim();
 
   const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: tz }).format(nowMs));
@@ -145,7 +152,8 @@ export default function HomePage() {
               <Link key={r.uid} to={rowLink(r)} className={`lb-mini-row ${r.uid === user?.uid ? 'me' : ''}`}>
                 <span className="lb-medal">{MEDALS[r.rank - 1] || r.rank}</span>
                 <Avatar name={r.name} url={r.photoURL} size={28} />
-                <span className="lb-mini-main"><span dir="auto">{r.name}</span><span className="lb-bar"><span style={{ width: `${leader > 0 ? Math.max(4, Math.round((100 * (r.total ?? 0)) / leader)) : 0}%` }} /></span></span>
+                <span className="lb-mini-main"><span dir="auto">{r.name}</span></span>
+                <MoveBadge delta={moves[r.uid]} title={t('home.moveTip')} />
                 <strong dir="ltr">{r.total ?? 0}</strong>
               </Link>
             ))}
@@ -155,7 +163,8 @@ export default function HomePage() {
                 <Link to="/my-points" className="lb-mini-row me">
                   <span className="lb-medal">{me.rank}</span>
                   <Avatar name={me.name} url={me.photoURL} size={28} />
-                  <span className="lb-mini-main"><span dir="auto">{me.name}</span><span className="lb-bar"><span style={{ width: `${leader > 0 ? Math.max(4, Math.round((100 * (me.total ?? 0)) / leader)) : 0}%` }} /></span></span>
+                  <span className="lb-mini-main"><span dir="auto">{me.name}</span></span>
+                  <MoveBadge delta={moves[me.uid]} title={t('home.moveTip')} />
                   <strong dir="ltr">{me.total ?? 0}</strong>
                 </Link>
               </>
