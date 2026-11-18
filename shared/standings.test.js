@@ -205,3 +205,47 @@ describe('Statistics tab: the initial order is by accuracy', () => {
     expect(rankRows(rows, STATS_TIEBREAKERS).map((x) => x.id)).toEqual(['manyExactTotal', 'manyExact', 'many', 'few']);
   });
 });
+
+describe('courage (risk) bonus: the percentage counts the players\' OWN picks only, an auto-filled pick never gets it (update 125)', () => {
+  const G = { id: 'g1', round: 'RS', status: 'finished', s1: 100, s2: 110, tipoffMs: Date.parse('2026-11-12T01:00:00Z') }; // the AWAY team wins by 10
+  const home = (x = {}) => ({ s1: 110, s2: 100, ...x });
+  const away = (x = {}) => ({ s1: 100, s2: 108, ...x }); // the right winner, margin 8 (error 2: winner 5 + 3 = 8)
+  const list = (spec) => Object.entries(spec).map(([uid, p]) => ({ uid, p, joker: false }));
+  const n = (prefix, count, p) => Object.fromEntries(Array.from({ length: count }, (_, i) => [`${prefix}${i}`, p]));
+
+  it('2 of the 20 real picks (10%) on the winner get the bonus although 3 auto-filled picks fell on the same side (5 of 23 = 21.7% would have blocked it)', () => {
+    const r = scoreGamePicks({ game: G, picks: list({ ...n('h', 18, home()), ...n('a', 2, away()), ...n('x', 3, away({ autoFilled: true })) }) });
+    expect(r.a0.riskPts).toBe(2);
+    expect(r.a0.pts).toBe(10); // 5 + 3 + the bonus 2
+    expect(r.x0.riskPts).toBe(0); // an auto-filled pick never gets it
+    expect(r.x0.pts).toBe(4); // 8, halved
+  });
+  it('an auto-filled pick alone on a side (way under 10%) still gets nothing', () => {
+    const r = scoreGamePicks({ game: G, picks: list({ ...n('h', 20, home()), x: away({ autoFilled: true }) }) });
+    expect(r.x.riskPts).toBe(0);
+  });
+  it('a real pick loses the bonus when the REAL percentage is above 10% (3 of 20 = 15%), even if the autos would have lowered the overall one', () => {
+    const r = scoreGamePicks({ game: G, picks: list({ ...n('h', 17, home()), ...n('a', 3, away()), ...n('x', 19, home({ autoFilled: true })), y: away({ autoFilled: true }) }) });
+    expect(r.a0.riskPts).toBe(0);
+  });
+  it('nobody picked on their own: no bonus for anyone, and nothing breaks', () => {
+    const r = scoreGamePicks({ game: G, picks: list(n('x', 5, away({ autoFilled: true }))) });
+    expect(Object.values(r).every((x) => x.riskPts === 0)).toBe(true);
+  });
+  it('the unique bonuses and every other rule are not touched (auto-filled never unique, an exact score still gets 17 or 22)', () => {
+    const r = scoreGamePicks({ game: G, picks: list({ ...n('h', 10, home()), e: { s1: 100, s2: 110 }, x: { s1: 100, s2: 110, autoFilled: true } }) });
+    expect(r.e.uniquePts).toBeGreaterThan(0); // the only REAL exact score: unique (the auto-filled exact does not block it)
+    expect(r.x.uniquePts).toBe(0);
+  });
+  it('computeAllPoints: riskHits and gamePts follow the new rule (the case of 12.11 and 18.11: two real picks gain 2 points each, the autos stay at half)', () => {
+    const uids = Array.from({ length: 23 }, (_, i) => `u${i}`);
+    const predictions = {};
+    uids.forEach((u, i) => { predictions[u] = { games: { g1: i < 18 ? home() : i < 20 ? away() : away({ autoFilled: true }) }, jokers: {} }; });
+    const r = computeAllPoints({ games: [G], predictions, uids, scoring: undefined, countedRounds: ['RS'] });
+    expect([r.u18.riskHits, r.u19.riskHits, r.u20.riskHits]).toEqual([1, 1, 0]);
+    expect([r.u18.gamePts, r.u19.gamePts, r.u20.gamePts]).toEqual([10, 10, 4]);
+    expect(r.u18.byGame.g1.r).toBe(1);
+    expect(r.u20.byGame.g1.r).toBe(0);
+    expect(r.u0.gamePts).toBe(0); // the wrong winner
+  });
+});

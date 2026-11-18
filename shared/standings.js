@@ -15,15 +15,18 @@ export const emptyStats = () => ({
 /**
  * Score every pick on ONE finished game (the only place the per-game rules are applied across players).
  * game: {round, s1, s2}   picks: [{uid, p:{s1,s2,autoFilled?}, joker}]   -> {uid: scoreGame result}
- * "unique" = exactly ONE non-auto-filled exact pick.  Risk % = share of ALL valid picks on the game with the same winner.
+ * "unique" = exactly ONE non-auto-filled exact pick.
+ * Courage (risk) bonus: the % = the share of the players' OWN picks (auto-filled ones are NOT counted) on this game with the same winner, and an auto-filled
+ * pick NEVER gets the bonus (owner's decision, update 125; before it the percentage counted every valid pick and an auto-filled pick could get the bonus).
  */
 export function scoreGamePicks({ game, picks, scoring }) {
   const sc = mergeScoring(scoring);
   const valid = picks.filter(({ p }) => validPick(p));
   const out = {};
   if (valid.length === 0) return out;
+  const real = valid.filter(({ p }) => !p.autoFilled);
   const counts = { 1: 0, 2: 0 };
-  valid.forEach(({ p }) => { counts[sideOf(p.s1, p.s2)] += 1; });
+  real.forEach(({ p }) => { counts[sideOf(p.s1, p.s2)] += 1; }); // the courage-bonus percentage: real picks only
   const exactManual = valid.filter(({ p }) => !p.autoFilled && p.s1 === game.s1 && p.s2 === game.s2);
   const uniqueUid = exactManual.length === 1 ? exactManual[0].uid : null;
   // exact MARGIN (right winner): includes the players who also hit the exact score, so a margin is unique only when nobody else has it
@@ -31,8 +34,10 @@ export function scoreGamePicks({ game, picks, scoring }) {
   const marginManual = valid.filter(({ p }) => !p.autoFilled && realMargin !== 0 && p.s1 - p.s2 === realMargin);
   const uniqueMarginUid = marginManual.length === 1 ? marginManual[0].uid : null;
   valid.forEach(({ uid, p, joker }) => {
+    // courage bonus: pickPct undefined = no bonus (an auto-filled pick, or nobody picked on their own)
+    const pickPct = p.autoFilled || real.length === 0 ? undefined : (100 * counts[sideOf(p.s1, p.s2)]) / real.length;
     out[uid] = scoreGame(p, { s1: game.s1, s2: game.s2, status: 'finished' }, {
-      round: game.round, joker: !!joker, pickPct: (100 * counts[sideOf(p.s1, p.s2)]) / valid.length, isUniqueExact: uid === uniqueUid, isUniqueMargin: uid === uniqueMarginUid, scoring: sc,
+      round: game.round, joker: !!joker, pickPct, isUniqueExact: uid === uniqueUid, isUniqueMargin: uid === uniqueMarginUid, scoring: sc,
     });
   });
   return out;
@@ -41,7 +46,7 @@ export function scoreGamePicks({ game, picks, scoring }) {
 /**
  * games: [{id, round, status, t1, t2, s1, s2, tipoffMs}]   predictions: {uid: {games:{id:{s1,s2,autoFilled?}}, jokers:{id:true}}}
  * Returns {uid: {...stats, byGame:{gameId:{pts,w,x,u,r,d}}}}.  gameHits === winnerCorrect (a hit needs the right winner).
- * "unique" = exactly ONE non-auto-filled exact pick on that game.  Risk % = share of ALL picks on the game with the same winner.
+ * "unique" = exactly ONE non-auto-filled exact pick on that game.  Risk % = share of the REAL (not auto-filled) picks with the same winner; an auto-filled pick gets no risk bonus.
  */
 export function computeAllPoints({ games, predictions, uids, scoring, countedRounds, timezone = 'Asia/Jerusalem' }) {
   const sc = mergeScoring(scoring);

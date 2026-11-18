@@ -38,3 +38,18 @@ Most important first: the save / scoring group, then the live-score group. Only 
 Admin -> Scoring -> "Recalculate all points" must say "חושבו מחדש N משתמשים ✓"; a player must be able to save a prediction; the Results page must show live scores.
 The browser console (F12) shows the real error of a failing callable (`functions/internal`, `not-found`, `permission-denied`); a CORS error on a callable
 usually means the function did not answer at all (not running / not deployed).
+
+## After a change of the scoring rules (`shared/standings.js`, `shared/scoring.js`): deploy EVERY function that computes points
+
+13 functions call the shared scoring (`recalcAllPoints`): **lockGamePicks, onGameUpdated, recalcAll, reconcilePoints, onBonusUpdated, resetParticipantClaim,
+adminEditPredictions, addAdjustment, deleteAdjustment, restoreBackup, seasonReset, recoverUsers, onParticipantUpdated**. A function that is not redeployed keeps the
+OLD rule, and the next admin action that triggers it (an adjustment, an edit of a pick, a restore...) would recalculate everything with the old rule and silently bring
+the old points back. Deploy them in three small groups (one command at a time, wait for `+ Deploy complete!`):
+
+    firebase deploy --only functions:recalcAll,functions:reconcilePoints,functions:lockGamePicks,functions:onGameUpdated,functions:onBonusUpdated
+
+    firebase deploy --only functions:onParticipantUpdated,functions:resetParticipantClaim,functions:adminEditPredictions,functions:addAdjustment,functions:deleteAdjustment
+
+    firebase deploy --only functions:restoreBackup,functions:recoverUsers,functions:seasonReset
+
+Then Admin -> Scoring -> "Recalculate all points" once, then `git push` (the app computes the provisional / live points with the same shared code).
