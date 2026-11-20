@@ -40,7 +40,7 @@ describe('i18n', () => {
   it('every text family built with a template (t(`prefix.${x}`)) is complete', () => {
     const families = {
       'status.': GAME_STATUSES, 'round.': GAME_ROUNDS, 'bq.type.': BONUS_TYPES, 'bq.cat.': ['general', 'season', 'month', 'ranking'],
-      'lb.tab.': ['total', 'games', 'bonus', 'jokers', 'stats'], 'h2h.tab.': ['league', 'knockout', 'fun'], 'tabs.': ['games', 'week', 'bonus'],
+      'lb.tab.': ['total', 'games', 'bonus', 'jokers', 'stats'], 'h2h.tab.': ['cup', 'fun'], 'cup.stage.': ['G', 'R', 'QF', 'SF', 'F'], 'cup.status.': ['undated', 'upcoming', 'live', 'over'], 'acup.err.': ['format', 'order', 'overlap'], 'tabs.': ['games', 'week', 'bonus'],
       'ah.tab.': ['tournament', 'fun'], 'al.view.': ['actions', 'errors'], 'results.tab.': ['live', 'finished', 'bonus'], 'home.hi.': ['morning', 'afternoon', 'evening', 'night'], 'mp.tab.': ['games', 'bonus'], 'bq.tab.': ['questions', 'players', 'missing'], 'rm.tab.': ['games', 'bonus'], 'rb.sub.': ['others', 'ranking'], 'mid.stage.': ['G', 'QF', 'SF', 'F'], 'mid.status.': ['upcoming', 'live', 'over'], 'ah.status.': ['league', 'knockout', 'finished'],
       'ah.tb.': ['winners', 'exactHits', 'uniqueHits', 'total'], 'tb.': ['total', 'exactHits', 'uniqueHits', 'bonus'],
       'pred.err.': ['locked', 'closed', 'not-found', 'not-counted', 'teams-tbd', 'invalid-score', 'tie', 'joker-limit', 'joker-needs-pick'],

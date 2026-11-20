@@ -1,20 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { usePoints } from '../contexts/PointsContext.jsx';
 import { windowStats, funPairResult } from '@shared/h2h.js';
-
-/** h2hTournament/main. undefined = loading, null = not set up yet. */
-export function useTournament() {
-  const { user } = useAuth();
-  const [data, setData] = useState(undefined);
-  useEffect(() => {
-    if (!user) return undefined;
-    return onSnapshot(doc(db, 'h2hTournament', 'main'), (s) => setData(s.exists() ? s.data() : null), () => setData(null));
-  }, [user]);
-  return data;
-}
 
 /** "Pairs for fun" (h2h collection). */
 export function useFunPairs() {

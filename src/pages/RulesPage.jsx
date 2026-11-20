@@ -3,7 +3,8 @@ import PageShell from '../components/PageShell.jsx';
 import { useLang } from '../contexts/LangContext.jsx';
 import { useScoring } from '../contexts/SettingsContext.jsx';
 import { useBonus } from '../contexts/BonusContext.jsx';
-import { useTournament } from '../hooks/useH2H.js';
+import { useH2HCupDoc } from '../hooks/useH2HCup.js';
+import { CUP_STAGES } from '@shared/h2hCup.js';
 import { scoreGame } from '@shared/scoring.js';
 import { formatKeyDay } from '../utils/dates.js';
 import { MID_STAGES, MID_WINDOWS } from '@shared/midTournament.js';
@@ -37,7 +38,7 @@ export default function RulesPage() {
     return () => { on = false; };
   }, []);
   const s = useScoring();
-  const tournament = useTournament();
+  const { data: cup } = useH2HCupDoc(); // the dates of the Head to Head stages (set by the admin)
   const months = seasonMonths(); // Champion of the month: November - April
   const monthName = (key) => new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(`${key}-15T12:00:00Z`));
   const { questions } = useBonus();
@@ -122,11 +123,18 @@ export default function RulesPage() {
 
       <Section title={t('rules.sec.h2h')} intro={t('rules.h2h.intro')}>
         <Note tone="green">
-          <strong>{t('rules.h2h.league.title')}</strong>
+          <strong>{t('cup.stage.G')}</strong>
           <ul>
-            <li>{t('rules.h2h.league.b1')}</li>
-            <li>{t('rules.h2h.league.b2')}</li>
-            <li>{tournament?.advancePerGroup ? t('rules.h2h.league.advN', { n: tournament.advancePerGroup }) : t('rules.h2h.league.adv')}</li>
+            <li>{t('rules.h2h.g.b1')}</li>
+            <li>{t('rules.h2h.g.b2')}</li>
+          </ul>
+        </Note>
+        <Note tone="teal">
+          <strong>{t('cup.stage.R')}</strong>
+          <ul>
+            <li>{t('rules.h2h.r.b1')}</li>
+            <li>{t('rules.h2h.r.b2')}</li>
+            <li>{t('rules.h2h.r.b3')}</li>
           </ul>
         </Note>
         <Note tone="blue">
@@ -136,6 +144,15 @@ export default function RulesPage() {
             <li>{t('rules.h2h.ko.b2')}</li>
           </ul>
         </Note>
+        <div className="mid-sched">
+          <div className="muted small">{t('rules.h2h.scheduleTitle')}</div>
+          {CUP_STAGES.map((k) => (
+            <div key={k} className="mid-sched-row">
+              <strong>{t(`cup.stage.${k}`)}</strong>
+              <span className="muted">{cup?.windows?.[k]?.lo && cup?.windows?.[k]?.hi ? `${formatKeyDay(cup.windows[k].lo, lang)} – ${formatKeyDay(cup.windows[k].hi, lang)}` : t('cup.datesTbd')}</span>
+            </div>
+          ))}
+        </div>
         <Note tone="teal">
           <strong>{t('rules.h2h.fun.title')}</strong>
           <p>{t('rules.h2h.fun.body')}</p>

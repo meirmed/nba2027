@@ -7,7 +7,7 @@ import { useTeams } from '../../contexts/TeamsContext.jsx';
 import { usePoints } from '../../contexts/PointsContext.jsx';
 import { useGames } from '../../hooks/useGames.js';
 import { useMidTournament } from '../../hooks/useMidTournament.js';
-import { useTournament } from '../../hooks/useH2H.js';
+import { useH2HCupDoc } from '../../hooks/useH2HCup.js';
 import { countsForStandings } from '@shared/games.js';
 import { MAX_WORDS, claudePrompt, computeFacts, factLine, weekOptions, wordCount, writeSummary } from '@shared/weeklySummary.js';
 import { dayKey, formatKeyDay } from '../../utils/dates.js';
@@ -21,7 +21,7 @@ export default function AdminWeeklySummaryPanel() {
   const { baseRows } = usePoints();
   const { games } = useGames();
   const { data: mid } = useMidTournament(); // the mid-season tournament and Head to Head: their facts appear once they are set up
-  const h2h = useTournament();
+  const { data: h2h } = useH2HCupDoc(); // the Head to Head competition (h2hTournament/cup)
   const tz = settings.timezone;
 
   const weeks = useMemo(() => weekOptions(dayKey(new Date(), tz)), [tz]);

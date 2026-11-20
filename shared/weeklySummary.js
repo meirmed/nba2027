@@ -6,7 +6,7 @@ import { scoreGamePicks } from './standings.js';
 import { buildBracket } from './midTournament.js';
 import { rankAt } from './rankMoves.js';
 export { rankAt }; // (the tests import it from here)
-import { rankGroup, windowStats as h2hWindow } from './h2h.js';
+import { buildCup, CUP_ADVANCE_1, CUP_ADVANCE_2, CUP_GROUPS_1, CUP_GROUPS_2 } from './h2hCup.js';
 
 export const MAX_WORDS = 380;
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -64,7 +64,27 @@ function groupFacts({ comp, group, before, after, advance }) {
 }
 const best1 = (arr) => [...arr].sort((a, b) => b.score - a.score)[0];
 
-/** Mid-season tournament: group leaders and the bubble while the group stage runs, who qualified, the stages that ended, the champion, a close pair. */
+/** The knockout facts: a stage that ended (the winners and the closest decision), the champion, a close pair in a running stage. The same for the mid-season
+ *  tournament and Head to Head (both run the same bracket). A / B = the competition at the end of the week / at the end of the day before it. */
+function knockoutFacts({ A, B, comp }) {
+  const out = [];
+  ['QF', 'SF', 'F'].forEach((s) => {
+    const ps = Object.values(A.pairs).filter((x) => x.stage === s && x.a && x.b);
+    if (A.over[s] && !B.over[s] && ps.length && ps.every((x) => x.winner)) {
+      const info = ps.map((x) => { const w = x.winner === x.a.uid ? x.a : x.b; const l = w === x.a ? x.b : x.a; return { winner: w.name, loser: l.name, margin: Math.round(Math.abs(x.a.pts - x.b.pts) * 100) / 100 }; });
+      const closest = [...info].sort((a, b) => a.margin - b.margin)[0];
+      if (s === 'F') out.push({ type: 'champion', score: 100, comp, name: closest.winner, runner: closest.loser, margin: closest.margin });
+      else out.push({ type: 'stageDone', score: 85, comp, stage: STAGE_LABEL[s], winners: info.map((i) => i.winner).join(', '), closest });
+    } else if (A.status[s] === 'live' && ps.length) {
+      const c = [...ps].filter((x) => x.a.pts + x.b.pts > 0).map((x) => ({ a: x.a.name, b: x.b.name, margin: Math.round(Math.abs(x.a.pts - x.b.pts) * 100) / 100 })).sort((a, b) => a.margin - b.margin)[0];
+      if (c && c.margin <= 3) out.push({ type: 'pairLive', score: 55 + (3 - c.margin) * 2, comp, stage: STAGE_LABEL[s], a: c.a, b: c.b, margin: c.margin });
+    }
+  });
+  return out;
+}
+const bestGroupFacts = (gs, out) => ['groupLeader', 'bubble'].forEach((ty) => { const f = best1(gs.filter((x) => x.type === ty)); if (f) out.push(f); });
+
+/** Mid-season tournament: group leaders and the bubble while the group stage runs, who qualified, then the knockout facts. */
 function midFacts({ mid, rows, bracketGames, weekLo, weekHi }) {
   const out = [];
   if (!mid?.groups || Object.values(mid.groups).flat().length === 0) return out;
@@ -72,59 +92,28 @@ function midFacts({ mid, rows, bracketGames, weekLo, weekHi }) {
   const build = (day) => buildBracket({ groups: mid.groups, rowsByUid: rowsAt(rows, day), overrides: mid.overrides || {}, todayKey: day, games: bracketGames });
   const A = build(weekHi);
   const B = build(dayBefore);
-  if (A.status.G === 'live') {
-    const gs = Object.keys(A.tables).filter((g) => A.tables[g].table.length >= 2).flatMap((g) => groupFacts({ comp: MID_COMP, group: g, before: B.tables[g].table, after: A.tables[g].table, advance: 2 }));
-    ['groupLeader', 'bubble'].forEach((ty) => { const f = best1(gs.filter((x) => x.type === ty)); if (f) out.push(f); });
-  }
+  if (A.status.G === 'live') bestGroupFacts(Object.keys(A.tables).filter((g) => A.tables[g].table.length >= 2).flatMap((g) => groupFacts({ comp: MID_COMP, group: g, before: B.tables[g].table, after: A.tables[g].table, advance: 2 })), out);
   if (A.over.G && !B.over.G) out.push({ type: 'qualified', score: 95, comp: MID_COMP, names: Object.keys(A.tables).flatMap((g) => A.tables[g].table.slice(0, 2).map((r) => r.name)).join(', ') });
-  ['QF', 'SF', 'F'].forEach((s) => {
-    const ps = Object.values(A.pairs).filter((x) => x.stage === s && x.a && x.b);
-    if (A.over[s] && !B.over[s] && ps.length && ps.every((x) => x.winner)) {
-      const info = ps.map((x) => { const w = x.winner === x.a.uid ? x.a : x.b; const l = w === x.a ? x.b : x.a; return { winner: w.name, loser: l.name, margin: Math.round(Math.abs(x.a.pts - x.b.pts) * 100) / 100 }; });
-      const closest = [...info].sort((a, b) => a.margin - b.margin)[0];
-      if (s === 'F') out.push({ type: 'champion', score: 100, comp: MID_COMP, name: closest.winner, runner: closest.loser, margin: closest.margin });
-      else out.push({ type: 'stageDone', score: 85, comp: MID_COMP, stage: STAGE_LABEL[s], winners: info.map((i) => i.winner).join(', '), closest });
-    } else if (A.status[s] === 'live' && ps.length) {
-      const c = [...ps].filter((x) => x.a.pts + x.b.pts > 0).map((x) => ({ a: x.a.name, b: x.b.name, margin: Math.round(Math.abs(x.a.pts - x.b.pts) * 100) / 100 })).sort((a, b) => a.margin - b.margin)[0];
-      if (c && c.margin <= 3) out.push({ type: 'pairLive', score: 55 + (3 - c.margin) * 2, comp: MID_COMP, stage: STAGE_LABEL[s], a: c.a, b: c.b, margin: c.margin });
-    }
-  });
+  out.push(...knockoutFacts({ A, B, comp: MID_COMP }));
   return out;
 }
 
-/** Head to Head (the league of groups, then the knockout stages): the same kinds of facts from h2hTournament/main. Nothing before it is set up. */
-function h2hFacts({ h2h, rows, weekLo, weekHi }) {
+/**
+ * Head to Head (shared/h2hCup.js): group leaders and the bubble in the group stage (4 advance) and in the round of 16 (2 advance), the players who are out after the
+ * group stage, who goes to the knockout, then the knockout facts. cup = h2hTournament/cup (null / no groups / no dates = nothing to say).
+ */
+function cupFacts({ cup, rows, bracketGames, weekLo, weekHi }) {
   const out = [];
-  if (!h2h?.league?.groups) return out;
+  if (!cup?.groups || Object.values(cup.groups).flat().length === 0) return out;
   const dayBefore = addDaysToKey(weekLo, -1);
-  const nameOf = Object.fromEntries(rows.map((r) => [r.uid, r.name]));
-  const at = rowsAt(rows, weekHi);
-  const bef = rowsAt(rows, dayBefore);
-  const lg = h2h.league;
-  const table = (members, byUid) => rankGroup(members, (uid) => ({ ...h2hWindow(byUid[uid]?.byDay, lg.startDay, lg.endDay ?? null), total: byUid[uid]?.total ?? 0 }), (u) => nameOf[u]).map((r) => ({ ...r, name: nameOf[r.uid] || '' }));
-  const leagueOpen = !lg.endDay || lg.endDay >= weekHi;
-  if (leagueOpen && lg.startDay && lg.startDay <= weekHi) {
-    const advance = h2h.advancePerGroup || 2;
-    const gs = Object.entries(lg.groups).filter(([, g]) => (g.members || []).length >= 2).flatMap(([id, g]) => groupFacts({ comp: H2H_COMP, group: id, before: table(g.members, bef), after: table(g.members, at), advance }));
-    ['groupLeader', 'bubble'].forEach((ty) => { const f = best1(gs.filter((x) => x.type === ty)); if (f) out.push(f); });
-  }
-  const pairScore = (stage, pid, p, byUid) => {
-    const sc = (uid, adv) => Math.round(((h2hWindow(byUid[uid]?.byDay, stage.startDay, stage.endDay ?? null).pts) + (adv || 0)) * 100) / 100;
-    return { a: sc(p.a, p.advA), b: sc(p.b, p.advB), pid };
-  };
-  Object.values(h2h.stages || {}).forEach((stage) => {
-    const entries = Object.entries(stage.pairs || {}).filter(([, p]) => p.a && p.b);
-    if (entries.length === 0) return;
-    if (stage.endDay && stage.endDay >= weekLo && stage.endDay <= weekHi && entries.every(([, p]) => p.winner)) {
-      const info = entries.map(([pid, p]) => { const s = pairScore(stage, pid, p, at); const wUid = p.winner; const lUid = wUid === p.a ? p.b : p.a; return { winner: nameOf[wUid] || '', loser: nameOf[lUid] || '', margin: Math.round(Math.abs(s.a - s.b) * 100) / 100 }; });
-      const closest = [...info].sort((a, b) => a.margin - b.margin)[0];
-      if (entries.length === 1 && h2h.status === 'finished') out.push({ type: 'champion', score: 100, comp: H2H_COMP, name: closest.winner, runner: closest.loser, margin: closest.margin });
-      else out.push({ type: 'stageDone', score: 85, comp: H2H_COMP, stage: `שלב ${stage.stageNum}`, winners: info.map((i) => i.winner).join(', '), closest });
-    } else if (!stage.endDay && stage.startDay && stage.startDay <= weekHi) {
-      const c = entries.map(([pid, p]) => { const s = pairScore(stage, pid, p, at); return { a: nameOf[p.a] || '', b: nameOf[p.b] || '', sum: s.a + s.b, margin: Math.round(Math.abs(s.a - s.b) * 100) / 100 }; }).filter((x) => x.sum > 0).sort((a, b) => a.margin - b.margin)[0];
-      if (c && c.margin <= 3) out.push({ type: 'pairLive', score: 55 + (3 - c.margin) * 2, comp: H2H_COMP, stage: `שלב ${stage.stageNum}`, a: c.a, b: c.b, margin: c.margin });
-    }
-  });
+  const build = (day) => buildCup({ cfg: cup, rowsByUid: rowsAt(rows, day), todayKey: day, games: bracketGames });
+  const A = build(weekHi);
+  const B = build(dayBefore);
+  if (A.status.G === 'live') bestGroupFacts(CUP_GROUPS_1.filter((g) => A.tablesG[g].table.length >= 2).flatMap((g) => groupFacts({ comp: H2H_COMP, group: g, before: B.tablesG[g].table, after: A.tablesG[g].table, advance: CUP_ADVANCE_1 })), out);
+  if (A.over.G && !B.over.G && A.out.length) out.push({ type: 'cupEliminated', score: 95, comp: H2H_COMP, out: A.out.length, stay: Object.values(A.groupsR).flat().length, names: A.out.map((r) => r.name).join(', ') });
+  if (A.status.R === 'live') bestGroupFacts(CUP_GROUPS_2.filter((e) => A.tablesR[e].table.length >= 2).flatMap((e) => groupFacts({ comp: H2H_COMP, group: e, before: B.tablesR[e].table, after: A.tablesR[e].table, advance: CUP_ADVANCE_2 })), out);
+  if (A.over.R && !B.over.R) out.push({ type: 'qualified', score: 95, comp: H2H_COMP, done: 'שלב שמינית הגמר', next: 'רבע הגמר', from: 'משמינית הגמר', names: CUP_GROUPS_2.flatMap((e) => A.tablesR[e].table.slice(0, 2).map((r) => r.name)).join(', ') });
+  out.push(...knockoutFacts({ A, B, comp: H2H_COMP }));
   return out;
 }
 
@@ -137,11 +126,11 @@ const kindOf = (s) => (s.exact ? 'exact' : s.exactMargin ? 'exactMargin' : s.dif
  * rows: points docs ({uid, name, byDay, bonus, adjust}); games: [{id, status, t1, t2, s1, s2, tipoffMs}] (counted games);
  * picksByGame: {gameId: {uid: {s1, s2, joker, autoFilled}}}; weekLo / weekHi = Israel day keys (inclusive).
  * unfinishedDays = day keys of the week that still have a game waiting / being played (no "star of the day" for them).
- * mid = midTournament/main, h2h = h2hTournament/main (null = not set up: no facts about it), bracketGames = counted games [{dayKey, status}] (to know when a stage is over).
+ * mid = midTournament/main, h2h = h2hTournament/cup (null = not set up: no facts about it), bracketGames = counted games [{dayKey, status}] (to know when a stage is over).
  */
 export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi, teamName = (a) => a, mid = null, h2h = null, bracketGames = [], unfinishedDays = [] }) {
   const facts = [];
-  facts.push(...midFacts({ mid, rows, bracketGames, weekLo, weekHi }), ...h2hFacts({ h2h, rows, weekLo, weekHi }));
+  facts.push(...midFacts({ mid, rows, bracketGames, weekLo, weekHi }), ...cupFacts({ cup: h2h, rows, bracketGames, weekLo, weekHi }));
 
   // ---- ranks: who climbed, who fell, who took the lead ----
   const before = rankAt(rows, addDaysToKey(weekLo, -1));
@@ -387,9 +376,9 @@ Object.assign(T, {
     (f) => `בית ${f.group}: ${f.name2} מול ${f.name3} על המקום האחרון בנוקאאוט של ${cn(f.comp)}, פער של ${f.gap} נקודות.`,
   ],
   qualified: [
-    (f) => `${cn(f.comp)}: שלב הבתים נגמר, והעולים לרבע הגמר הם ${f.names}. מי שנשאר בחוץ מוזמן לראות את הנוקאאוט מהיציע, עם פופקורן.`,
-    (f) => `נחתם שלב הבתים ב${cn(f.comp)}, ולרבע הגמר מגיעים: ${f.names}. שמונה שמות, שמונה ביטחונות, ואיש לא יודע מי יתפרק ראשון.`,
-    (f) => `השמונה שעלו מהבתים ב${cn(f.comp)}: ${f.names}. לשאר שמור כבוד, ולפעמים גם תקווה לשנה הבאה.`,
+    (f) => `${cn(f.comp)}: ${f.done || 'שלב הבתים'} נגמר, והעולים ל${f.next || 'רבע הגמר'} הם ${f.names}. מי שנשאר בחוץ מוזמן לראות את הנוקאאוט מהיציע, עם פופקורן.`,
+    (f) => `נחתם ${f.done || 'שלב הבתים'} ב${cn(f.comp)}, ול${f.next || 'רבע הגמר'} מגיעים: ${f.names}. שמונה שמות, שמונה ביטחונות, ואיש לא יודע מי יתפרק ראשון.`,
+    (f) => `השמונה שעלו ${f.from || 'מהבתים'} ב${cn(f.comp)}: ${f.names}. לשאר שמור כבוד, ולפעמים גם תקווה לשנה הבאה.`,
   ],
   stageDone: [
     (f) => `${f.stage} ב${cn(f.comp)} הסתיים. המעפילים: ${f.winners}. ההכרעה הצמודה ביותר: ${f.closest.winner} מול ${f.closest.loser}, הפרש של ${f.closest.margin} נקודות.`,
@@ -451,6 +440,19 @@ Object.assign(C, {
   repeatStar: ['מי שלא מצליח לעקוף מוזמן להצטרף.', 'הלילה הבא יגלה אם זה שגרה או הפסקה.', 'ובינתיים הקהל מצביע ברגליים, ועם הרבה סקרנות.'],
   starSpecial: ['הסיפור הזה ממשיך לעניין את מי שבחר אחרת.', 'מי שנתן עדיפות לביטחון קיבל שיעור בהימור.', 'בפעם הבאה, גם המסורתיים יסתכלו בעיניים אחרות על הטבלה.'],
 });
+Object.assign(T, {
+  cupEliminated: [
+    (f) => `${cn(f.comp)}: שלב הבתים נגמר, ו-${f.stay} עולים לשמינית הגמר. הודחו ${f.out}: ${f.names}. תודה על ההשתתפות, והזמנה חמה לצפות מהיציע עם פופקורן.`,
+    (f) => `נסגר שלב הבתים ב${cn(f.comp)}: ${f.out} הודחו (${f.names}), ו-${f.stay} ממשיכים. בשלב הבא אין מקום לקפה קר.`,
+    (f) => `בבתים של ${cn(f.comp)} ירד המסך על ${f.names}. ${f.stay} האחרים עוברים לשמינית הגמר, ושם הכול מתחיל מאפס.`,
+  ],
+});
+Object.assign(E, {
+  cupEliminated: ['מי שהודח יכול להתנחם בכך שהטבלה הכללית עדיין פתוחה בפניהם.', 'ההדחה בשלב הבתים כואבת, אבל היא לא סוף העולם, רק סוף הבית.', 'המשחק נמשך גם בלעדיהם, ויש להניח שהם ימשיכו לנחש מהספה.'],
+});
+Object.assign(C, {
+  cupEliminated: ['בשמינית הגמר אין הרבה זמן לנשום, אבל יש הרבה נקודות ללכוד.', 'מי שעלה מוזמן לאפס את הזיכרון, כי הטבלה עושה זאת בכל מקרה.', 'ועכשיו נראה מי ישרוד את ארבעת הבתים החדשים.'],
+});
 const QUIET = 'שבוע שקט בטבלה: כל המשתתפים התקדמו בקצב של תור בסניף הדואר. נחכה לשבוע הבא, שבטח יהיה סוער יותר.';
 
 // a deterministic "random" choice: the same seed always gives the same text, and a new seed gives a new mix (not a short cycle)
@@ -505,7 +507,8 @@ export function factLine(f) {
     case 'loneWolf': return `${f.n} תוצאות ייחודיות (רק אחד ניחש כך) השבוע: ${f.name}`;
     case 'groupLeader': return `${f.comp}, בית ${f.group}: ראש הטבלה עבר ${pre('מ', f.prev)} ${pre('ל', f.name)}`;
     case 'bubble': return `${f.comp}, בית ${f.group}: ${f.gap} נקודות בין ${f.name2} (המקום האחרון שעולה) לבין ${f.name3}`;
-    case 'qualified': return `${f.comp}: שלב הבתים הסתיים. העולים: ${f.names}`;
+    case 'qualified': return `${f.comp}: ${f.done || 'שלב הבתים'} הסתיים. העולים: ${f.names}`;
+    case 'cupEliminated': return `${f.comp}: שלב הבתים הסתיים. ${f.out} הודחו: ${f.names}. ${f.stay} ממשיכים לשמינית הגמר`;
     case 'stageDone': return `${f.comp}: ${f.stage} הסתיים. המעפילים: ${f.winners}. הצמוד ביותר: ${f.closest.winner} על ${f.closest.loser}, ${f.closest.margin} נקודות`;
     case 'champion': return `${f.comp}: האלוף ${f.name}, מול ${f.runner}, בהפרש ${f.margin} נקודות`;
     case 'pairLive': return `${f.comp}, ${f.stage}: ${f.a} מול ${f.b}, פער של ${f.margin} נקודות`;

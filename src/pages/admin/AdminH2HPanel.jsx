@@ -2,11 +2,11 @@ import { useState } from 'react';
 import PageShell from '../../components/PageShell.jsx';
 import ErrorBoundary from '../../components/ErrorBoundary.jsx';
 import { useLang } from '../../contexts/LangContext.jsx';
-import TournamentManager from './TournamentManager.jsx';
+import CupManager from './CupManager.jsx';
 import FunPairsManager from './FunPairsManager.jsx';
 
-// Shell only: Tournament (groups league -> knockout) | Pairs for fun. Editors live in the two managers.
-const TABS = { tournament: TournamentManager, fun: FunPairsManager };
+// Shell only: the competition (dates, groups A-D, tie decisions) | Pairs for fun. Editors live in the two managers.
+const TABS = { tournament: CupManager, fun: FunPairsManager };
 
 export default function AdminH2HPanel() {
   const { t } = useLang();

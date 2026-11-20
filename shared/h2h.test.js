@@ -166,8 +166,9 @@ describe('the joker in Head to Head', () => {
   it('the pairs for fun screens (players and admin) use funResult', () => {
     ['pages/h2h/FunTab.jsx', 'pages/admin/FunPairsManager.jsx'].forEach((f) => { expect(src(f)).toContain('funResult'); expect(src(f)).not.toContain('statsOf('); });
   });
-  it('the league, the knockout and the admin tournament never count the joker', () => {
-    ['pages/h2h/LeagueTab.jsx', 'pages/h2h/KnockoutTab.jsx', 'pages/admin/TournamentManager.jsx'].forEach((f) => { expect(src(f)).not.toContain('funResult'); expect(src(f)).not.toMatch(/joker:\s*true/); });
+  it('the Head to Head competition (the groups, the round of 16, the knockout) never counts the joker', () => {
+    ['pages/h2h/CupTab.jsx', 'pages/admin/CupManager.jsx', 'hooks/useH2HCup.js'].forEach((f) => { expect(src(f)).not.toContain('funResult'); expect(src(f)).not.toMatch(/joker:\s*true/); });
+    expect(fs.readFileSync(new URL('./h2hCup.js', import.meta.url), 'utf8')).not.toMatch(/joker:\s*true/);
   });
   it('the mid-season tournament has its own windowStats and never counts the joker', () => {
     const mid = fs.readFileSync(new URL('./midTournament.js', import.meta.url), 'utf8');

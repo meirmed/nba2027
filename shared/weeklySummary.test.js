@@ -235,32 +235,63 @@ describe('facts about the mid-season tournament', () => {
   });
 });
 
-describe('facts about Head to Head', () => {
-  const rows = [prow('x1', { '2026-12-15': 10, '2026-12-22': 0 }), prow('x2', { '2026-12-15': 5, '2026-12-22': 20 }), prow('x3', {}), prow('y1', { '2026-12-16': 20 }), prow('y2', { '2026-12-16': 19 }), prow('y3', {})];
-  const league = { startDay: '2026-12-14', endDay: null, groups: { A: { members: ['x1', 'x2', 'x3'] }, B: { members: ['y1', 'y2', 'y3'] } } };
-  it('the league: a group changed its leader; a tight fight for the last place that qualifies', () => {
-    const f = computeFacts({ rows, games: [], picksByGame: {}, weekLo: '2026-12-20', weekHi: '2026-12-26', h2h: { status: 'league', advancePerGroup: 1, league, stages: {} } });
-    expect(f.find((x) => x.type === 'groupLeader')).toMatchObject({ comp: H2H_COMP, group: 'A', name: 'x2', prev: 'x1' });
-    expect(f.find((x) => x.type === 'bubble')).toMatchObject({ comp: H2H_COMP, group: 'B', name2: 'y1', name3: 'y2', gap: 1 });
+describe('facts about Head to Head (groups A-D -> round of 16 E-H -> knockout)', () => {
+  const groups = { A: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'], B: ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'], C: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'], D: ['d1', 'd2', 'd3', 'd4', 'd5'] };
+  const W = { G: { lo: '2026-12-01', hi: '2026-12-10' }, R: { lo: '2026-12-11', hi: '2026-12-20' }, QF: { lo: '2026-12-21', hi: '2026-12-27' }, SF: { lo: '2026-12-28', hi: '2027-01-03' }, F: { lo: '2027-01-04', hi: '2027-01-10' } };
+  const pts = {};
+  Object.values(groups).forEach((m) => m.forEach((u, i) => { pts[u] = { '2026-12-02': 60 - i * 10 }; })); // the group stage: 60, 50, 40, 30, 20, 10
+  const add = (u, day, x) => { pts[u] = { ...pts[u], [day]: x }; };
+  [['a1', 10], ['d2', 40], ['c3', 30], ['b4', 20], ['b1', 5], ['a2', 50], ['d3', 20], ['c4', 10], ['c1', 10], ['b2', 20], ['a3', 5], ['d4', 30], ['d1', 50], ['c2', 40], ['b3', 20], ['a4', 10]].forEach(([u, x]) => add(u, '2026-12-15', x)); // round of 16
+  [['d2', 20], ['d3', 10], ['a2', 5], ['c3', 15], ['d4', 7], ['c2', 9], ['d1', 30], ['b2', 1]].forEach(([u, x]) => add(u, '2026-12-22', x)); // quarter finals
+  [['d2', 10], ['c2', 12], ['c3', 20], ['d1', 5]].forEach(([u, x]) => add(u, '2026-12-30', x)); // semi finals
+  [['c2', 8], ['c3', 9]].forEach(([u, x]) => add(u, '2027-01-05', x)); // the final
+  const rows = Object.keys(pts).map((u) => prow(u, pts[u]));
+  const run = (cup, weekLo, weekHi) => computeFacts({ rows, games: [], picksByGame: {}, weekLo, weekHi, h2h: cup });
+  const get = (f, ty) => f.find((x) => x.type === ty && x.comp === H2H_COMP);
+
+  it('while the group stage runs: a group changed its leader, and the fight for the 4th place (the last one that advances)', () => {
+    const r2 = rows.map((r) => (r.uid === 'a2' ? prow('a2', { '2026-12-02': 50, '2026-12-08': 20 }) : r.uid === 'b5' ? prow('b5', { '2026-12-02': 29 }) : r.uid === 'b4' ? prow('b4', { '2026-12-02': 30 }) : r));
+    const f = computeFacts({ rows: r2, games: [], picksByGame: {}, weekLo: '2026-12-06', weekHi: '2026-12-09', h2h: { groups, windows: { G: W.G } } });
+    expect(get(f, 'groupLeader')).toMatchObject({ group: 'A', name: 'a2', prev: 'a1' });
+    expect(get(f, 'bubble')).toMatchObject({ group: 'B', name2: 'b4', name3: 'b5', gap: 1 });
   });
-  const kRows = [prow('x1', { '2026-12-22': 30 }), prow('x2', { '2026-12-22': 25 }), prow('x3', { '2026-12-23': 10 }), prow('x4', { '2026-12-23': 12 })];
-  const closedLeague = { ...league, endDay: '2026-12-20' };
-  it('a knockout stage closed in the week: the winners and the closest decision', () => {
-    const h2h = { status: 'knockout', advancePerGroup: 1, league: closedLeague, stages: { K1: { stageNum: 1, startDay: '2026-12-21', endDay: '2026-12-24', pairs: { p1: { a: 'x1', b: 'x2', advA: 0, advB: 0, winner: 'x1' }, p2: { a: 'x3', b: 'x4', advA: 0, advB: 0, winner: 'x4' } } } } };
-    const f = computeFacts({ rows: kRows, games: [], picksByGame: {}, weekLo: '2026-12-20', weekHi: '2026-12-26', h2h }).find((x) => x.type === 'stageDone');
-    expect(f).toMatchObject({ comp: H2H_COMP, stage: 'שלב 1', winners: 'x1, x4' });
-    expect(f.closest).toEqual({ winner: 'x4', loser: 'x3', margin: 2 });
+  it('the group stage ended in the week: the 7 who are out (2 + 2 + 2 + 1) and the 16 who stay', () => {
+    const f = get(run({ groups, windows: W }, '2026-12-06', '2026-12-12'), 'cupEliminated');
+    expect(f).toMatchObject({ out: 7, stay: 16, names: 'a5, a6, b5, b6, c5, c6, d5' });
   });
-  it('the last stage (one pair) closed and the tournament finished: the champion', () => {
-    const h2h = { status: 'finished', championUid: 'x1', league: closedLeague, stages: { K2: { stageNum: 2, startDay: '2026-12-21', endDay: '2026-12-24', pairs: { p1: { a: 'x1', b: 'x2', advA: 0, advB: 0, winner: 'x1' } } } } };
-    expect(computeFacts({ rows: kRows, games: [], picksByGame: {}, weekLo: '2026-12-20', weekHi: '2026-12-26', h2h }).find((x) => x.type === 'champion')).toMatchObject({ comp: H2H_COMP, name: 'x1', runner: 'x2', margin: 5 });
+  it('the round of 16 ended in the week: the 8 who go to the knockout (the top two of E, F, G, H)', () => {
+    const f = run({ groups, windows: W }, '2026-12-20', '2026-12-26').find((x) => x.type === 'qualified' && x.comp === H2H_COMP);
+    expect(f).toMatchObject({ done: 'שלב שמינית הגמר', next: 'רבע הגמר', from: 'משמינית הגמר', names: 'd2, c3, a2, d3, d4, b2, d1, c2' });
   });
-  it('a head start is part of the margin; a stage that closed in another week and a missing setup give nothing', () => {
-    const h2h = { status: 'knockout', league: closedLeague, stages: { K1: { stageNum: 1, startDay: '2026-12-21', endDay: '2026-12-24', pairs: { p1: { a: 'x1', b: 'x2', advA: 0, advB: 4, winner: 'x2' } } } } };
-    const f = computeFacts({ rows: kRows, games: [], picksByGame: {}, weekLo: '2026-12-20', weekHi: '2026-12-26', h2h }).find((x) => x.type === 'stageDone');
-    expect(f.closest.margin).toBe(1); // 30 vs 25 + 4
-    expect(computeFacts({ rows: kRows, games: [], picksByGame: {}, weekLo: '2027-01-03', weekHi: '2027-01-09', h2h }).filter((x) => x.comp)).toEqual([]);
-    expect(computeFacts({ rows: kRows, games: [], picksByGame: {}, weekLo: '2026-12-20', weekHi: '2026-12-26', h2h: null }).filter((x) => x.comp)).toEqual([]);
+  it('the quarter finals ended in the week: the winners and the closest decision', () => {
+    const f = get(run({ groups, windows: W }, '2026-12-27', '2027-01-02'), 'stageDone');
+    expect(f).toMatchObject({ stage: 'רבע הגמר', winners: 'd2, c3, c2, d1' });
+    expect(f.closest).toEqual({ winner: 'c2', loser: 'd4', margin: 2 });
+  });
+  it('the final ended in the week: the champion', () => {
+    expect(get(run({ groups, windows: W }, '2027-01-10', '2027-01-16'), 'champion')).toMatchObject({ name: 'c3', runner: 'c2', margin: 1 });
+  });
+  it('not set up, no groups or no dates: nothing to say; a stage that ended in another week gives nothing', () => {
+    expect(run(null, '2026-12-06', '2026-12-12').filter((x) => x.comp === H2H_COMP)).toEqual([]);
+    expect(run({ groups: {} , windows: W }, '2026-12-06', '2026-12-12').filter((x) => x.comp === H2H_COMP)).toEqual([]);
+    expect(run({ groups }, '2026-12-06', '2026-12-12').filter((x) => x.comp === H2H_COMP)).toEqual([]); // the dates are not set yet
+    expect(get(run({ groups, windows: W }, '2027-02-01', '2027-02-07'), 'champion')).toBeUndefined();
+  });
+  it('the text of the eliminated players, in every version, with the right numbers and the name of the competition', () => {
+    const f = { type: 'cupEliminated', score: 95, comp: H2H_COMP, out: 7, stay: 16, names: 'דן, מאיה' };
+    for (let seed = 0; seed < 12; seed += 1) {
+      const text = writeSummary([f], { seed }).paragraphs.join(' ');
+      expect(text).toContain('16'); expect(text).toContain('דן, מאיה'); expect(text).toContain('ראש בראש'); expect(text).not.toContain('undefined');
+    }
+    expect(factLine(f)).toContain('7 הודחו');
+  });
+  it('the sentences of "who goes on" fit both rounds ("לשמינית" after the group stage, "לרבע" after the round of 16)', () => {
+    const g = { type: 'qualified', score: 95, comp: MID_COMP, names: 'x' }; // the mid-season tournament: no extra fields
+    const r = { type: 'qualified', score: 95, comp: H2H_COMP, names: 'x', done: 'שלב שמינית הגמר', next: 'רבע הגמר', from: 'משמינית הגמר' };
+    for (let seed = 0; seed < 12; seed += 1) {
+      expect(writeSummary([g], { seed }).paragraphs.join(' ')).toMatch(/שלב הבתים|מהבתים/);
+      expect(writeSummary([r], { seed }).paragraphs.join(' ')).toMatch(/שמינית הגמר|משמינית הגמר/);
+    }
   });
 });
 
