@@ -4,6 +4,7 @@ import { useNow } from '../hooks/useNow.js';
 import { dayKey } from '../utils/dates.js';
 import { countsForStandings } from '@shared/games.js';
 import MidTournamentView from './MidTournamentView.jsx';
+import AutoTab from './AutoTab.jsx';
 import { monthArrived, monthChampions, monthFinished, monthlyRows, seasonMonths } from '@shared/monthly.js';
 import PageShell from '../components/PageShell.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
@@ -183,7 +184,7 @@ function LiveScoresChip() {
 
 export default function LeaderboardPage() {
   const { t } = useLang();
-  const [tab, setTab] = useState('total'); // 'total' | 'games' | 'bonus' | 'jokers' | 'stats' | 'month' | 'mid' (= "Champion of the month": its months appear only after the click)
+  const [tab, setTab] = useState('total'); // 'total' | 'games' | 'bonus' | 'jokers' | 'stats' | 'month' | 'mid' | 'auto' (= "Champion of the month": its months appear only after the click)
   return (
     <PageShell titleKey="nav.leaderboard">
       <div className="tabs scroll" role="tablist">
@@ -195,9 +196,10 @@ export default function LeaderboardPage() {
         <button role="tab" aria-selected={tab === 'month'} className={`tab ${tab === 'month' ? 'active' : ''}`} onClick={() => setTab('month')}>{t('lb.tab.month')}</button>
         <button role="tab" aria-selected={tab === 'mid'} className={`tab ${tab === 'mid' ? 'active' : ''}`} onClick={() => setTab('mid')}>{t('lb.tab.mid')}</button>
         <button role="tab" aria-selected={tab === 'stats'} className={`tab ${tab === 'stats' ? 'active' : ''}`} onClick={() => setTab('stats')}>{t('lb.tab.stats')}</button>
+        <button role="tab" aria-selected={tab === 'auto'} className={`tab ${tab === 'auto' ? 'active' : ''}`} onClick={() => setTab('auto')} title={t('lb.auto.title')} aria-label={t('lb.auto.title')}>{t('lb.tab.auto')}</button>
       </div>
-      {tab !== 'stats' && <LiveScoresChip />}{/* below the second row of tabs; it is there only while a game is live. Statistics only changes when a game ends: no live sign there */}
-      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab === 'month' ? <MonthTab /> : tab === 'mid' ? <MidTournamentView /> : <Board tab={tab} />}</ErrorBoundary>
+      {tab !== 'stats' && tab !== 'auto' && <LiveScoresChip />}{/* below the second row of tabs; it is there only while a game is live. Statistics only changes when a game ends: no live sign there */}
+      <ErrorBoundary key={tab} name={`leaderboard-${tab}`}>{tab === 'month' ? <MonthTab /> : tab === 'mid' ? <MidTournamentView /> : tab === 'auto' ? <AutoTab /> : <Board tab={tab} />}</ErrorBoundary>
     </PageShell>
   );
 }

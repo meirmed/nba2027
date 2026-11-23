@@ -858,5 +858,12 @@
   "rules.h2h.r.b1": "The 16 are placed in four new groups (E to H) by their place: first of group A goes to group E, second of group A to group F, third to group G and fourth to group H. The same for the other groups.",
   "rules.h2h.r.b2": "Every new group has one player of every previous group and one of every place. The points of the group stage are not kept: the round of 16 starts from zero.",
   "rules.h2h.r.b3": "The top two of every new group advance to the knockout, 8 players.",
-  "rules.h2h.scheduleTitle": "Schedule (Israel dates, by the date of the game)"
+  "rules.h2h.scheduleTitle": "Schedule (Israel dates, by the date of the game)",
+  "lb.tab.auto": "🎲",
+  "lb.auto.title": "Games with an automatic (random) result",
+  "lb.auto.games": "Games",
+  "lb.auto.pts": "Points",
+  "lb.auto.win": "% right winner",
+  "lb.auto.winTip": "In what share of the random results the winner was right",
+  "lb.auto.note": "A random result = a pick the system filled in for a player who made no pick before the game started. The points are after the partial scoring (half). Finished games only."
 }
