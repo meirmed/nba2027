@@ -23,7 +23,7 @@ const COLS = {
   // Games tab (like the World Cup): game points / correct winner / exact / unique / no score
   games: [['lb.gamePtsCol', 'gamePts', 'pts-games'], ['lb.winnerDir', 'winnerCorrect', 'pts-hit'], ['lb.exactHits', 'exactHits', 'pts-exact'], ['lb.uniqueHits', 'uniqueHits', 'pts-unique'], ['lb.noScore', 'noScore', 'pts-miss']],
   bonus: [['lb.bonus', 'bonus', 'pts-bonus']],
-  jokers: [['lb.jokers', 'jokersLeft', 'pts-joker']], // jokers LEFT = jokers per season - jokers already spent (games that started)
+  jokers: [['lb.jokers', 'jokersLeft', 'pts-joker'], ['lb.jokerExtra', 'jokerExtra', 'pts-games']], // jokers LEFT = jokers per season - jokers already spent (games that started)
 };
 // Current streak (like the World Cup app): 🔥 = 3+ correct winners in a row, ❄️ = 3+ misses in a row, otherwise a dash.
 function Streak({ r }) {
@@ -32,6 +32,8 @@ function Streak({ r }) {
   if ((r.curMiss ?? 0) >= 3) return <span className="streak cold" title={t('lb.coldTip', { n: r.curMiss })}>❄️ {r.curMiss}</span>;
   return <span className="muted">–</span>;
 }
+/** Extra points the jokers gave: per day, game points minus game points WITHOUT the joker doubling (byDay[day] = [pts, ..., ..., ..., ptsNoJoker]). */
+const jokerExtraOf = (r) => Object.values(r.byDay || {}).reduce((s, c) => s + Math.max(0, (c?.[0] ?? 0) - (c?.[4] ?? c?.[0] ?? 0)), 0);
 const pct = (a, b) => (b > 0 ? `${Math.round((100 * a) / b)}%` : '–');
 
 // "January", "ינואר": the month name from a 'YYYY-MM' key
@@ -93,7 +95,7 @@ function Board({ tab }) {
   // 'games' tab ranks by game points only; the others use the configured tiebreakers (total first).
   const ranked = useMemo(
     () => rankRows(
-      tab === 'jokers' ? rows.map((r) => ({ ...r, jokersLeft: Math.max(0, scoring.jokersPerSeason - (r.jokersUsed ?? 0)) })) : tab === 'stats' ? withAccuracy(rows) : rows,
+      tab === 'jokers' ? rows.map((r) => ({ ...r, jokersLeft: Math.max(0, scoring.jokersPerSeason - (r.jokersUsed ?? 0)), jokerExtra: jokerExtraOf(r) })) : tab === 'stats' ? withAccuracy(rows) : rows,
       tab === 'games' ? ['gamePts', 'exactHits', 'uniqueHits'] : tab === 'bonus' ? ['bonus', 'total'] : tab === 'jokers' ? ['jokersLeft', 'total'] : tab === 'stats' ? STATS_TIEBREAKERS : scoring.tiebreakers,
     ),
     [rows, tab, scoring.tiebreakers, scoring.jokersPerSeason],

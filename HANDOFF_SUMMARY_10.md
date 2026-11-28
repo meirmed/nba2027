@@ -334,3 +334,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 128: the "🎲" tab of the leaderboard (random / auto-filled results)
 - New tab "🎲" in the SECOND row of the leaderboard page, after "סטטיסטיקה" (the owner wrote "results page, next to the statistics tab"; the Statistics tab is in the leaderboard page, so it was put there). `AutoTab` (src/pages/AutoTab.jsx) + `shared/autoStats.js` (`autoStatsOf`, `autoRows`, 5 tests, 416 total). For every competitor: the number of games in which he got an AUTO-FILLED pick, the points those picks earned (already halved by the auto-fill factor) and the % of them with the right winner; sorted from the most random games to the fewest (ties: more points, then name; players without any are last). Source: `pointsDetail/{uid}.byGame` (`a` = auto-filled, `pts`, `w` = right winner; finished games only), read once per opening of the tab with `getDocs(collection('pointsDetail'))` (one read per player; any signed-in user may read it, the rules allow a list). No server change, no recalculation. The live "LIVE" chip is hidden on this tab like on Statistics. App-only.
+
+## Update 129 — Leaderboard "Jokers" tab: extra column "Joker pts"
+`LeaderboardPage.jsx`: `jokerExtraOf(r)` = sum over `byDay` of (game points − points without joker). New i18n `lb.jokerExtra`; note extended. App-only.
