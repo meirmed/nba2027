@@ -121,6 +121,72 @@ const KIND_RANK = { exact: 3, exactMargin: 2, tier: 1, winner: 0 };
 const KIND_NOUN = { exact: 'תוצאה מדויקת', exactMargin: 'הפרש מדויק', tier: 'הפרש קרוב מאוד', winner: 'ניחוש נכון' };
 const kindOf = (s) => (s.exact ? 'exact' : s.exactMargin ? 'exactMargin' : s.diffTier ? 'tier' : 'winner');
 
+
+const weekStartOf = (day) => addDaysToKey(day, -dow(day)); // the Israeli week starts on Sunday
+const heDay = (d) => new Intl.DateTimeFormat('he-IL', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`));
+const MIN_WEEK_DAYS = 3; // a weekly low counts only for a player who played on 3+ days of that week (a player who joined on Friday is not "the lowest week ever")
+
+/**
+ * Records, from points/{uid}.byDay (game points, with the joker): a new daily record of the season, a new weekly high, a new weekly low, and a "star of the week"
+ * (the clear winner of a Sunday-Saturday week) who has won a week before. The weekly facts exist only for a COMPLETE week (Sunday-Saturday, nothing still open).
+ */
+function recordFacts({ rows, weekLo, weekHi, open }) {
+  const facts = [];
+  const nameOf = Object.fromEntries(rows.map((r) => [r.uid, r.name]));
+  const cells = [];
+  rows.forEach((r) => Object.entries(r.byDay || {}).forEach(([day, c]) => cells.push({ uid: r.uid, name: r.name || '', day, pts: r2(c?.[0] || 0) })));
+  if (cells.length === 0) return facts;
+  const inWeek = (x) => x.day >= weekLo && x.day <= weekHi;
+
+  // a daily record: the best day of this week against the best day of the season before it
+  const prevDays = cells.filter((x) => x.day < weekLo);
+  const prevDay = [...prevDays].sort((a, b) => b.pts - a.pts || a.day.localeCompare(b.day))[0];
+  const bestDay = [...cells.filter((x) => inWeek(x) && !open.has(x.day))].sort((a, b) => b.pts - a.pts || a.day.localeCompare(b.day) || byName(a, b))[0];
+  if (prevDay && prevDay.pts > 0 && bestDay && bestDay.pts > prevDay.pts) {
+    facts.push({ type: 'dayRecord', score: 90, must: true, name: bestDay.name, pts: bestDay.pts, dayName: heDay(bestDay.day), day: bestDay.day, prevPts: prevDay.pts, prevName: prevDay.name || nameOf[prevDay.uid] || '' });
+  }
+
+  // weekly totals per player: weekStart -> uid -> {pts, days}
+  const weeks = {};
+  cells.forEach((x) => { const w = ((weeks[weekStartOf(x.day)] ||= {})[x.uid] ||= { uid: x.uid, name: x.name, pts: 0, days: 0 }); w.pts = r2(w.pts + x.pts); w.days += 1; });
+  const firstDay = cells.reduce((m, x) => (x.day < m ? x.day : m), cells[0].day);
+  const complete = weekStartOf(weekLo) === weekLo && addDaysToKey(weekLo, 6) === weekHi && ![...open].some((d) => d >= weekLo && d <= weekHi);
+  const cur = weeks[weekLo];
+  if (!complete || !cur) return facts;
+  const curList = Object.values(cur);
+  const prevWeeks = Object.entries(weeks).filter(([ws]) => ws < weekLo);
+  const prevAll = prevWeeks.flatMap(([ws, m]) => Object.values(m).map((x) => ({ ...x, ws })));
+
+  // a weekly high
+  const topNow = [...curList].sort((a, b) => b.pts - a.pts || byName(a, b))[0];
+  const prevTop = [...prevAll].sort((a, b) => b.pts - a.pts || a.ws.localeCompare(b.ws))[0];
+  if (topNow && prevTop && prevTop.pts > 0 && topNow.pts > prevTop.pts) {
+    facts.push({ type: 'weekHigh', score: 88, must: true, name: topNow.name, pts: topNow.pts, prevPts: prevTop.pts, prevName: prevTop.name });
+  }
+  // a weekly low: only complete previous weeks (the first week of the season is partial), only players with enough days
+  const fullPrev = prevAll.filter((x) => x.ws > weekStartOf(firstDay) || weekStartOf(firstDay) === firstDay).filter((x) => x.days >= MIN_WEEK_DAYS);
+  const lowList = curList.filter((x) => x.days >= MIN_WEEK_DAYS);
+  if (fullPrev.length && lowList.length) {
+    const lowNow = Math.min(...lowList.map((x) => x.pts));
+    const prevLow = [...fullPrev].sort((a, b) => a.pts - b.pts || a.ws.localeCompare(b.ws))[0];
+    if (lowNow < prevLow.pts) {
+      const who = lowList.filter((x) => x.pts === lowNow).sort(byName);
+      facts.push({ type: 'weekLow', score: 80, must: true, name: who.map((x) => x.name).join(' ו'), count: who.length, pts: lowNow, prevPts: prevLow.pts, prevName: prevLow.name });
+    }
+  }
+  // a star of the week (the clear winner of a week) who has already been one
+  const winnerOf = (m) => { const l = Object.values(m).filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts); return l.length && !(l[1] && l[1].pts === l[0].pts) ? l[0] : null; };
+  const nowWin = winnerOf(cur);
+  if (nowWin) {
+    const earlier = prevWeeks.map(([ws, m]) => ({ ws, w: winnerOf(m) })).filter((x) => x.w && x.w.uid === nowWin.uid).map((x) => x.ws);
+    if (earlier.length) {
+      const consecutive = earlier.includes(addDaysToKey(weekLo, -7));
+      facts.push({ type: 'weekStarRepeat', score: 66, must: true, name: nowWin.name, n: earlier.length + 1, pts: nowWin.pts, consecutive });
+    }
+  }
+  return facts;
+}
+
 /**
  * The facts of the week, best first: [{type, score, ...data}].
  * rows: points docs ({uid, name, byDay, bonus, adjust}); games: [{id, status, t1, t2, s1, s2, tipoffMs}] (counted games);
@@ -215,14 +281,16 @@ export function computeFacts({ rows, games, picksByGame, scoring, weekLo, weekHi
   };
   if (stars.length) {
     const record = [...stars].sort((a, b) => b.pts - a.pts || b.lead - a.lead || a.day.localeCompare(b.day))[0];
-    if (record.pts >= 10) facts.push({ type: 'nightRecord', score: 62 + Math.min(10, Math.round(record.lead / 3)), name: record.name, pts: record.pts, lead: record.lead, dayName: dayNameOf(record.day), day: record.day, reason: specialOf(record)?.reason || '' });
+    if (record.pts >= 10) facts.push({ type: 'nightRecord', must: true, score: 62 + Math.min(10, Math.round(record.lead / 3)), name: record.name, pts: record.pts, lead: record.lead, dayName: dayNameOf(record.day), day: record.day, reason: specialOf(record)?.reason || '' });
     const other = stars.filter((s) => s.day !== record.day).map((s) => ({ s, sp: specialOf(s) })).filter((x) => x.sp).sort((a, b) => b.s.pts - a.s.pts)[0];
     if (other) facts.push({ type: 'starSpecial', score: 58 + (other.sp.kind === 'both' ? 6 : 0), name: other.s.name, pts: other.s.pts, dayName: dayNameOf(other.s.day), day: other.s.day, kind: other.sp.kind, reason: other.sp.reason });
     const byStar = {};
     stars.forEach((s) => { (byStar[s.uid] ||= []).push(s); });
     const rep = Object.values(byStar).filter((a) => a.length >= 2).sort((a, b) => b.length - a.length || b.reduce((x, s) => x + s.pts, 0) - a.reduce((x, s) => x + s.pts, 0))[0];
-    if (rep) facts.push({ type: 'repeatStar', score: 50 + rep.length * 8, name: rep[0].name, n: rep.length, dayNames: rep.map((s) => dayNameOf(s.day)).join(', ') });
+    if (rep) facts.push({ type: 'repeatStar', must: true, score: 50 + rep.length * 8, name: rep[0].name, n: rep.length, dayNames: rep.map((s) => dayNameOf(s.day)).join(', ') });
   }
+
+  facts.push(...recordFacts({ rows, weekLo, weekHi, open }));
 
   const people = Object.entries(per).map(([uid, x]) => ({ uid, name: nameOf[uid] || '', ...x }));
   const mvp = [...people].sort((a, b) => b.pts - a.pts || byName(a, b))[0];
@@ -255,14 +323,16 @@ export function selectFacts(facts, max = 10) {
   const used = {};
   const out = [];
   const take = (f) => {
+    if (out.includes(f)) return;
     const names = [f.name, f.prev].filter(Boolean);
     if (names.some((n) => (used[n] || 0) >= 3)) return;
     names.forEach((n) => { used[n] = (used[n] || 0) + 1; });
     out.push(f);
   };
+  facts.filter((f) => f.must).forEach(take); // stars of the nights and records are always told
   [MID_COMP, H2H_COMP].forEach((c) => { const f = facts.find((x) => x.comp === c); if (f) take(f); });
   facts.forEach((f) => {
-    if (out.length >= max || out.includes(f)) return;
+    if (out.length >= max || out.includes(f) || f.must) return;
     if (f.comp && out.filter((x) => x.comp === f.comp).length >= 2) return;
     take(f);
   });
@@ -440,6 +510,42 @@ Object.assign(C, {
   repeatStar: ['מי שלא מצליח לעקוף מוזמן להצטרף.', 'הלילה הבא יגלה אם זה שגרה או הפסקה.', 'ובינתיים הקהל מצביע ברגליים, ועם הרבה סקרנות.'],
   starSpecial: ['הסיפור הזה ממשיך לעניין את מי שבחר אחרת.', 'מי שנתן עדיפות לביטחון קיבל שיעור בהימור.', 'בפעם הבאה, גם המסורתיים יסתכלו בעיניים אחרות על הטבלה.'],
 });
+
+// records of the season
+Object.assign(T, {
+  dayRecord: [
+    (f) => `שיא יומי חדש בעונה: ${f.name} עם ${f.pts} נקודות ב${f.dayName}, מעל השיא הקודם של ${f.prevName} (${f.prevPts}).`,
+    (f) => `הספרים נפתחו מחדש: ${f.pts} נקודות ביום אחד של ${f.name} (${f.dayName}) שוברות את השיא של ${f.prevName}, ${f.prevPts}.`,
+    (f) => `${f.name} כתב היסטוריה ב${f.dayName}: ${f.pts} נקודות ביום אחד, ו${f.prevName} (${f.prevPts}) יורד מהפודיום של השיא.`,
+  ],
+  weekHigh: [
+    (f) => `שיא שבועי חדש: ${f.name} אסף ${f.pts} נקודות בשבוע אחד, מול השיא הקודם של ${f.prevName} (${f.prevPts}).`,
+    (f) => `${f.pts} נקודות בשבוע אחד של ${f.name}, יותר מכל שבוע קודם בעונה (השיא הקודם: ${f.prevPts} אצל ${f.prevName}).`,
+    (f) => `מצביעים על שבוע אחד בלוח: ${f.name}, ${f.pts} נקודות, ושיא העונה עובר מ${f.prevName} (${f.prevPts}).`,
+  ],
+  weekLow: [
+    (f) => `שיא שלילי שבועי: ${f.name} עם ${f.pts} נקודות בשבוע אחד, פחות מהשפל הקודם של ${f.prevName} (${f.prevPts}).`,
+    (f) => `השבוע הנמוך ביותר בעונה: ${f.name}, ${f.pts} נקודות. השפל הקודם היה ${f.prevPts} אצל ${f.prevName}.`,
+    (f) => `${f.pts} נקודות בלבד בשבוע שלם אצל ${f.name}, שבירת השפל של ${f.prevName} (${f.prevPts}). גם זה שיא, אם כי לא מהסוג שתולים על הקיר.`,
+  ],
+  weekStarRepeat: [
+    (f) => `כוכב השבוע בפעם ה-${f.n}: ${f.name}${f.consecutive ? ', ברצף' : ''}, עם ${f.pts} נקודות.`,
+    (f) => `${f.name} שוב בראש השבוע (${f.pts} נקודות): זה כבר כוכב השבוע ה-${f.n}${f.consecutive ? ' ברצף' : ''}.`,
+    (f) => `התואר חוזר אל ${f.name}: כוכב השבוע בפעם ה-${f.n}${f.consecutive ? ', ובלי להפסיק' : ''}, ${f.pts} נקודות.`,
+  ],
+});
+Object.assign(E, {
+  dayRecord: ['שיאים נועדו להישבר, אבל לא תמיד בהפרש כזה.', 'המחשבון ביקש הפסקה והמעריצים ביקשו עוד.', 'בספר השיאים כבר מחפשים עט חדש.'],
+  weekHigh: ['שבוע כזה לא נשכח בקלות, גם לא על ידי מי שנשארו מאחור.', 'בבורסה זה היה נקרא פריצת שיא, ובכדורסל: שבוע של פלייאוף.', 'מי שרצה להתחרות בשבוע הזה, כנראה הביא קלמר.'],
+  weekLow: ['נחמה: אין לאן לרדת, חוץ מלעלות.', 'הדרך חזרה מתחילה בניחוש אחד טוב, והוא כבר בדרך.', 'כולם מכירים שבוע כזה, אבל רק אחד קיבל עליו תעודה.'],
+  weekStarRepeat: ['מי שחושב שזה מקרה מוזמן לנסות להפיל את זה.', 'התארים האלה לא מתחלקים, הם נאספים.', 'זה כבר לא כוכב, זו קבוצת כוכבים עם כתובת קבועה.'],
+});
+Object.assign(C, {
+  dayRecord: ['היום שאחרי כבר מתחיל עם אתגר חדש לכולם.', 'מי שרוצה את השיא חזרה יודע איפה למצוא אותו.', 'נשאר רק לראות מי יעז להתקרב.'],
+  weekHigh: ['השבוע הבא יגלה אם זה שיא או קיצור דרך.', 'מי שמבקש לשבור אותו, שיתחיל לאסוף ניחושים כבר עכשיו.', 'ובינתיים הטבלה שומרת את המספר על הקיר.'],
+  weekLow: ['השבוע הבא הוא הזדמנות להתחיל מחדש.', 'מי שנפל ידע לקום, ובלי להודיע לכולם.', 'עכשיו הכול רק יכול להשתפר.'],
+  weekStarRepeat: ['הרודפים כבר מתחילים לתכנן את ההתקפה.', 'נראה מי יעצור את המומנטום.', 'השבוע הבא יוכיח אם זו שושלת או רק פרק יפה.'],
+});
 Object.assign(T, {
   cupEliminated: [
     (f) => `${cn(f.comp)}: שלב הבתים נגמר, ו-${f.stay} עולים לשמינית הגמר. הודחו ${f.out}: ${f.names}. תודה על ההשתתפות, והזמנה חמה לצפות מהיציע עם פופקורן.`,
@@ -485,7 +591,13 @@ export function writeSummary(facts, { seed = 0, monthName = (k) => k } = {}) {
   const sd = Math.abs(Math.trunc(seed));
   const parts = used.map((f, i) => `${pick(T[f.type], sd, i * 3)({ ...f, monthName: f.month ? monthName(f.month) : '' })} ${pick(E[f.type], sd, i * 3 + 1)} ${pick(C[f.type], sd, i * 3 + 2)}`);
   let paragraphs = toParagraphs(parts);
-  while (used.length > 1 && wordCount(paragraphs.join(' ')) > MAX_WORDS) { used = used.slice(0, -1); paragraphs = toParagraphs(parts.slice(0, used.length)); } // drop the weakest
+  let texts = parts;
+  while (used.length > 1 && wordCount(paragraphs.join(' ')) > MAX_WORDS) { // drop the weakest fact that is not a star / record
+    let i = used.length - 1;
+    while (i > 0 && used[i].must) i -= 1;
+    if (used[i].must) break;
+    used = used.filter((_, k) => k !== i); texts = texts.filter((_, k) => k !== i); paragraphs = toParagraphs(texts);
+  }
   return { paragraphs, words: wordCount(paragraphs.join(' ')), facts: used };
 }
 
@@ -514,6 +626,10 @@ export function factLine(f) {
     case 'pairLive': return `${f.comp}, ${f.stage}: ${f.a} מול ${f.b}, פער של ${f.margin} נקודות`;
     case 'nightRecord': return `הניקוד הלילי הגבוה ביותר של השבוע: ${f.name}, ${f.pts} נקודות ב${f.dayName}, ${f.lead} נקודות לפני השני${f.reason ? ` (${f.reason})` : ''}`;
     case 'repeatStar': return `כוכב הלילה ${f.n} פעמים השבוע: ${f.name} (${f.dayNames})`;
+    case 'dayRecord': return `שיא יומי חדש בעונה: ${f.name}, ${f.pts} נקודות ב${f.dayName} (השיא הקודם: ${f.prevPts}, ${f.prevName})`;
+    case 'weekHigh': return `שיא שבועי חדש בעונה: ${f.name}, ${f.pts} נקודות (השיא הקודם: ${f.prevPts}, ${f.prevName})`;
+    case 'weekLow': return `שיא שבועי נמוך חדש בעונה: ${f.name}, ${f.pts} נקודות (הנמוך הקודם: ${f.prevPts}, ${f.prevName})`;
+    case 'weekStarRepeat': return `כוכב השבוע בפעם ה-${f.n}${f.consecutive ? ' ברצף' : ''}: ${f.name} (${f.pts} נקודות)`;
     case 'starSpecial': return `כוכב ${f.dayName}: ${f.name} (${f.pts} נקודות), בזכות ${f.reason}`;
     default: return JSON.stringify(f);
   }

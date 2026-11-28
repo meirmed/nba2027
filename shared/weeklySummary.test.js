@@ -384,3 +384,59 @@ describe('stars of the nights (calendar days)', () => {
     facts.forEach((f) => expect(factLine(f)).toContain(f.name));
   });
 });
+
+describe('records: daily record, weekly high, weekly low, a star of the week who repeats', () => {
+  const D = (n) => `2026-11-${String(n).padStart(2, '0')}`; // 2026-11-01 is a Sunday
+  // a and b: weeks of 01-07 and 08-14 (and 15-21 = the week under test); days with points
+  const mk = (a, b, c) => [row('a', a), row('b', b), row('c', c)];
+  const week = (days, pts) => Object.fromEntries(days.map((d, i) => [D(d), [pts[i]]]));
+  const run = (rows, lo = '2026-11-15', hi = '2026-11-21', extra = {}) => computeFacts({ rows, games: [], picksByGame: {}, weekLo: lo, weekHi: hi, ...extra });
+  const get = (f, t) => f.find((x) => x.type === t);
+  const rows = mk(
+    { ...week([2, 3, 4], [20, 30, 25]), ...week([9, 10, 11], [20, 20, 20]), ...week([16, 17, 18], [40, 35, 30]) }, // a: 75, 60, 105
+    { ...week([2, 3, 4], [10, 10, 10]), ...week([9, 10, 11], [30, 30, 30]), ...week([16, 17, 18], [10, 10, 10]) }, // b: 30, 90, 30
+    { ...week([2, 3, 4], [12, 12, 12]), ...week([9, 10, 11], [15, 15, 15]), ...week([16, 17, 18], [1, 1, 1]) }, // c: 36, 45, 3
+  );
+  it('a daily record broken: a 40 against the old 30', () => {
+    expect(get(run(rows), 'dayRecord')).toMatchObject({ name: 'a', pts: 40, prevPts: 30, dayName: 'יום שני', day: D(16) });
+  });
+  it('no daily record when the best day equals the old one', () => {
+    const r = mk({ [D(3)]: [40], [D(16)]: [40] }, {}, {});
+    expect(get(run(r), 'dayRecord')).toBeUndefined();
+  });
+  it('a weekly high: 105 against 90', () => {
+    expect(get(run(rows), 'weekHigh')).toMatchObject({ name: 'a', pts: 105, prevPts: 90, prevName: 'b' });
+  });
+  it('a weekly low: c has 3 against the old low of 30 (the first week is partial, so only the 2nd week counts as a comparison)', () => {
+    // the season started on 2026-11-04 (a Wednesday), so the week of 01-07 is partial: its low (30) is not compared
+    const r = mk({ [D(4)]: [20], [D(5)]: [20], [D(6)]: [20], ...week([9, 10, 11], [20, 20, 20]), ...week([16, 17, 18], [40, 35, 30]) },
+      { [D(4)]: [1], [D(5)]: [1], [D(6)]: [1], ...week([9, 10, 11], [30, 30, 30]), ...week([16, 17, 18], [10, 10, 10]) },
+      { ...week([9, 10, 11], [15, 15, 15]), ...week([16, 17, 18], [1, 1, 1]) });
+    expect(get(run(r), 'weekLow')).toMatchObject({ name: 'c', pts: 3, prevPts: 45, prevName: 'c' });
+  });
+  it('the star of the week who repeats: a won the week of 01-07 and 15-21', () => {
+    const f = get(run(rows), 'weekStarRepeat');
+    expect(f).toMatchObject({ name: 'a', n: 2, pts: 105, consecutive: false });
+  });
+  it('a consecutive star of the week', () => {
+    const r = mk({ ...week([2, 3, 4], [20, 30, 25]), ...week([9, 10, 11], [40, 40, 40]), ...week([16, 17, 18], [40, 35, 30]) }, { ...week([2, 3, 4], [10, 10, 10]), ...week([9, 10, 11], [30, 30, 30]), ...week([16, 17, 18], [10, 10, 10]) }, {});
+    expect(get(run(r), 'weekStarRepeat')).toMatchObject({ name: 'a', n: 3, consecutive: true });
+  });
+  it('no weekly facts for a partial week or a week with a game still open; the daily record still counts for finished days', () => {
+    expect(get(run(rows, '2026-11-15', '2026-11-18'), 'weekHigh')).toBeUndefined();
+    const f = run(rows, '2026-11-15', '2026-11-21', { unfinishedDays: [D(20)] });
+    expect(get(f, 'weekHigh')).toBeUndefined();
+    expect(get(f, 'dayRecord')).toBeDefined();
+  });
+  it('the records are always in the summary, and the texts have no holes', () => {
+    const f = run(rows);
+    const used = selectFacts([...f, ...Array.from({ length: 14 }, (_, i) => ({ type: 'exactKing', score: 90 + i, name: `x${i}`, n: 3 }))], 10);
+    ['dayRecord', 'weekHigh', 'weekStarRepeat'].forEach((t) => expect(used.some((x) => x.type === t)).toBe(true));
+    for (let seed = 0; seed < 20; seed += 1) {
+      const w = writeSummary(f, { seed });
+      expect(w.paragraphs.join(' ')).not.toContain('undefined');
+      expect(w.facts.some((x) => x.type === 'dayRecord')).toBe(true);
+    }
+    f.filter((x) => x.must).forEach((x) => expect(factLine(x)).not.toContain('undefined'));
+  });
+});

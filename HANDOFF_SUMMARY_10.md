@@ -337,3 +337,6 @@ Confirm the **risk-bonus points** (placeholder 2) - decide the **World Cup H2H t
 
 ## Update 129 — Leaderboard "Jokers" tab: extra column "Joker pts"
 `LeaderboardPage.jsx`: `jokerExtraOf(r)` = sum over `byDay` of (game points − points without joker). New i18n `lb.jokerExtra`; note extended. App-only.
+
+## Update 130 — Weekly summary: records + repeat stars always included
+`shared/weeklySummary.js`: new facts `dayRecord` (daily points record of the season broken), `weekHigh`, `weekLow` (complete Sunday-Saturday week only; low only for players with 3+ days and not against the partial first week), `weekStarRepeat` (clear winner of a week who won before). Facts with `must:true` (these + `nightRecord`, `repeatStar`) are always selected and are the last to be dropped by the word limit. Texts T/E/C + `factLine`; tests added (record tests). App-only; nothing to deploy to Firebase.
